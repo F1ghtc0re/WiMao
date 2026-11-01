@@ -1,0 +1,23 @@
+# Recette du faux gestionnaire d'éditeur, pour le test d'intégration tests/gestionnaire.rs.
+# L'installeur (faux-gestionnaire-setup.exe) est fabriqué par tests/fabriquer-fixtures.sh ;
+# le programme (FauxGestionnaire.exe) est décrit dans tests/fixtures/gestionnaire/FauxGestionnaire.c.
+# À l'ouverture, le faux gestionnaire lance test-nsis.exe (déposé par le test dans
+# {telechargements}\FauxEditeur) sans option silencieuse : le pilote doit le relancer en
+# silencieux. Il relaie aussi les liens wimao-test://… dans C:\faux-gestionnaire-liens.txt.
+nom = "Faux gestionnaire"
+editeur = "WiMao (tests)"
+type = "gestionnaire"
+reconnaitre = ["faux-gestionnaire-setup.exe"]
+
+[installation]
+methode = "extraire-7z"
+lien-connexion = "wimao-test"
+
+[[installation.extraire]]
+archive = '$PLUGINSDIR/app-64.7z'
+vers = 'C:\Program Files\FauxEditeur'
+
+[gestionnaire]
+programme = 'C:\Program Files\FauxEditeur\FauxGestionnaire.exe'
+arguments = ['{telechargements}\FauxEditeur\test-nsis.exe']
+pilote = ['{telechargements}\FauxEditeur']

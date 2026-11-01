@@ -1,0 +1,561 @@
+# Fabrication des trois paquets Debian de WiMao (wimao-wine, wimao-bridge, wimao) dans un conteneur
+# Ubuntu 24.04 figé, puis contrôle de reproductibilité et calcul des sommes SHA-256.
+#
+# Jobs :
+#   wine                : compile Wine 11.20 + correctif (plusieurs heures, d'où le cache du .deb final).
+#   bridge, wimao       : yabridge + DXVK, et l'application (Rust figé ici, voir « Rust » plus bas).
+#   reproductible       : refabrique bridge et wimao dans un second conteneur, compare les sha256.
+#   reproductible-wine  : idem pour wimao-wine, SANS cache ; seulement sur étiquette `v*` ou lancement manuel.
+#   sommes              : réunit les trois .deb et écrit SHA256SUMS (artefact `paquets-<sha court>`).
+#   installation        : installe les trois .deb dans un système vierge (Ubuntu 24.04 et Debian 13),
+#                         les contrôle et les retire (paquets/tester-installation.sh).
+#   signature-a-blanc   : rejoue scripts/signer-version.sh --a-blanc : refabrique wimao et wimao-bridge avec podman
+#                         (comme le fera le propriétaire chez lui) et exige les mêmes .deb octet pour octet.
+#   brouillon           : (droits d'écriture) attestation de provenance des .deb et Release BROUILLON (jamais publiée),
+#                         sur une étiquette `v*` ou un lancement manuel avec a_blanc faux.
+#   brouillon-a-blanc   : (aucun droit d'écriture) même logique sans rien créer, sur demande de fusion et lancement
+#                         manuel par défaut.
+#
+# Choix communs :
+#   - Conteneur `ubuntu:24.04@sha256:…` : la machine de fabrication est la même d'un lancement à l'autre.
+#     `container.image` n'accepte pas le contexte `env` : l'image est donc répétée à chaque job, et
+#     paquets/verifier-workflows.sh (job `chaine` de la CI) contrôle chacune des occurrences.
+#     Pour changer d'image : modifier TOUTES les occurrences (et l'empreinte courte de la clé de cache du job `wine`).
+#     Le job `installation` écrit `image: ${{ matrix.image }}` (seule expression admise par le script) :
+#     les images elles-mêmes sont dans sa matrice, lignes `image:` contrôlées comme les autres.
+#   - git est installé AVANT actions/checkout : paquets/commun.sh lit la date du dernier commit avec
+#     `git log` (SOURCE_DATE_EPOCH), il faut donc un vrai dépôt git et non l'archive que checkout
+#     télécharge quand git manque.
+#   - Rust : version figée ICI (`toolchain: 1.99.1`), pas de rust-toolchain.toml dans le dépôt, qui
+#     imposerait cette version aux développeurs. L'action est celle de ci.yml (même empreinte).
+#   - Aucun cargo-deb : les .deb sont assemblés par paquets/commun.sh (dpkg-deb).
+#   - a_blanc : entrée du lancement manuel (vrai par défaut) qui choisit entre `brouillon-a-blanc` (vrai) et
+#     `brouillon` (faux). Une étiquette `v*` n'est jamais à blanc ; une demande de fusion l'est toujours (elle
+#     prouve la logique du job sans rien créer et sans droit d'écriture).
+#   - Droits : `contents: read` à la racine ; les droits d'écriture (Release, attestation) sont accordés au seul
+#     job `brouillon`, et jamais ailleurs.
+name: Paquets
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      a_blanc:
+        description: "À blanc : fabriquer et vérifier sans rien publier"
+        type: boolean
+        default: true
+
+# Droits minimaux du jeton GITHUB_TOKEN : lecture du dépôt seulement (aucun secret).
+permissions:
+  contents: read
+
+# Un seul lancement par référence ; un nouvel envoi sur une demande de fusion annule le précédent
+# (jamais sur main ni sur une étiquette : ces lancements-là vont jusqu'au bout).
+concurrency:
+  group: paquets-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    # bash (avec -eo pipefail) plutôt que le sh de repli du conteneur.
+    shell: bash
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  wine:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+    # La compilation de Wine dure plusieurs heures sur un cache froid.
+    timeout-minutes: 300
+    steps:
+      - name: Paquets de base (git avant checkout)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Dépôt git de confiance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # Le cache garde le .deb FINAL (pas un dossier DESTDIR) : un succès de cache évite toute la
+      # compilation. La clé change avec le correctif, le script, les fichiers du paquet, les fonctions
+      # communes et l'image du conteneur (empreinte courte). Limite connue : les paquets de compilation
+      # d'Ubuntu (apt-get update) ne sont pas dans la clé ; pour forcer une recompilation, changer un fichier hashé.
+      # Les chemins hashés sont aussi ceux dont paquets/fabriquer-wine.sh tire SOURCE_DATE_EPOCH (dernier commit
+      # qui les touche) : garder les deux listes identiques. D'où fetch-depth: 0 au checkout (historique complet).
+      - name: Cache du paquet wimao-wine
+        id: cache-wine
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: cache-wine
+          key: wimao-wine-11.20-ubuntu24.04-fe815609-${{ hashFiles('patches-v2/**', 'paquets/fabriquer-wine.sh', 'paquets/wine/**', 'paquets/commun.sh') }}
+      - name: Paquets de compilation
+        if: steps.cache-wine.outputs.cache-hit != 'true'
+        run: |
+          apt-get update
+          # La liste vient du script lui-même : une seule source de vérité.
+          # shellcheck disable=SC2046
+          apt-get install -y --no-install-recommends dpkg-dev $(paquets/fabriquer-wine.sh --paquets-compilation)
+      - name: Fabrication de wimao-wine
+        if: steps.cache-wine.outputs.cache-hit != 'true'
+        run: |
+          paquets/fabriquer-wine.sh sortie
+          mkdir -p cache-wine
+          cp sortie/wimao-wine_*.deb cache-wine/
+      - name: Dossier de livraison
+        run: |
+          mkdir -p livraison
+          cp cache-wine/wimao-wine_*.deb livraison/
+          ls -l livraison
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wimao-wine
+          path: livraison/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  bridge:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+    timeout-minutes: 30
+    steps:
+      # git avant checkout : paquets/commun.sh lit la date du dernier commit avec `git log`.
+      # Les autres paquets viennent de paquets/bridge/paquets-compilation.txt (liste partagée avec
+      # scripts/signer-version.sh), lisible seulement après le checkout.
+      - name: Paquets de base (git avant checkout)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Dépôt git de confiance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Paquets de compilation
+        run: sed 's/#.*//' paquets/bridge/paquets-compilation.txt | xargs apt-get install -y --no-install-recommends
+      - name: Fabrication de wimao-bridge
+        run: |
+          paquets/fabriquer-bridge.sh sortie
+          mkdir -p livraison
+          cp sortie/wimao-bridge_*.deb livraison/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wimao-bridge
+          path: livraison/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  wimao:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+    timeout-minutes: 60
+    steps:
+      # git avant checkout (voir le job `bridge`). Les autres paquets viennent de
+      # paquets/wimao/paquets-compilation.txt (liste commentée, partagée avec scripts/signer-version.sh).
+      - name: Paquets de base (git avant checkout)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Dépôt git de confiance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Paquets de compilation
+        run: sed 's/#.*//' paquets/wimao/paquets-compilation.txt | xargs apt-get install -y --no-install-recommends
+      # Rust figé ici (même empreinte d'action que ci.yml). À relever à la main avec la CI.
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branche : Dependabot propose les mises à jour) ; l'empreinte ne fige que le code de l'action
+        with:
+          # La version de Rust est figée par cette entrée.
+          toolchain: 1.99.1
+      - name: Fabrication de wimao
+        run: |
+          paquets/fabriquer-wimao.sh sortie
+          mkdir -p livraison
+          cp sortie/wimao_*.deb livraison/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wimao
+          path: livraison/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  # Refabrique bridge et wimao dans un conteneur neuf et exige des .deb identiques octet pour octet
+  # (même SOURCE_DATE_EPOCH, mêmes outils, même chemin de travail). Tourne à chaque événement.
+  reproductible:
+    needs: [bridge, wimao]
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+    timeout-minutes: 60
+    steps:
+      - name: Paquets de base (git avant checkout)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Dépôt git de confiance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # Réunion des deux listes : celles des jobs `bridge` et `wimao`.
+      - name: Paquets de compilation
+        run: |
+          for liste in paquets/wimao/paquets-compilation.txt paquets/bridge/paquets-compilation.txt; do
+            sed 's/#.*//' "$liste"
+          done | xargs apt-get install -y --no-install-recommends
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branche : Dependabot propose les mises à jour) ; l'empreinte ne fige que le code de l'action
+        with:
+          # La version de Rust est figée par cette entrée.
+          toolchain: 1.99.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wimao-bridge
+          path: premiers
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wimao
+          path: premiers
+      - name: Seconde fabrication
+        run: |
+          paquets/fabriquer-bridge.sh sortie
+          paquets/fabriquer-wimao.sh sortie
+      - name: Comparaison des empreintes
+        run: |
+          differences=0
+          for premier in premiers/*.deb; do
+            second="sortie/$(basename "$premier")"
+            if [ ! -f "$second" ]; then
+              echo "ERREUR : $second absent de la seconde fabrication" >&2
+              differences=1
+              continue
+            fi
+            a="$(sha256sum "$premier" | cut -d' ' -f1)"
+            b="$(sha256sum "$second" | cut -d' ' -f1)"
+            echo "$(basename "$premier") : $a / $b"
+            [ "$a" = "$b" ] || { echo "ERREUR : $(basename "$premier") n'est pas reproductible" >&2; differences=1; }
+          done
+          [ "$(ls premiers/*.deb | wc -l)" -eq 2 ] || { echo "ERREUR : deux paquets attendus" >&2; differences=1; }
+          exit "$differences"
+
+  # Idem pour wimao-wine, mais SANS cache (donc plusieurs heures) : seulement sur une étiquette `v*` ou un
+  # lancement manuel (quelle que soit la valeur de a_blanc). Les autres événements sautent ce job.
+  reproductible-wine:
+    needs: [wine]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+    timeout-minutes: 300
+    steps:
+      - name: Paquets de base (git avant checkout)
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Dépôt git de confiance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Paquets de compilation
+        run: |
+          apt-get update
+          # shellcheck disable=SC2046
+          apt-get install -y --no-install-recommends dpkg-dev $(paquets/fabriquer-wine.sh --paquets-compilation)
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wimao-wine
+          path: premiers
+      # Aucun cache ici, et jamais WIMAO_WINE_DEJA_COMPILE : tout est recompilé.
+      - name: Seconde fabrication de wimao-wine
+        run: paquets/fabriquer-wine.sh sortie
+      - name: Comparaison des empreintes
+        run: |
+          premier="$(ls premiers/wimao-wine_*.deb)"
+          second="sortie/$(basename "$premier")"
+          a="$(sha256sum "$premier" | cut -d' ' -f1)"
+          b="$(sha256sum "$second" | cut -d' ' -f1)"
+          echo "$(basename "$premier") : $a / $b"
+          [ "$a" = "$b" ] || { echo "ERREUR : wimao-wine n'est pas reproductible" >&2; exit 1; }
+
+  # Réunit les trois .deb, écrit SHA256SUMS (trié, noms de fichiers seuls) et publie le tout.
+  sommes:
+    needs: [wine, bridge, wimao, reproductible, reproductible-wine]
+    # reproductible-wine est sauté hors étiquette et lancement manuel : sauté = accepté, échoué = bloquant.
+    if: ${{ !cancelled() && needs.wine.result == 'success' && needs.bridge.result == 'success' && needs.wimao.result == 'success' && needs.reproductible.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: wimao*
+          merge-multiple: true
+          path: paquets
+      - name: SHA256SUMS et sha court
+        id: sommes
+        run: |
+          [ "$(ls paquets/*.deb | wc -l)" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l paquets; exit 1; }
+          cd paquets
+          # LC_ALL=C : tri identique partout ; basenames seuls puisque l'on est dans le dossier.
+          LC_ALL=C sha256sum -- *.deb | LC_ALL=C sort -k2 > SHA256SUMS
+          cat SHA256SUMS
+          echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paquets-${{ steps.sommes.outputs.court }}
+          path: |
+            paquets/*.deb
+            paquets/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+  # Installe les trois .deb de l'artefact `paquets-<sha court>` dans un système vierge, une fois par
+  # distribution visée, puis les contrôle (lintian, droits, chemins, utilisation réelle avec Wine et
+  # yabridge des paquets, interface sous Xvfb) et les retire : tout est dans paquets/tester-installation.sh.
+  # Les images sont figées par empreinte (index multi-architecture) ; fail-fast: false pour voir les deux résultats.
+  installation:
+    needs: sommes
+    # Condition explicite : sans elle, GitHub saute ce job dès qu'un ancêtre est « skipped »
+    # (reproductible-wine l'est hors étiquette v* et lancement manuel), même si `sommes` a réussi.
+    if: ${{ !cancelled() && needs.sommes.result == 'success' }}
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ matrix.image }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nom: ubuntu-24.04
+            image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+          - nom: debian-13
+            image: debian:13@sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1
+    steps:
+      # nsis : makensis fabrique l'installeur factice (tests/fabriquer-fixtures.sh --seulement-nsis, sans Wine).
+      # curl : téléchargement de Dexed (plus bas) ; WiMao n'appelle jamais curl, il ne peut donc pas
+      # masquer une dépendance manquante. Les autres outils de test sont installés par le script, APRÈS
+      # les paquets de WiMao, pour la même raison.
+      - name: Paquets de base
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates nsis curl
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Même nom que celui de l'artefact du job `sommes`.
+      - name: Nom de l'artefact des paquets
+        id: paquets
+        run: echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: paquets-${{ steps.paquets.outputs.court }}
+          path: paquets-telecharges
+      # Dexed 1.1.0 (synthétiseur libre, GPL-3, github.com/asb2m10/dexed) : un VRAI plugin VST3 Windows,
+      # pour prouver que le Wine et le yabridge des paquets ouvrent un plugin dans Carla. Le faux plugin
+      # WiMaoTest ne le peut pas (sa fabrique VST3 est vide, voir tests/fixtures/plugin/WiMaoTest.c).
+      # Empreinte : celle publiée par le projet (artifact_sha256sum.txt), vérifiée avant tout usage.
+      # Sert uniquement à ce test : jamais livré dans un paquet.
+      - name: Installeurs de test (NSIS factice, Dexed)
+        env:
+          DEXED_URL: https://github.com/asb2m10/dexed/releases/download/v1.1.0/Dexed-1.1.0-win.zip
+          DEXED_SHA256: 4773150a3dfa281d1caef583f493a41ed99ea95b054b5a3479780799ed6279cc
+        run: |
+          tests/tester-fixtures.sh
+          tests/fabriquer-fixtures.sh --seulement-nsis fixtures
+          curl -fsSL -o fixtures/Dexed-1.1.0-win.zip "$DEXED_URL"
+          echo "${DEXED_SHA256}  fixtures/Dexed-1.1.0-win.zip" | sha256sum -c -
+      # L'empreinte des .deb est vérifiée par le script avant toute installation.
+      - name: Installation, contrôles et retrait
+        env:
+          JOURNAUX: ${{ github.workspace }}/journaux
+        run: paquets/tester-installation.sh paquets-telecharges fixtures
+      # Même en cas d'échec : journaux et capture d'écran servent à comprendre.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: installation-${{ matrix.nom }}
+          path: journaux
+          if-no-files-found: error
+          retention-days: 14
+
+  # Attestation de provenance et Release BROUILLON, en DEUX jobs pour que les droits d'écriture ne soient
+  # accordés que là où ils servent :
+  #   - `brouillon` (droits d'écriture) : étiquette `v*`, ou lancement manuel avec a_blanc FAUX. C'est le seul
+  #     job qui atteste et crée la Release ;
+  #   - `brouillon-a-blanc` (aucun droit d'écriture) : demande de fusion, ou lancement manuel avec a_blanc
+  #     vrai (défaut). Il éprouve la logique (téléchargement de l'artefact, sommes, notes) et montre ce
+  #     que ferait `brouillon`, sans rien créer : une attestation est un enregistrement durable chez
+  #     Sigstore/GitHub.
+  # Le propriétaire relit le brouillon, y ajoute la signature SHA256SUMS.asc et la clé publique
+  # (scripts/signer-version.sh) puis le publie lui-même : ces jobs ne publient JAMAIS (pas de retrait de
+  # --draft, pas de --latest). Un lancement manuel avec a_blanc faux exige une étiquette `v*` sélectionnée
+  # comme référence (`gh release create --verify-tag` en a besoin) : sinon `brouillon` échoue.
+  brouillon-a-blanc:
+    needs: [installation, reproductible, reproductible-wine, sommes]
+    # Même logique que `sommes` : sauté = accepté pour reproductible-wine, échoué = bloquant.
+    if: ${{ !cancelled() && needs.installation.result == 'success' && needs.reproductible.result == 'success' && needs.sommes.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.a_blanc)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Aucun droit supplémentaire : `contents: read` hérité de la racine suffit (téléchargement de l'artefact).
+    steps:
+      # Pas de checkout : le job n'utilise que l'artefact. Les notes viennent donc du dépôt par checkout
+      # léger ci-dessous (le script des notes est dans le dépôt).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Même nom que celui de l'artefact du job `sommes`.
+      - name: Nom de l'artefact des paquets
+        id: paquets
+        run: echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: paquets-${{ steps.paquets.outputs.court }}
+          path: paquets
+      - name: Vérification des sommes SHA-256
+        working-directory: paquets
+        run: |
+          debs=(./*.deb)
+          [ "${#debs[@]}" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l; exit 1; }
+          sha256sum -c SHA256SUMS
+      - name: Notes de la Release (à blanc)
+        env:
+          EVENEMENT: ${{ github.event_name }}
+        run: |
+          paquets/ecrire-notes-release.sh a-blanc paquets/SHA256SUMS | tee notes.md
+          echo "À BLANC : aucune Release ni attestation créée (événement : $EVENEMENT)."
+          echo "Aurait fait :"
+          echo "  1. attester la provenance de :"
+          sed 's/^/       /' paquets/SHA256SUMS
+          echo "  2. gh release create vX.Y.Z --draft --verify-tag, avec les fichiers :"
+          find paquets -type f -printf '       %f\n' | sort
+          echo "       + le fichier d'attestation (.intoto.jsonl)"
+
+  # RÉEL. ATTENTION : les attestations d'artefacts exigent un dépôt public, ou GitHub Enterprise Cloud pour un
+  # dépôt PRIVÉ. La spec ne publie qu'après le passage du dépôt en public : la première étiquette `v*` réelle
+  # doit donc venir APRÈS ce passage (sinon l'étape d'attestation échoue).
+  brouillon:
+    needs: [installation, reproductible, reproductible-wine, sommes]
+    # Même logique que `sommes` : sauté = accepté pour reproductible-wine, échoué = bloquant.
+    if: ${{ !cancelled() && needs.installation.result == 'success' && needs.reproductible.result == 'success' && needs.sommes.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && !inputs.a_blanc)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # SEUL job avec des droits d'écriture : contents (créer la Release), id-token (certificat Sigstore)
+    # et attestations (enregistrer l'attestation).
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # Checkout pour le script des notes (le reste du job n'utilise que l'artefact et la CLI gh,
+      # préinstallée sur le runner). Le jeton n'est pas laissé dans .git.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # Même nom que celui de l'artefact du job `sommes`.
+      - name: Nom de l'artefact des paquets
+        id: paquets
+        run: echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: paquets-${{ steps.paquets.outputs.court }}
+          path: paquets
+      # Étiquette et version. La valeur du contexte passe par `env` (jamais injectée dans le script).
+      - name: Étiquette
+        id: mode
+        env:
+          REFERENCE: ${{ github.ref }}
+        run: |
+          if [[ "$REFERENCE" != refs/tags/v* ]]; then
+            echo "ERREUR : une Release exige une étiquette v* ; la référence « $REFERENCE » n'en est pas une." >&2
+            echo "Choisir l'étiquette (v0.4.0…) comme référence du lancement, ou laisser a_blanc vrai." >&2
+            exit 1
+          fi
+          etiquette="${REFERENCE#refs/tags/}"
+          {
+            echo "etiquette=$etiquette"
+            echo "version=${etiquette#v}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Vérification des sommes SHA-256
+        working-directory: paquets
+        run: |
+          debs=(./*.deb)
+          [ "${#debs[@]}" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l; exit 1; }
+          sha256sum -c SHA256SUMS
+      - name: Notes de la Release
+        env:
+          VERSION: ${{ steps.mode.outputs.version }}
+        run: paquets/ecrire-notes-release.sh "$VERSION" paquets/SHA256SUMS | tee notes.md
+      # Une seule attestation couvre les trois .deb (un sujet par fichier) ; son fichier est joint à la Release.
+      - name: Attestation de provenance des .deb
+        id: attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: paquets/*.deb
+      - name: Release brouillon
+        env:
+          ETIQUETTE: ${{ steps.mode.outputs.etiquette }}
+          VERSION: ${{ steps.mode.outputs.version }}
+          BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
+        run: |
+          cp "$BUNDLE" "paquets/wimao-${VERSION}.intoto.jsonl"
+          # --draft : jamais publiée par la CI ; --verify-tag : l'étiquette doit déjà exister ;
+          # pas de --latest : le propriétaire décidera à la publication.
+          gh release create "$ETIQUETTE" --draft --verify-tag \
+            --title "WiMao ${VERSION}" --notes-file notes.md \
+            paquets/*.deb paquets/SHA256SUMS "paquets/wimao-${VERSION}.intoto.jsonl"
+
+  # Essai à blanc de la signature : prouve de bout en bout que la refabrication locale de
+  # scripts/signer-version.sh (podman sans racine, image et Rust lus dans ce fichier, paquets de
+  # paquets/*/paquets-compilation.txt) redonne EXACTEMENT les .deb de cette CI. Le runner a podman.
+  # Pas de conteneur de job : podman tourne sur le runner lui-même. Clé GnuPG jetable, créée ici et
+  # détruite avec le runner : la signature obtenue ne sert à rien d'autre que ce contrôle.
+  # Aucun appel à gh (--a-blanc) ; le réseau sert à la refabrication (image, apt, rustup, crates).
+  signature-a-blanc:
+    needs: sommes
+    # Même condition explicite que `installation` (reproductible-wine peut être sauté).
+    if: ${{ !cancelled() && needs.sommes.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Historique complet : le script crée un git worktree du commit et lit la date de son dernier commit.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Même nom que celui de l'artefact du job `sommes`.
+      - name: Nom de l'artefact des paquets
+        id: paquets
+        run: echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: paquets-${{ steps.paquets.outputs.court }}
+          path: paquets-telecharges
+      # --ref : le commit que la CI vient de fabriquer (sur une demande de fusion, le commit de fusion).
+      - name: Signature à blanc avec refabrication podman
+        run: |
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          cat > "$GNUPGHOME/cle.params" <<'EOF'
+          %no-protection
+          Key-Type: EDDSA
+          Key-Curve: ed25519
+          Key-Usage: sign
+          Name-Real: WiMao CI a blanc
+          Name-Email: ci@example.invalid
+          Expire-Date: 1d
+          %commit
+          EOF
+          gpg --batch --quiet --gen-key "$GNUPGHOME/cle.params"
+          podman --version
+          scripts/signer-version.sh v0.0.0-a-blanc --a-blanc --ref "$GITHUB_SHA" --dossier paquets-telecharges

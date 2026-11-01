@@ -1,0 +1,6 @@
+/src/
+build/
+*.tar.*
+*.log
+.claude/
+target/

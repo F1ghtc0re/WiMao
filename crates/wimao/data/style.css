@@ -1,0 +1,51 @@
+/* Feuille de style unique de WiMao. Aucune couleur écrite en dur : uniquement les variables de
+   libadwaita (@success_color…), pour que les thèmes clair et sombre fonctionnent seuls. */
+
+/* Pastille d'état d'un plugin : icône + mot, fond léger de la couleur du verdict. */
+.badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+.badge.success { color: @success_color; background-color: alpha(@success_color, 0.15); }
+.badge.warning { color: @warning_color; background-color: alpha(@warning_color, 0.15); }
+.badge.error   { color: @error_color;   background-color: alpha(@error_color, 0.15); }
+.badge.accent  { color: @accent_color;  background-color: alpha(@accent_color, 0.15); }
+.badge.dim-label { background-color: alpha(currentColor, 0.08); }
+
+/* Retour visuel pendant qu'un fichier survole la fenêtre. */
+.zone-depot {
+  outline: 3px dashed @accent_color;
+  outline-offset: -14px;
+  border-radius: 18px;
+}
+
+/* Tuile d'icône d'un gestionnaire d'éditeur (section « Managers », gestionnaires.rs) : carré
+   arrondi en teinte neutre, puis teinte d'accent une fois le gestionnaire installé. */
+.tuile-gestionnaire {
+  padding: 8px;
+  border-radius: 10px;
+  background-color: alpha(currentColor, 0.08);
+}
+.tuile-gestionnaire.installe {
+  color: @accent_color;
+  background-color: alpha(@accent_color, 0.15);
+}
+
+/* Bouton arrondi (« pill ») d'une ligne de la section « Managers » : la taille d'un « pill » de
+   page d'accueil écraserait la ligne ; on garde la forme, avec un rembourrage de ligne. */
+.pill.bouton-ligne {
+  padding: 6px 22px;
+}
+
+/* Bannière d'une session de gestionnaire (session_fenetre.rs) : teinte d'accent, pour la
+   distinguer du bandeau gris d'un travail ; son bouton prend l'allure d'une action suggérée
+   (libadwaita 1.5 n'a pas encore `AdwBanner:button-style`). */
+banner.banniere-session > revealer > widget {
+  background-color: alpha(@accent_bg_color, 0.18);
+}
+banner.banniere-session button {
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+}

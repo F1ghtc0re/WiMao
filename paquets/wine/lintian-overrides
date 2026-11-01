@@ -1,0 +1,16 @@
+# Écarts voulus par rapport à la charte Debian.
+# WiMao cherche Wine à l'emplacement fixe /opt/wimao/wine (crates/wimao-core/src/chemins.rs).
+wimao-wine: dir-or-file-in-opt
+# Les modules de Wine (.so Unix) sont livrés avec les droits 0755 voulus par l'amont.
+wimao-wine: shared-library-is-executable
+# Beaucoup de DLL de Wine sont des « DLL factices » PE sans code (ressources et redirections),
+# produites telles quelles par la compilation de Wine.
+wimao-wine: no-code-sections
+# Wine embarque ses propres polices (marlett, symbol, tahoma, webdings, wingding) sous
+# /opt/wimao/wine/share/wine/fonts, où il les cherche ; fonts-wine (paquet du Wine de Debian)
+# installe les mêmes ailleurs. Les deux Wine sont indépendants et peuvent coexister.
+wimao-wine: duplicate-font-file
+# Certains modules Unix de Wine (wine-preloader, netapi32.so, wined3d.so, winedmo.so) n'ont aucune
+# entrée NEEDED (relevé par lintian en CI) : wine-preloader est lié sans libc par l'amont, et les
+# modules ne sont chargés que par Wine, dont le processus fournit déjà la libc et les symboles.
+wimao-wine: shared-library-lacks-prerequisites

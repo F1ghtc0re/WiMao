@@ -1,0 +1,26 @@
+# inMusic Software Center (AIR, etc.). NOTES.md : application Squirrel, installée dans
+# AppData\Local\inmusic_software_center\app-<version>. Elle télécharge dans Downloads\inMusic
+# et lance les installeurs AVEC leur interface : le pilote les relance en silencieux.
+nom = "inMusic Software Center"
+editeur = "inMusic"
+telecharger = "https://inmusic.to/ISCPC"
+# Pas d'empreinte : NOTES.md n'en donne aucune.
+type = "gestionnaire"
+# Nom réel (vérification du 2026-11-01) : « inMusic Software Center-1.40.0 Setup.exe », cible
+# de la redirection de inmusic.to/ISCPC. Les autres motifs couvrent d'anciens noms possibles.
+reconnaitre = ["inMusic*Software*Center*.exe", "ISC*Setup*.exe", "inMusic_Software_Center*.exe"]
+
+[installation]
+methode = "squirrel"
+
+[gestionnaire]
+# Le dossier app-<version> change à chaque mise à jour : la version la plus haute est retenue.
+programme = '{appdata-local}\inmusic_software_center\app-*\inMusic Software Center.exe'
+arguments = ["--no-sandbox", "--disable-gpu"]
+pilote = ['{telechargements}\inMusic']
+fermer = ["inMusic Software Center.exe"]
+
+[consignes]
+connexion.fr = "Connectez-vous à votre compte inMusic dans la fenêtre du Software Center. Si un produit réaffiche « Install » après son installation, cliquez à nouveau dessus ou redémarrez le Software Center : il revérifie la présence du produit à ce moment-là."
+connexion.en = "Sign in to your inMusic account in the Software Center window. If a product shows \"Install\" again after it was installed, click it again or restart the Software Center: it only rechecks that the product is present then."
+connexion.es = "Inicie sesión en su cuenta de inMusic en la ventana del Software Center. Si un producto vuelve a mostrar «Install» tras instalarse, haga clic de nuevo o reinicie el Software Center: solo entonces vuelve a comprobar que el producto está presente."

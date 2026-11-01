@@ -1,0 +1,36 @@
+nom = "Native Access 2"
+editeur = "Native Instruments"
+telecharger = "https://www.native-instruments.com/…/Native-Access-Installer.exe"
+empreinte = "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9"  # sha256 facultatif, vérifié avant l'exécution
+type = "gestionnaire"            # gestionnaire | installeur | archive
+reconnaitre = ["Native Access*.exe"]  # noms de fichiers d'installeur auxquels la recette s'applique
+
+[installation]
+methode = "extraire-7z"          # ou : squirrel, inno, msi, wix, nsis, installaware, auto
+lien-connexion = "native-access" # relais du lien native-access:// vers Wine (exige [gestionnaire])
+
+# Étapes d'extraction (obligatoires avec extraire-7z, refusées avec une autre méthode).
+[[installation.extraire]]
+archive = '$PLUGINSDIR/app-64.7z'                              # relative au dossier décompressé, * admis
+vers = 'C:\Program Files\Native Instruments\Native Access'     # dossier Windows de destination
+
+# Installeurs à lancer après l'installation principale (ici NTKDaemon, déposé par Native Access).
+[[dependances]]
+fichier = 'C:\Program Files\Native Instruments\Native Access\resources\daemon\win\NTKDaemon * Setup PC.exe'
+methode = "installaware"         # comme [installation].methode, sauf extraire-7z et squirrel
+
+[correctifs]
+registre = [{ cle = 'HKCU\Software\Native Instruments\Native Access', valeur = "DownloadLocation", donnee = "{telechargements}" }]
+dossiers = ['{telechargements}\NI']  # créés à l'installation et à chaque ouverture
+services = ["NTKDaemonService"]      # démarrés à chaque ouverture du gestionnaire
+
+[gestionnaire]                   # obligatoire si type = "gestionnaire", refusée sinon
+programme = 'C:\Program Files\Native Instruments\Native Access\Native Access.exe'
+arguments = ["--no-sandbox", "--disable-gpu"]
+pilote = ['{telechargements}\NI']  # dossiers où le gestionnaire dépose les installeurs qu'il lance
+# fermer = ["Native Access.exe"]   # défaut : le nom de fichier de `programme`
+
+[consignes]                      # textes affichés à l'utilisateur, dans les trois langues
+connexion.fr = "Connecte-toi à ton compte Native Instruments."
+connexion.en = "Sign in to your Native Instruments account."
+connexion.es = "Inicia sesión en tu cuenta de Native Instruments."

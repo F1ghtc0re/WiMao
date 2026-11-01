@@ -1,0 +1,13 @@
+# Dependabot : propose chaque semaine des mises à jour des dépendances Rust (Cargo.lock)
+# et des actions GitHub figées par empreinte (les empreintes des workflows sont mises à jour
+# avec le commentaire de version). Les propositions passent par la CI avant fusion.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

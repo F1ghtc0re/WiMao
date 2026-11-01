@@ -1,0 +1,38 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Wine
+Source: https://dl.winehq.org/wine/source/11.x/wine-11.20.tar.xz
+
+Files: *
+Copyright: 1993-2026 the Wine project authors (see AUTHORS in the source archive)
+License: LGPL-2.1+
+
+Files: usr/share/doc/wimao-wine/patches/*
+Copyright: 2026 F1ghtc0re
+License: LGPL-2.1+
+Comment: Patch against dlls/winex11.drv/window.c reverting the wm_state_serial
+ guard added in Wine 9.22 (source: attachment 79098 of Wine bug 58552).
+
+License: LGPL-2.1+
+ This library is free software; you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 2.1 of the License, or (at
+ your option) any later version.
+ .
+ This library is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser
+ General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU Lesser General Public
+ License version 2.1 can be found in /usr/share/common-licenses/LGPL-2.1.
+
+Comment: The packaging scripts and this file belong to WiMao
+ (https://github.com/F1ghtc0re/WiMao). Wine is built from the unmodified
+ official source archive plus the single patch above, which is also provided
+ in /usr/share/doc/wimao-wine/patches/ (complete corresponding source: the
+ archive at the address given in Source, then this patch). Wine bundles
+ third-party libraries under their own licences (in the source archive,
+ libs/: FAudio, LittleCMS, libjpeg, libpng, libtiff, libxml2, libxslt, zlib,
+ mpg123, vkd3d, OpenLDAP, SQLite and others; each carries its own LICENSE
+ or COPYING file). No Microsoft DLL is included: the DLLs of the package are
+ Wine's own implementations.

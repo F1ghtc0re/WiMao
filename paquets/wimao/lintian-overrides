@@ -1,0 +1,4 @@
+# Écart voulu par rapport à la charte Debian.
+# WiMao lance « tar » pour extraire des archives ; « tar » est un paquet essentiel, et la
+# dépendance est écrite sans version volontairement (aucune version minimale n'est requise).
+wimao: depends-on-essential-package-without-using-version

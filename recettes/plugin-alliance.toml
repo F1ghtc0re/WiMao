@@ -1,0 +1,23 @@
+# Plugin Alliance, Installation Manager. NOTES.md : zip public (plugin-alliance.com/pages/
+# installation-manager) qui contient un MSI ; la méthode « auto » le reconnaît.
+nom = "Plugin Alliance"
+editeur = "Plugin Alliance"
+# Zip public de l'Installation Manager (lien de plugin-alliance.com/pages/installation-manager),
+# relevé à la vérification réelle du 2026-11-01 ; l'empreinte correspond à celle de NOTES.md.
+# Le nom contient la version : à mettre à jour quand Plugin Alliance publie une nouvelle version.
+telecharger = "https://www.plugin-alliance.com/cdn/shop/files/pa_installation_manager_win_1_4_0.zip"
+empreinte = "0ff7eca91d657e0e16c470dd260548b3bb3576c3c489905fe5c2a7f84b3eb8c5"
+type = "gestionnaire"
+# Noms réels (vérification du 2026-11-01) : le zip téléchargé et le MSI qu'il contient.
+reconnaitre = ["pa_installation_manager_win*.zip", "PA-InstallationManager*.msi"]
+
+[installation]
+methode = "auto"
+
+[gestionnaire]
+programme = 'C:\Program Files\Plugin Alliance\Installation Manager\PA-InstallationManager.exe'
+
+[consignes]
+connexion.fr = "Connectez-vous à votre compte Plugin Alliance dans l'Installation Manager. Il peut se figer à 98 % sur le dernier produit alors que les fichiers sont complets : attendez que les produits soient listés comme installés, puis fermez-le (le fermer plus tôt vide son dossier temporaire et perd les paquets)."
+connexion.en = "Sign in to your Plugin Alliance account in the Installation Manager. It may freeze at 98% on the last product although the files are complete: wait until the products are listed as installed, then close it (closing it earlier empties its temporary folder and loses the packages)."
+connexion.es = "Inicie sesión en su cuenta de Plugin Alliance en el Installation Manager. Puede quedarse bloqueado al 98 % en el último producto aunque los archivos estén completos: espere a que los productos aparezcan como instalados y ciérrelo entonces (cerrarlo antes vacía su carpeta temporal y se pierden los paquetes)."

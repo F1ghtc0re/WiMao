@@ -1,0 +1,21 @@
+[package]
+name = "wimao"
+description = "Interface graphique (GTK4 + libadwaita) de WiMao"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+wimao-core.workspace = true
+wimao-recettes.workspace = true
+gtk4.workspace = true
+libadwaita.workspace = true
+async-channel.workspace = true
+serde = { version = "1", features = ["derive"] }
+toml = "1.0"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+serial_test = "3.5.0"

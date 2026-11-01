@@ -1,0 +1,26 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: WiMao
+Upstream-Contact: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Source: https://github.com/F1ghtc0re/WiMao
+
+Files: *
+Copyright: 2026 F1ghtc0re
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public
+ License version 3 can be found in /usr/share/common-licenses/GPL-3.
+
+Comment: The binaries wimao and wimao-cli statically link Rust crates
+ (see Cargo.lock in the source) released under licences compatible with
+ GPL-3+ (MIT, Apache-2.0, BSD-3-Clause, ISC, Unicode-3.0, Zlib, CC0-1.0,
+ CDLA-Permissive-2.0), as enforced by cargo-deny (deny.toml in the source).
+ Their licence texts are in the corresponding crate sources.

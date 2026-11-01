@@ -1,0 +1,2254 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wimao\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-01 19:35+0100\n"
+"PO-Revision-Date: 2026-10-31 00:00+0000\n"
+"Last-Translator: WiMao\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Run Windows audio plugins on Linux with Wine and yabridge"
+msgstr "Ejecuta plugins de audio de Windows en Linux con Wine y yabridge"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Language of the messages (default: system language)"
+msgstr "Idioma de los mensajes (por defecto: el del sistema)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Create the Wine environment"
+msgstr "Crea el entorno de Wine"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Install a plugin from its installer or archive"
+msgstr "Instala un plugin desde su instalador o archivo comprimido"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Installer or archive to install"
+msgstr "Instalador o archivo comprimido que se instala"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Open the installer normally instead of running it silently"
+msgstr "Abre el instalador normalmente en lugar de ejecutarlo en silencio"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Do not test that the installed plugins open"
+msgstr "No comprueba que los plugins instalados se abran"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Do not ask before closing the open programs"
+msgstr "No pide confirmación antes de cerrar los programas abiertos"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Recognise the type of an installer without running it"
+msgstr "Reconoce el tipo de un instalador sin ejecutarlo"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "File to examine"
+msgstr "Archivo que se examina"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Test that each already bridged plugin opens"
+msgstr "Comprueba que se abre cada plugin ya enlazado"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Wine environment to examine (default: WiMao's own)"
+msgstr "Entorno de Wine que se examina (por defecto: el de WiMao)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Look for problems in the Wine environment"
+msgstr "Busca fallos en el entorno de Wine"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Repair the problems found by the diagnosis"
+msgstr "Repara los fallos encontrados por el diagnóstico"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Restore points of the Wine environment"
+msgstr "Puntos de restauración del entorno de Wine"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "List the restore points"
+msgstr "Lista los puntos de restauración"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Put the environment back in the state of a restore point"
+msgstr "Devuelve el entorno al estado de un punto de restauración"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Restore point identifier (see the \"lister\" command)"
+msgstr "Identificador del punto de restauración (véase el comando «lister»)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Do not ask for confirmation"
+msgstr "No pide confirmación"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Back up the Wine environment to a disk"
+msgstr "Guarda una copia del entorno de Wine en un disco"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Destination folder (an external disk, for example)"
+msgstr "Carpeta de destino (un disco externo, por ejemplo)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Restore the Wine environment from a backup"
+msgstr "Restaura el entorno de Wine desde una copia de seguridad"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "The .sha256 file written by the backup"
+msgstr "El archivo .sha256 escrito por la copia de seguridad"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Print an anonymised problem report"
+msgstr "Imprime un informe de problema anonimizado"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "List the recipes (publisher managers and known plugins)"
+msgstr "Lista las recetas (gestores de editores y plugins conocidos)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Install or open a publisher's manager (Native Access…)"
+msgstr "Instala o abre el gestor de un editor (Native Access…)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Install the manager of a recipe"
+msgstr "Instala el gestor de una receta"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Recipe name (see \"recettes\") or its file name without .toml"
+msgstr "Nombre de la receta (véase «recettes») o de su archivo sin .toml"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Installer already downloaded (otherwise the recipe downloads it)"
+msgstr "Instalador ya descargado (si no, la receta lo descarga)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Do not ask before replacing the program that handles the link"
+msgstr ""
+"No pide confirmación antes de reemplazar el programa que gestiona el enlace"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Open the manager and watch its installations until it is closed"
+msgstr "Abre el gestor y vigila sus instalaciones hasta que se cierre"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Do not test that the plugins installed in the session open"
+msgstr "No prueba que se abran los plugins instalados durante la sesión"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Show the latest actions (installations, repairs, backups…)"
+msgstr ""
+"Muestra las últimas acciones (instalaciones, reparaciones, copias de "
+"seguridad…)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Show every action, not only the latest 20"
+msgstr "Muestra todas las acciones, no solo las 20 últimas"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Import the existing Wine environment (~/.wine-mao) into WiMao"
+msgstr "Importa el entorno Wine existente (~/.wine-mao) en WiMao"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Cancel the last import: the environment goes back to ~/.wine-mao"
+msgstr "Cancela la última importación: el entorno vuelve a ~/.wine-mao"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Pass a sign-in link (native-access://…) to the manager in Wine"
+msgstr ""
+"Pasa un enlace de inicio de sesión (native-access://…) al gestor en Wine"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Link received from the browser"
+msgstr "Enlace recibido del navegador"
+
+#: crates/wimao-cli/src/commandes/entretien.rs
+#: crates/wimao-cli/src/commandes/import.rs
+#: crates/wimao-cli/src/commandes/mod.rs
+#: crates/wimao-cli/src/commandes/restauration.rs
+#: crates/wimao-cli/src/commandes/sauvegarde.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
+msgid "Cancelled: nothing was changed"
+msgstr "Cancelado: no se ha cambiado nada"
+
+#: crates/wimao-cli/src/commandes/entretien.rs crates/wimao/src/reparation.rs
+msgid "Repair finished"
+msgstr "Reparación terminada"
+
+#: crates/wimao-cli/src/commandes/entretien.rs
+msgid "Repairing will close these open programs: {programs}. Continue?"
+msgstr ""
+"La reparación cerrará estos programas abiertos: {programs}. ¿Continuar?"
+
+#: crates/wimao-cli/src/commandes/entretien.rs crates/wimao-core/src/rapport.rs
+#: crates/wimao/src/reparation.rs
+msgid "No problem found"
+msgstr "No se encontró ningún problema"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+msgid "No recipe"
+msgstr "Ninguna receta"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+#: crates/wimao/src/gestionnaires.rs
+msgid "Installed"
+msgstr "Instalado"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+#: crates/wimao/src/gestionnaires.rs
+msgid "Not installed"
+msgstr "No instalado"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+#: crates/wimao/src/operations.rs
+msgid "a recipe named {name}"
+msgstr "una receta llamada {name}"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+#: crates/wimao/src/gestionnaires.rs
+msgid "{name} is installed"
+msgstr "{name} está instalado"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+msgid "{name} is open: close it when you are done, or press Ctrl+C"
+msgstr "{name} está abierto: ciérrelo cuando haya terminado, o pulse Ctrl+C"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "Warning:"
+msgstr "Atención:"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+msgid ""
+"Still running: {programs}. Waiting for them to finish (Ctrl+C again to stop "
+"anyway)"
+msgstr ""
+"Aún en curso: {programs}. Se espera a que terminen (Ctrl+C otra vez para "
+"parar igualmente)"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+msgid ""
+"An installer may still be running. Waiting for it to finish (Ctrl+C again to "
+"stop anyway)"
+msgstr ""
+"Puede que un instalador siga en curso. Se espera a que termine (Ctrl+C otra "
+"vez para parar igualmente)"
+
+#: crates/wimao-cli/src/commandes/gestionnaires.rs
+#: crates/wimao-cli/src/sortie.rs crates/wimao/src/operations.rs
+msgid "Error:"
+msgstr "Error:"
+
+#: crates/wimao-cli/src/commandes/historique.rs
+msgid "No action yet"
+msgstr "Todavía no hay ninguna acción"
+
+#: crates/wimao-cli/src/commandes/import.rs
+msgid "Import finished: {path} is now a link to the environment of WiMao"
+msgstr "Importación terminada: {path} es ahora un enlace al entorno de WiMao"
+
+#: crates/wimao-cli/src/commandes/import.rs
+msgid ""
+"A copy of the registry and of the yabridgectl settings is kept in {path}"
+msgstr ""
+"Se guarda una copia del registro y de los ajustes de yabridgectl en {path}"
+
+#: crates/wimao-cli/src/commandes/import.rs
+msgid "an import to cancel"
+msgstr "una importación que cancelar"
+
+#: crates/wimao-cli/src/commandes/import.rs crates/wimao/src/restaurer.rs
+msgid ""
+"The import will be cancelled: the environment goes back to {path} and the "
+"link is removed."
+msgstr ""
+"Se cancelará la importación: el entorno vuelve a {path} y se quita el enlace."
+
+#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/historique.rs
+msgid "Import cancelled"
+msgstr "Importación cancelada"
+
+#: crates/wimao-cli/src/commandes/import.rs
+msgid "Existing Wine environment found: {path}"
+msgstr "Entorno Wine existente encontrado: {path}"
+
+#: crates/wimao-cli/src/commandes/import.rs crates/wimao/src/restaurer.rs
+msgid "Size: {size}"
+msgstr "Tamaño: {size}"
+
+#: crates/wimao-cli/src/commandes/import.rs
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "{count} plugin found"
+msgid_plural "{count} plugins found"
+msgstr[0] "{count} plugin encontrado"
+msgstr[1] "{count} plugins encontrados"
+
+#: crates/wimao-cli/src/commandes/import.rs
+msgid "It will be moved to {path} (nothing is copied)."
+msgstr "Se moverá a {path} (no se copia nada)."
+
+#: crates/wimao-cli/src/commandes/import.rs
+msgid "A link will be left at {path}, pointing to the new location."
+msgstr "Se dejará un enlace en {path}, hacia la nueva ubicación."
+
+#: crates/wimao-cli/src/commandes/import.rs
+#: crates/wimao-cli/src/commandes/sauvegarde.rs
+msgid "Continue?"
+msgstr "¿Continuar?"
+
+#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/import.rs
+msgid ""
+"Wine environment in {path} (a folder with system.reg, user.reg and drive_c)"
+msgstr ""
+"entorno Wine en {path} (una carpeta con system.reg, user.reg y drive_c)"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "The Wine environment is ready"
+msgstr "El entorno de Wine está listo"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+#: crates/wimao-recettes/src/installation.rs
+msgid "the file {path} does not exist"
+msgstr "el archivo {path} no existe"
+
+#: crates/wimao-cli/src/commandes/installation.rs crates/wimao/src/dialogues.rs
+msgid "The link {scheme}:// is handled by {current}. Replace it with WiMao?"
+msgstr "El enlace {scheme}:// lo gestiona {current}. ¿Reemplazarlo por WiMao?"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+#: crates/wimao/src/gestionnaires.rs
+msgid "The link {scheme}:// is not relayed to WiMao"
+msgstr "El enlace {scheme}:// no lo retransmite WiMao"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+#: crates/wimao/src/gestionnaires.rs
+msgid "The link {scheme}:// is now relayed to WiMao"
+msgstr "El enlace {scheme}:// ahora lo retransmite WiMao"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "Warning, ignored recipe:"
+msgstr "Atención, receta ignorada:"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "{name} (updated)"
+msgstr "{name} (actualizado)"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid ""
+"No new or updated plugin was found (installer exit code {code}): run the "
+"command again with --interactif to open the installer normally"
+msgstr ""
+"No se encontró ningún plugin nuevo ni actualizado (código de salida del "
+"instalador: {code}): vuelva a ejecutar la orden con --interactif para abrir "
+"el instalador normalmente"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid ""
+"No new or updated plugin was found: run the command again with --interactif "
+"to open the installer normally"
+msgstr ""
+"No se encontró ningún plugin nuevo ni actualizado: vuelva a ejecutar la "
+"orden con --interactif para abrir el instalador normalmente"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "{file}: {type}"
+msgstr "{file}: {type}"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "Recipe: {name}"
+msgstr "Receta: {name}"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "Archive (to extract)"
+msgstr "Archivo comprimido (para extraer)"
+
+#: crates/wimao-cli/src/commandes/installation.rs
+msgid "Unknown installer"
+msgstr "Instalador desconocido"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "installation"
+msgstr "instalación"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "repair"
+msgstr "reparación"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "No restore point"
+msgstr "Ningún punto de restauración"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "outdated"
+msgstr "obsoleto"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "Unusable restore point (interrupted creation): {path}"
+msgstr "Punto de restauración inutilizable (creación interrumpida): {path}"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "restore point {id}"
+msgstr "punto de restauración {id}"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "{n} file added since this point will be removed:"
+msgid_plural "{n} files added since this point will be removed:"
+msgstr[0] "Se eliminará {n} archivo añadido desde este punto:"
+msgstr[1] "Se eliminarán {n} archivos añadidos desde este punto:"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "Put the environment back in this state?"
+msgstr "¿Devolver el entorno a este estado?"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "Done: {n} file removed"
+msgid_plural "Done: {n} files removed"
+msgstr[0] "Hecho: {n} archivo eliminado"
+msgstr[1] "Hecho: {n} archivos eliminados"
+
+#: crates/wimao-cli/src/commandes/restauration.rs
+msgid "{n} broken plugin link removed"
+msgid_plural "{n} broken plugin links removed"
+msgstr[0] "{n} enlace de plugin roto eliminado"
+msgstr[1] "{n} enlaces de plugin rotos eliminados"
+
+#: crates/wimao-cli/src/commandes/sauvegarde.rs
+msgid "Backup written. To restore it, keep this file: {path}"
+msgstr ""
+"Copia de seguridad escrita. Para restaurarla, conserve este archivo: {path}"
+
+#: crates/wimao-cli/src/commandes/sauvegarde.rs
+msgid "the backup file {path} does not exist"
+msgstr "el archivo de copia de seguridad {path} no existe"
+
+#: crates/wimao-cli/src/commandes/sauvegarde.rs
+msgid ""
+"The current environment will be set aside as {path}.ancien-<date> (nothing "
+"is deleted), then replaced by the backup."
+msgstr ""
+"El entorno actual se apartará en {path}.ancien-<date> (no se borra nada) y "
+"se sustituirá por la copia de seguridad."
+
+#: crates/wimao-cli/src/commandes/sauvegarde.rs crates/wimao/src/restaurer.rs
+msgid "Backup restored"
+msgstr "Copia de seguridad restaurada"
+
+#: crates/wimao-cli/src/commandes/verification.rs
+msgid "No bridged plugin found for this environment"
+msgstr "No se encontró ningún plugin enlazado para este entorno"
+
+#: crates/wimao-cli/src/commandes/verification.rs
+msgid "broken link: the Windows plugin no longer exists in the environment"
+msgstr "enlace roto: el plugin de Windows ya no existe en el entorno"
+
+#. Un échec d'écriture sur la sortie n'empêche pas de lire la réponse.
+#: crates/wimao-cli/src/confirmation.rs
+msgid "[y/N]"
+msgstr "[s/N]"
+
+#: crates/wimao-cli/src/confirmation.rs
+msgid ""
+"Wine will be stopped and these open programs will be closed: {programs}. "
+"Continue?"
+msgstr ""
+"Se detendrá Wine y se cerrarán estos programas abiertos: {programs}. "
+"¿Continuar?"
+
+#: crates/wimao-core/src/chemins.rs
+msgid ""
+"home folder: HOME must be set and not empty (WiMao keeps its settings and "
+"cache there)"
+msgstr ""
+"carpeta personal: HOME debe estar definida y no vacía (WiMao guarda allí sus "
+"ajustes y su caché)"
+
+#: crates/wimao-core/src/chemins.rs
+msgid "{variable} must be an absolute path (it is \"{path}\")"
+msgstr "{variable} debe ser una ruta absoluta (vale «{path}»)"
+
+#: crates/wimao-core/src/correctifs/dxvk.rs
+msgid "folders {x64}/ and {x32}/ in the extracted DXVK archive ({folder})"
+msgstr "carpetas {x64}/ y {x32}/ en el archivo DXVK extraído ({folder})"
+
+#: crates/wimao-core/src/correctifs/dxvk.rs
+msgid "Installing DXVK…"
+msgstr "Instalando DXVK…"
+
+#: crates/wimao-core/src/correctifs/mono.rs
+msgid "Installing Wine Mono…"
+msgstr "Instalando Wine Mono…"
+
+#: crates/wimao-core/src/correctifs/msvcp.rs
+msgid "cabextract (install the \"cabextract\" package of your distribution)"
+msgstr "cabextract (instale el paquete «cabextract» de su distribución)"
+
+#: crates/wimao-core/src/correctifs/msvcp.rs
+msgid "Unknown Microsoft library version, used anyway: {hash}"
+msgstr ""
+"Versión desconocida de la biblioteca de Microsoft, usada de todos modos: "
+"{hash}"
+
+#: crates/wimao-core/src/correctifs/msvcp.rs
+msgid "{names} in {folder} after cabextract"
+msgstr "{names} en {folder} después de cabextract"
+
+#: crates/wimao-core/src/correctifs/msvcp.rs
+msgid "Installing the Microsoft C++ library (msvcp140)…"
+msgstr "Instalando la biblioteca C++ de Microsoft (msvcp140)…"
+
+#: crates/wimao-core/src/correctifs/msvcp.rs
+msgid ""
+"cab1.cab of vcRuntimeMinimum in ProgramData/Package Cache after installing "
+"the VC++ Redistributable"
+msgstr ""
+"cab1.cab de vcRuntimeMinimum en ProgramData/Package Cache después de "
+"instalar el VC++ Redistributable"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "The Wine environment does not exist yet"
+msgstr "El entorno de Wine todavía no existe"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "Wine Mono (.NET support) is not installed"
+msgstr "Wine Mono (compatibilidad con .NET) no está instalado"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "DXVK (graphics libraries) is not installed"
+msgstr "DXVK (bibliotecas gráficas) no está instalado"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "The Microsoft msvcp140 library is not installed"
+msgstr "La biblioteca msvcp140 de Microsoft no está instalada"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "{n} plugin is not bridged to Linux yet"
+msgid_plural "{n} plugins are not bridged to Linux yet"
+msgstr[0] "{n} plugin aún no está conectado a Linux"
+msgstr[1] "{n} plugins aún no están conectados a Linux"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid ""
+"Wine seems stuck: its server is running but no plugin or installation uses it"
+msgstr ""
+"Wine parece bloqueado: su servidor está en marcha pero ningún plugin ni "
+"instalación lo usa"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid ""
+"Some folders of the Wine environment (Documents, Desktop…) lead to your "
+"personal folders: installers would fill them"
+msgstr ""
+"Algunas carpetas del entorno Wine (Documentos, Escritorio…) llevan a sus "
+"carpetas personales: los instaladores las llenarían"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid ""
+"The plugins in your music software use another yabridge than WiMao's: {link} "
+"leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn "
+"{expected_sh} {link_sh}"
+msgstr ""
+"Los plugins de su software de música usan otro yabridge distinto del de "
+"WiMao: {link} lleva a {current} y no a {expected}. Para usar el de WiMao, "
+"ejecute: ln -sfn {expected_sh} {link_sh}"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid ""
+"The plugins in your music software cannot find yabridge: {link} leads to "
+"{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
+"{expected_sh} {link_sh}"
+msgstr ""
+"Los plugins de su software de música no encuentran yabridge: {link} lleva "
+"a {current}, que ya no existe. Para usar el de WiMao ({expected}), "
+"ejecute: ln -sfn {expected_sh} {link_sh}"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid ""
+"The plugins in your music software use the yabridge in the folder {link}, "
+"not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
+"ln -s {expected_sh} {link_sh}"
+msgstr ""
+"Los plugins de su software de música usan el yabridge de la carpeta "
+"{link}, y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa "
+"carpeta a otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
+
+#: crates/wimao-core/src/diagnostic.rs
+#: crates/wimao-recettes/src/gestionnaire.rs
+#: crates/wimao-recettes/src/installation.rs
+msgid "Creating a restore point…"
+msgstr "Creando un punto de restauración…"
+
+#: crates/wimao-core/src/diagnostic.rs crates/wimao-core/src/historique.rs
+#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
+#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
+msgid "Repair"
+msgstr "Reparar"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "Stopping Wine"
+msgstr "Detención de Wine"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid "Repairing: {problem}"
+msgstr "Reparando: {problem}"
+
+#: crates/wimao-core/src/environnement.rs
+msgid "Wine environment"
+msgstr "Entorno de Wine"
+
+#: crates/wimao-core/src/environnement.rs
+msgid "Creating the Wine environment…"
+msgstr "Creando el entorno de Wine…"
+
+#: crates/wimao-core/src/environnement.rs
+msgid "Already done: {name}"
+msgstr "Ya hecho: {name}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"the command \"{program}\" failed (code {code}):\n"
+"{output}"
+msgstr ""
+"el comando «{program}» ha fallado (código {code}):\n"
+"{output}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "the command \"{program}\" took too long and was stopped"
+msgstr "el comando «{program}» tardó demasiado y se detuvo"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "download failed: {cause}"
+msgstr "la descarga ha fallado: {cause}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "wrong checksum: expected {expected}, got {actual}"
+msgstr "huella incorrecta: se esperaba {expected}, se obtuvo {actual}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid " (line {line})"
+msgstr " (línea {line})"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "invalid recipe {file}{place}: {message}"
+msgstr "receta no válida {file}{place}: {message}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "not found: {what}"
+msgstr "no encontrado: {what}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "several files match {pattern} ({count}): the recipe must be corrected"
+msgstr ""
+"varios archivos coinciden con {pattern} ({count}): hay que corregir la receta"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "input/output error: {error}"
+msgstr "error de entrada/salida: {error}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "Close your music software before continuing: a plugin is running"
+msgstr ""
+"Cierre su software de música antes de continuar: hay un plugin en ejecución"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"rollback incomplete: {removed} entries removed, {failed} failed:\n"
+"{list}"
+msgstr ""
+"reversión incompleta: {removed} entrada(s) eliminadas, {failed} con error:\n"
+"{list}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"this restore point no longer matches the environment (a backup was restored, "
+"an older point was used, or the environment was replaced since then)"
+msgstr ""
+"este punto de restauración ya no corresponde al entorno (desde entonces se "
+"restauró una copia de seguridad, se usó un punto más antiguo o se reemplazó "
+"el entorno)"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"Another installation is already running: wait for it to finish, then try "
+"again"
+msgstr ""
+"Ya hay otra instalación en curso: espere a que termine y vuelva a intentarlo"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"repair incomplete, {n} problem not repaired:\n"
+"{list}"
+msgid_plural ""
+"repair incomplete, {n} problems not repaired:\n"
+"{list}"
+msgstr[0] ""
+"reparación incompleta, {n} problema sin reparar:\n"
+"{list}"
+msgstr[1] ""
+"reparación incompleta, {n} problemas sin reparar:\n"
+"{list}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "not supported: {what}"
+msgstr "no admitido: {what}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid "invalid process number: {pid}"
+msgstr "número de proceso no válido: {pid}"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"The WiMao Wine environment already exists ({path}): importing would "
+"overwrite it"
+msgstr ""
+"El entorno Wine de WiMao ya existe ({path}): la importación lo sobrescribiría"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"{source} and {destination} are on different disks. WiMao only moves the "
+"environment within the same disk and never copies it (it is too large). "
+"Nothing was changed: you can move the folder yourself or keep using it where "
+"it is"
+msgstr ""
+"{source} y {destination} están en discos diferentes. WiMao solo mueve el "
+"entorno dentro del mismo disco y nunca lo copia (es demasiado grande). No se "
+"ha modificado nada: puede mover la carpeta usted mismo o seguir usándola "
+"donde está"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"{path} is no longer the link created by the import: cancelling the import is "
+"refused so that nothing is overwritten"
+msgstr ""
+"{path} ya no es el enlace creado por la importación: se rechaza cancelar la "
+"importación para no sobrescribir nada"
+
+#: crates/wimao-core/src/erreur.rs
+msgid ""
+"An import of the Wine environment was interrupted and cannot be finished "
+"safely: nothing was changed. Check {old} and {new} by hand"
+msgstr ""
+"Una importación del entorno Wine se interrumpió y no se puede terminar sin "
+"riesgo: no se ha modificado nada. Compruebe {old} y {new} usted mismo"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Installation"
+msgstr "Instalación"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Manager session"
+msgstr "Sesión de gestor"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Undo"
+msgstr "Deshacer"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Backup"
+msgstr "Copia de seguridad"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Restore"
+msgstr "Restauración"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Import"
+msgstr "Importación"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Succeeded"
+msgstr "Correcto"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Failed"
+msgstr "Fallo"
+
+#: crates/wimao-core/src/historique.rs
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#: crates/wimao-core/src/i18n.rs
+msgid "translation file {path} (install the gettext package, then rebuild)"
+msgstr ""
+"archivo de traducción {path} (instale el paquete gettext y vuelva a compilar)"
+
+#: crates/wimao-core/src/i18n.rs
+msgid "invalid translation file {path}: {error}"
+msgstr "archivo de traducción no válido {path}: {error}"
+
+#. En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
+#: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
+msgid "{n} plugin"
+msgid_plural "{n} plugins"
+msgstr[0] "{n} plugin"
+msgstr[1] "{n} plugins"
+
+#: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
+msgid "Ready"
+msgstr "Listo"
+
+#: crates/wimao-core/src/i18n.rs
+msgid "{n} plugins found"
+msgstr "{n} plugins encontrados"
+
+#. 1. Vérifications : rien n'est modifié tant qu'elles ne sont pas toutes passées.
+#: crates/wimao-core/src/import.rs
+msgid "Checking the existing Wine environment…"
+msgstr "Comprobación del entorno Wine existente…"
+
+#. 2. Plus aucun programme Windows ne doit écrire pendant le déplacement.
+#: crates/wimao-core/src/import.rs crates/wimao-core/src/sauvegarde.rs
+msgid "Stopping Wine…"
+msgstr "Deteniendo Wine…"
+
+#. 3. Petite sauvegarde.
+#: crates/wimao-core/src/import.rs
+msgid "Saving the registry and the yabridgectl settings…"
+msgstr "Copia de seguridad del registro y de los ajustes de yabridgectl…"
+
+#. 4 et 5. Trace « en cours », puis déplacement. `deplacer` n'échoue que si le renommage
+#. n'a PAS eu lieu : on peut alors effacer ce que l'essai a écrit (trace, petite sauvegarde).
+#: crates/wimao-core/src/import.rs
+msgid "Moving the Wine environment…"
+msgstr "Traslado del entorno Wine…"
+
+#. 6. Lien à l'ancienne place ; en cas d'échec, tout est remis comme avant.
+#: crates/wimao-core/src/import.rs
+msgid "Creating the link to the new location…"
+msgstr "Creación del enlace a la nueva ubicación…"
+
+#: crates/wimao-core/src/import.rs
+msgid ""
+"the link {link} could not be created ({error}) and the Wine environment "
+"could not be moved back: it is now in {path}"
+msgstr ""
+"no se pudo crear el enlace {link} ({error}) y el entorno Wine no se pudo "
+"devolver a su lugar: ahora está en {path}"
+
+#: crates/wimao-core/src/import.rs
+msgid "no free name found for {name} in {path}"
+msgstr "no se encontró ningún nombre libre para {name} en {path}"
+
+#. 1. Vérifications.
+#: crates/wimao-core/src/import.rs
+msgid "Checking the import…"
+msgstr "Comprobación de la importación…"
+
+#: crates/wimao-core/src/import.rs
+msgid "import record {path} (there is no import to cancel)"
+msgstr ""
+"registro de importación {path} (no hay ninguna importación que cancelar)"
+
+#. 2. Retour à l'ancienne place, annoncé d'abord dans la trace.
+#: crates/wimao-core/src/import.rs
+msgid "Moving the Wine environment back…"
+msgstr "Devolución del entorno Wine a su lugar…"
+
+#: crates/wimao-core/src/import.rs
+msgid "The import of {path} had been interrupted: it has been completed"
+msgstr "La importación de {path} se había interrumpido: se ha completado"
+
+#: crates/wimao-core/src/import.rs
+msgid ""
+"The import of {path} had been interrupted before anything was moved: it has "
+"been abandoned"
+msgstr ""
+"La importación de {path} se había interrumpido antes de mover nada: se ha "
+"abandonado"
+
+#: crates/wimao-core/src/import.rs
+msgid ""
+"Cancelling the import of {path} had been interrupted before anything was "
+"moved: the import is still in place"
+msgstr ""
+"La cancelación de la importación de {path} se había interrumpido antes de "
+"mover nada: la importación sigue vigente"
+
+#: crates/wimao-core/src/import.rs
+msgid ""
+"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
+"\"{command}\" to update your plugin links"
+msgstr ""
+"No hay ajustes de yabridgectl en {path}: si usa yabridgectl usted mismo, "
+"ejecute «{command}» para actualizar los enlaces de sus plugins"
+
+#: crates/wimao-core/src/import.rs
+msgid "Updating your plugin links (yabridgectl sync)…"
+msgstr "Actualización de los enlaces de sus plugins (yabridgectl sync)…"
+
+#: crates/wimao-core/src/import.rs
+msgid ""
+"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
+msgstr ""
+"No se pudieron actualizar los enlaces de sus plugins ({error}): ejecute "
+"«{command}» usted mismo"
+
+#: crates/wimao-core/src/import.rs
+msgid ""
+"Cancelling the import of {path} had been interrupted: it has been completed. "
+"If you use yabridgectl yourself, run \"{command}\""
+msgstr ""
+"La cancelación de la importación de {path} se había interrumpido: se ha "
+"completado. Si usa yabridgectl usted mismo, ejecute «{command}»"
+
+#: crates/wimao-core/src/journal.rs
+msgid ""
+"Cannot write to the log {path}: {error} (further log errors are not shown)"
+msgstr ""
+"No se puede escribir en el registro {path}: {error} (no se mostrarán más "
+"errores del registro)"
+
+#: crates/wimao-core/src/liens.rs
+msgid "the wimao-cli program (is WiMao installed?)"
+msgstr "el programa wimao-cli (¿está instalado WiMao?)"
+
+#: crates/wimao-core/src/outils.rs
+msgid "the working folder {folder}"
+msgstr "la carpeta de trabajo {folder}"
+
+#: crates/wimao-core/src/outils.rs
+msgid "the program {program} (is it installed?)"
+msgstr "el programa {program} (¿está instalado?)"
+
+#: crates/wimao-core/src/outils.rs
+msgid "{value} B"
+msgstr "{value} B"
+
+#: crates/wimao-core/src/outils.rs
+msgid "{value} KiB"
+msgstr "{value} KiB"
+
+#: crates/wimao-core/src/outils.rs
+msgid "{value} MiB"
+msgstr "{value} MiB"
+
+#: crates/wimao-core/src/outils.rs
+msgid "{value} GiB"
+msgstr "{value} GiB"
+
+#: crates/wimao-core/src/outils.rs
+msgid "{value} TiB"
+msgstr "{value} TiB"
+
+#: crates/wimao-core/src/pontage.rs
+msgid "yabridgectl configuration: {error}"
+msgstr "configuración de yabridgectl: {error}"
+
+#: crates/wimao-core/src/pontage.rs
+msgid ""
+"yabridgectl ({path} does not exist): install the WiMao yabridge package or "
+"set WIMAO_YABRIDGE_DIR"
+msgstr ""
+"yabridgectl ({path} no existe): instale el paquete yabridge de WiMao o "
+"defina WIMAO_YABRIDGE_DIR"
+
+#: crates/wimao-core/src/pontage.rs
+msgid ""
+"PATH for yabridgectl: a folder contains \":\" ({error}); move Wine or "
+"yabridge"
+msgstr ""
+"PATH de yabridgectl: una carpeta contiene «:» ({error}); mueva Wine o "
+"yabridge"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "WiMao version: {v}"
+msgstr "Versión de WiMao: {v}"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "Wine version: {v}"
+msgstr "Versión de Wine: {v}"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "Distribution: {v}"
+msgstr "Distribución: {v}"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "Diagnostic:"
+msgstr "Diagnóstico:"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "Last lines of the log:"
+msgstr "Últimas líneas del registro:"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "unknown"
+msgstr "desconocida"
+
+#: crates/wimao-core/src/rapport.rs
+msgid "The diagnostic failed: {error}"
+msgstr "El diagnóstico falló: {error}"
+
+#: crates/wimao-core/src/regles.rs
+msgid "A Microsoft C++ library (msvcp140) is missing: use Repair to install it"
+msgstr ""
+"Falta una biblioteca C++ de Microsoft (msvcp140): use Reparar para instalarla"
+
+#: crates/wimao-core/src/regles.rs
+msgid "Wine Mono (.NET support) is missing: use Repair to install it"
+msgstr "Falta Wine Mono (compatibilidad con .NET): use Reparar para instalarlo"
+
+#: crates/wimao-core/src/regles.rs
+msgid ""
+"The graphics libraries (DXVK) are missing or broken: use Repair to reinstall "
+"them"
+msgstr ""
+"Las bibliotecas gráficas (DXVK) faltan o están dañadas: use Reparar para "
+"reinstalarlas"
+
+#: crates/wimao-core/src/regles.rs
+msgid "The WiX installer failed, often because a .NET component is missing"
+msgstr "El instalador WiX falló, a menudo porque falta un componente .NET"
+
+#: crates/wimao-core/src/regles.rs
+msgid "Native Access has no download folder: use Repair"
+msgstr "Native Access no tiene carpeta de descargas: use Reparar"
+
+#: crates/wimao-core/src/regles.rs
+msgid ""
+"A sign-in link could not reach the manager: open it again from the browser"
+msgstr ""
+"Un enlace de inicio de sesión no llegó al gestor: ábralo de nuevo desde el "
+"navegador"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "before a repair"
+msgstr "antes de una reparación"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "before the {name} session"
+msgstr "antes de la sesión de {name}"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "before installing {file}"
+msgstr "antes de instalar {file}"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "no free name found for the restore point {id}"
+msgstr "no se encontró un nombre libre para el punto de restauración {id}"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "{path} (has the Wine environment been created?)"
+msgstr "{path} (¿se ha creado el entorno Wine?)"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "{file} of the restore point {id} (incomplete or damaged)"
+msgstr "{file} del punto de restauración {id} (incompleto o dañado)"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "{file} of the restore point {id}"
+msgstr "{file} del punto de restauración {id}"
+
+#: crates/wimao-core/src/restauration.rs crates/wimao/src/historique_vue.rs
+msgid "{n} file removed"
+msgid_plural "{n} files removed"
+msgstr[0] "{n} archivo eliminado"
+msgstr[1] "{n} archivos eliminados"
+
+#: crates/wimao-core/src/restauration.rs
+msgid "{path} is not a real folder (symbolic link?)"
+msgstr "{path} no es una carpeta real (¿enlace simbólico?)"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Checking the free space…"
+msgstr "Comprobando el espacio libre…"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Backing up the Wine environment (several minutes)…"
+msgstr "Copia del entorno de Wine (varios minutos)…"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "zstd has no output"
+msgstr "zstd no tiene salida"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "The tool {name} is required for backups but is not installed"
+msgstr ""
+"La herramienta {name} es necesaria para las copias de seguridad pero no está "
+"instalada"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "missing backup piece"
+msgstr "falta un fragmento de la copia de seguridad"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid ""
+"Cannot write the backup to {path}: {error}. Check that the destination is "
+"connected and has free space."
+msgstr ""
+"No se puede escribir la copia en {path}: {error}. Compruebe que el destino "
+"está conectado y tiene espacio libre."
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid ""
+"The destination {path} does not exist or is not a folder: plug in the disk "
+"or choose another folder"
+msgstr ""
+"El destino {path} no existe o no es una carpeta: conecte el disco o elija "
+"otra carpeta"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid ""
+"The destination {path} is inside WiMao's data folder ({data}): choose "
+"another folder, for example on an external disk"
+msgstr ""
+"El destino {path} está dentro de la carpeta de datos de WiMao ({data}): "
+"elija otra carpeta, por ejemplo en un disco externo"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "The backup {path} already exists: wait a minute or remove it"
+msgstr "La copia {path} ya existe: espere un minuto o elimínela"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Not enough free space on {path}: {need} MB needed, {free} MB available"
+msgstr ""
+"No hay espacio suficiente en {path}: se necesitan {need} MB y hay {free} MB "
+"disponibles"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "invalid path (NUL byte)"
+msgstr "ruta no válida (byte nulo)"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Verifying the backup checksums…"
+msgstr "Comprobando las huellas de la copia de seguridad…"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Extracting the backup (several minutes)…"
+msgstr "Extrayendo la copia de seguridad (varios minutos)…"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Putting the restored environment in place…"
+msgstr "Colocando el entorno restaurado…"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Cannot read {path}: {error}"
+msgstr "No se puede leer {path}: {error}"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "A backup file is missing: {name}"
+msgstr "Falta un archivo de la copia de seguridad: {name}"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Invalid line in the checksum file: {line}"
+msgstr "Línea no válida en el archivo de huellas: {line}"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "The checksum file lists no backup file"
+msgstr "El archivo de huellas no lista ningún archivo de la copia"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "The backup is incomplete: expected a file ending with {suffix}"
+msgstr ""
+"La copia está incompleta: se esperaba un archivo que termine en {suffix}"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "the sending thread stopped unexpectedly"
+msgstr "el hilo de envío se detuvo de forma inesperada"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid "Cannot read the backup: {error}"
+msgstr "No se puede leer la copia de seguridad: {error}"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid ""
+"The backup does not look like a Wine environment (drive_c or system.reg is "
+"missing): nothing was changed"
+msgstr ""
+"La copia no parece un entorno de Wine (falta drive_c o system.reg): no se ha "
+"cambiado nada"
+
+#: crates/wimao-core/src/sauvegarde.rs
+msgid ""
+"Could not put the restored environment in place ({error}) nor put the "
+"previous one back ({error2}). Your previous environment is in {old}; the "
+"restored files are in {new}"
+msgstr ""
+"No se pudo colocar el entorno restaurado ({error}) ni devolver el anterior "
+"({error2}). Su entorno anterior está en {old}; los archivos restaurados "
+"están en {new}"
+
+#. / Détail d'un plugin qui s'ouvre.
+#: crates/wimao-core/src/tableau.rs
+msgid "The plugin opens"
+msgstr "El plugin se abre"
+
+#. / Détail d'un VST2 écarté au profit du VST3.
+#: crates/wimao-core/src/tableau.rs
+msgid "VST2 skipped: the same plugin is available as VST3"
+msgstr "VST2 descartado: el mismo plugin existe en VST3"
+
+#. / Détail d'un plugin déjà ponté depuis un autre environnement.
+#: crates/wimao-core/src/tableau.rs
+msgid "already bridged from another environment"
+msgstr "ya enlazado desde otro entorno"
+
+#. / Détail d'un plugin ponté mais pas testé.
+#: crates/wimao-core/src/tableau.rs
+msgid "bridged, not tested"
+msgstr "enlazado, sin probar"
+
+#: crates/wimao-core/src/telechargement.rs
+msgid "no address given"
+msgstr "no se indicó ninguna dirección"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "CLAP plugins are not tested yet"
+msgstr "Los plugins CLAP aún no se prueban"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "Install Carla to test plugins"
+msgstr "Instale Carla para probar los plugins"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "Install x11-utils to test plugins"
+msgstr "Instale x11-utils para probar los plugins"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "The plugin host could not be started"
+msgstr "No se pudo iniciar el anfitrión de plugins"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "The virtual screen does not respond: {error}"
+msgstr "La pantalla virtual no responde: {error}"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "Loaded, but the interface could not be checked"
+msgstr "Cargado, pero no se pudo comprobar la interfaz"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid ""
+"The audio server (PipeWire or JACK) could not be reached: the plugin was not "
+"tested"
+msgstr ""
+"No se pudo contactar con el servidor de audio (PipeWire o JACK): el plugin "
+"no se probó"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "The plugin host stopped"
+msgstr "El anfitrión de plugins se detuvo"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "Install Xvfb to test plugins"
+msgstr "Instale Xvfb para probar los plugins"
+
+#: crates/wimao-core/src/test_plugin.rs
+msgid "The virtual screen could not be started"
+msgstr "No se pudo iniciar la pantalla virtual"
+
+#: crates/wimao-core/src/wine.rs
+msgid ""
+"WiMao's Wine ({path}): install the WiMao Wine package or set WIMAO_WINE_DIR"
+msgstr ""
+"el Wine de WiMao ({path}): instale el paquete Wine de WiMao o defina "
+"WIMAO_WINE_DIR"
+
+#: crates/wimao-recettes/src/apres_installation.rs
+msgid "installed, but the sign-in link could not be declared: {error}"
+msgstr ""
+"instalado, pero no se pudo declarar el enlace de inicio de sesión: {error}"
+
+#: crates/wimao-recettes/src/archive.rs
+msgid "Extracting {name}"
+msgstr "Extrayendo {name}"
+
+#: crates/wimao-recettes/src/archive.rs
+msgid "The tool 7z is not installed (package 7zip or p7zip-full)"
+msgstr "La herramienta 7z no está instalada (paquete 7zip o p7zip-full)"
+
+#: crates/wimao-recettes/src/archive.rs
+msgid "Warning from 7z, some files may not have been extracted: {detail}"
+msgstr ""
+"Advertencia de 7z, puede que algunos archivos no se hayan extraído: {detail}"
+
+#: crates/wimao-recettes/src/archive.rs
+msgid "Copying {name}"
+msgstr "Copiando {name}"
+
+#: crates/wimao-recettes/src/catalogue.rs crates/wimao-recettes/src/recette.rs
+msgid "Cannot read the recipe: {error}"
+msgstr "No se puede leer la receta: {error}"
+
+#: crates/wimao-recettes/src/chemins_windows.rs
+msgid "archive path {path} (it must be relative and without \"..\")"
+msgstr "ruta de archivo {path} (debe ser relativa y sin «..»)"
+
+#: crates/wimao-recettes/src/chemins_windows.rs
+msgid "archive path {path} (symbolic links are not followed)"
+msgstr "ruta de archivo {path} (los enlaces simbólicos no se siguen)"
+
+#: crates/wimao-recettes/src/chemins_windows.rs
+msgid "Windows path {path} (only C:\\ paths without \"..\" are supported)"
+msgstr "ruta de Windows {path} (solo se admiten rutas C:\\ sin \"..\")"
+
+#: crates/wimao-recettes/src/extraction.rs
+msgid "the .nuspec file of the package"
+msgstr "el archivo .nuspec del paquete"
+
+#: crates/wimao-recettes/src/extraction.rs
+msgid "<id> and <version> in the .nuspec file of the package"
+msgstr "<id> y <version> en el archivo .nuspec del paquete"
+
+#: crates/wimao-recettes/src/extraction.rs
+msgid "package name {name} (it must not contain a path)"
+msgstr "nombre de paquete {name} (no debe contener una ruta)"
+
+#: crates/wimao-recettes/src/extraction.rs
+msgid "7z extraction warning"
+msgstr "advertencia de 7z al extraer"
+
+#: crates/wimao-recettes/src/extraction.rs
+msgid "{name} in the installer"
+msgstr "{name} en el instalador"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "Plugin bridged: {name}"
+msgstr "Plugin puenteado: {name}"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "{name} installed silently (exit code {code})"
+msgstr "{name} instalado en silencio (código de salida {code})"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "{name} ran silently but did not finish in time"
+msgstr "{name} se lanzó en silencio pero no terminó a tiempo"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "{name} was already run silently: closed"
+msgstr "{name} ya se lanzó en silencio: cerrado"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "{name}: unknown installer, left as it is"
+msgstr "{name}: instalador desconocido, se deja tal cual"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "{program} (install the manager first)"
+msgstr "{program} (instale primero el gestor)"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+#: crates/wimao/src/session_fenetre.rs
+msgid "Opening {name}…"
+msgstr "Abriendo {name}…"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+#: crates/wimao/src/session_fenetre.rs
+msgid "Closing {name}…"
+msgstr "Cerrando {name}…"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+#: crates/wimao-recettes/src/installation.rs
+msgid "Looking for the installed plugins…"
+msgstr "Buscando los plugins instalados…"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "a link of the form scheme://…"
+msgstr "un enlace con la forma esquema://…"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "a recipe for the link scheme {scheme}"
+msgstr "una receta para el esquema de enlace {scheme}"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "{name}: this recipe has no manager to open"
+msgstr "{name}: esta receta no tiene un gestor que abrir"
+
+#: crates/wimao-recettes/src/gestionnaire.rs
+msgid "Starting the {name} service…"
+msgstr "Iniciando el servicio {name}…"
+
+#. Sans options silencieuses connues, rien ne peut être lancé : inutile de créer
+#. un point de restauration, un environnement ou d'écrire dans le registre.
+#. Installeur inconnu sans fenêtre autorisée : on ne devine pas d'options.
+#: crates/wimao-recettes/src/installation.rs
+msgid "Unknown installer type: it has to be opened normally"
+msgstr "Tipo de instalador desconocido: hay que abrirlo normalmente"
+
+#. Après le point de restauration (qui garde l'état d'avant), avant le relevé `avant` :
+#. un `wineboot -u` tardif ne doit pas se déclencher au milieu de l'installeur.
+#: crates/wimao-recettes/src/installation.rs
+msgid "Updating the Wine environment…"
+msgstr "Actualizando el entorno de Wine…"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "{n} plugin processed"
+msgid_plural "{n} plugins processed"
+msgstr[0] "{n} plugin procesado"
+msgstr[1] "{n} plugins procesados"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid ""
+"No new or updated plugin found (the installer returned code {code}): it may "
+"need to be opened normally"
+msgstr ""
+"Ningún plugin nuevo ni actualizado (el instalador devolvió el código "
+"{code}): quizá haya que abrirlo normalmente"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid ""
+"No new or updated plugin found: the installer may need to be opened normally"
+msgstr ""
+"Ningún plugin nuevo ni actualizado: quizá haya que abrir el instalador "
+"normalmente"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "The archive contains nothing usable"
+msgstr "El archivo comprimido no contiene nada utilizable"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Extracting {name}…"
+msgstr "Extrayendo {name}…"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Running {name} (its window will open)…"
+msgstr "Ejecutando {name} (se abrirá su ventana)…"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Running {name} silently…"
+msgstr "Ejecutando {name} en modo silencioso…"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "{program} after running the installer (exit code {code})"
+msgstr "{program} tras ejecutar el instalador (código de salida {code})"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "{program} after running the installer"
+msgstr "{program} tras ejecutar el instalador"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Dependency {name}: no silent options known for this installer type"
+msgstr ""
+"Dependencia {name}: no se conocen opciones silenciosas para este tipo de "
+"instalador"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Applying the recipe settings…"
+msgstr "Aplicando los ajustes de la receta…"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Bridging the plugins to Linux…"
+msgstr "Conectando los plugins con Linux…"
+
+#: crates/wimao-recettes/src/installation.rs
+msgid "Testing {name}…"
+msgstr "Probando {name}…"
+
+#: crates/wimao-recettes/src/obtention.rs
+msgid "no download address in the recipe: choose the installer file"
+msgstr ""
+"no hay dirección de descarga en la receta: elija el archivo de instalación"
+
+#: crates/wimao-recettes/src/obtention.rs
+msgid "the address must start with https:// (got \"{address}\")"
+msgstr "la dirección debe empezar por https:// (recibido «{address}»)"
+
+#: crates/wimao-recettes/src/obtention.rs
+msgid "Downloading {name}…"
+msgstr "Descargando {name}…"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "The recipe must list at least one pattern in `reconnaitre`"
+msgstr "La receta debe indicar al menos un patrón en `reconnaitre`"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "Invalid file name pattern \"{pattern}\": {error}"
+msgstr "Patrón de nombre de archivo no válido «{pattern}»: {error}"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "The instruction \"{name}\" has no text in the language \"{language}\""
+msgstr "La instrucción «{name}» no tiene texto en «{language}»"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid ""
+"`methode = \"extraire-7z\"` needs at least one [[installation.extraire]] step"
+msgstr ""
+"`methode = \"extraire-7z\"` exige al menos un paso [[installation.extraire]]"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid ""
+"[[installation.extraire]] steps are only allowed with `methode = "
+"\"extraire-7z\"`"
+msgstr ""
+"Los pasos [[installation.extraire]] solo se admiten con `methode = "
+"\"extraire-7z\"`"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "A [[dependances]] entry cannot use `methode = \"{method}\"`"
+msgstr "Una entrada [[dependances]] no puede usar `methode = \"{method}\"`"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "A recipe with `type = \"gestionnaire\"` needs a [gestionnaire] section"
+msgstr ""
+"Una receta con `type = \"gestionnaire\"` exige una sección [gestionnaire]"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid ""
+"The [gestionnaire] section is only allowed with `type = \"gestionnaire\"`"
+msgstr "La sección [gestionnaire] solo se admite con `type = \"gestionnaire\"`"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid ""
+"`lien-connexion` needs a [gestionnaire] section: its `programme` receives "
+"the link"
+msgstr ""
+"`lien-connexion` exige una sección [gestionnaire]: su `programme` recibe el "
+"enlace"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid ""
+"Invalid `lien-connexion` \"{scheme}\": only a-z, 0-9, +, . and - are allowed"
+msgstr ""
+"`lien-connexion` «{scheme}» no válido: solo se admiten a-z, 0-9, +, . y -"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "`telecharger` must start with https:// (got \"{address}\")"
+msgstr "`telecharger` debe empezar por https:// (recibido «{address}»)"
+
+#: crates/wimao-recettes/src/recette.rs
+msgid "`empreinte` must be a sha256 hash: 64 hexadecimal characters"
+msgstr "`empreinte` debe ser un hash sha256: 64 caracteres hexadecimales"
+
+#: crates/wimao/src/aide.rs
+msgid "Getting started"
+msgstr "Primeros pasos"
+
+#: crates/wimao/src/aide.rs
+msgid "Adding a plugin"
+msgstr "Añadir un plugin"
+
+#: crates/wimao/src/aide.rs
+msgid "Publisher managers"
+msgstr "Gestores de editores"
+
+#: crates/wimao/src/aide.rs
+msgid "Using plugins in your music software"
+msgstr "Usar los plugins en su programa de música"
+
+#: crates/wimao/src/aide.rs
+msgid "History and rollback"
+msgstr "Historial y vuelta atrás"
+
+#: crates/wimao/src/aide.rs
+msgid "Backup and restore"
+msgstr "Copia de seguridad y restauración"
+
+#: crates/wimao/src/aide.rs
+msgid "Importing an existing environment"
+msgstr "Importar un entorno existente"
+
+#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
+msgid "Common problems"
+msgstr "Problemas frecuentes"
+
+#: crates/wimao/src/aide_fenetre.rs
+msgid "User guide"
+msgstr "Guía de uso"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Back"
+msgstr "Atrás"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Start"
+msgstr "Comenzar"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "How does it work?"
+msgstr "¿Cómo funciona?"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Welcome to WiMao"
+msgstr "Bienvenido a WiMao"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid ""
+"WiMao installs your Windows audio plugins and makes them work in your music "
+"software (Bitwig, Ardour, REAPER…), on Linux."
+msgstr ""
+"WiMao instala sus plugins de audio de Windows y los hace funcionar en su "
+"programa de música (Bitwig, Ardour, REAPER…), en Linux."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Looking for an existing environment…"
+msgstr "Buscando un entorno existente…"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "This can take a few minutes. Please keep WiMao open."
+msgstr "Esto puede tardar unos minutos. Mantenga WiMao abierto."
+
+#: crates/wimao/src/assistant_fenetre.rs crates/wimao/src/fenetre/mod.rs
+msgid "Try again"
+msgstr "Reintentar"
+
+#: crates/wimao/src/assistant_fenetre.rs crates/wimao/src/fenetre/mod.rs
+msgid "Copy the report"
+msgstr "Copiar el informe"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "The environment could not be set up"
+msgstr "No se ha podido preparar el entorno"
+
+#: crates/wimao/src/assistant_fenetre.rs crates/wimao/src/dialogues.rs
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Add an installer"
+msgstr "Añadir un instalador"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Install a Windows plugin from its installer file."
+msgstr "Instala un plugin de Windows a partir de su archivo de instalación."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Open a publisher manager"
+msgstr "Abrir un gestor de editor"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "For plugins that come with a publisher's app, such as Native Access."
+msgstr ""
+"Para los plugins que vienen con la aplicación de un editor, como Native "
+"Access."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Later"
+msgstr "Más tarde"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Go to the main window."
+msgstr "Ir a la ventana principal."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Your environment is ready"
+msgstr "Su entorno está listo"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "What would you like to do first?"
+msgstr "¿Qué le gustaría hacer primero?"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Import this environment (recommended)"
+msgstr "Importar este entorno (recomendado)"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Create a new environment"
+msgstr "Crear un entorno nuevo"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Starts from scratch. Your old environment stays where it is."
+msgstr "Empieza desde cero. Su entorno anterior se queda donde está."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Create the environment"
+msgstr "Crear el entorno"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid ""
+"An environment from a previous installation was found. WiMao can take it "
+"over, or start from scratch."
+msgstr ""
+"Se ha encontrado un entorno de una instalación anterior. WiMao puede "
+"retomarlo o empezar desde cero."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid ""
+"WiMao will create the Wine environment where your plugins are installed."
+msgstr "WiMao creará el entorno de Wine donde se instalarán sus plugins."
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Your Wine environment"
+msgstr "Su entorno de Wine"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Importing the environment…"
+msgstr "Importando el entorno…"
+
+#: crates/wimao/src/assistant_fenetre.rs
+msgid "Creating the environment…"
+msgstr "Creando el entorno…"
+
+#: crates/wimao/src/assistant_fenetre.rs crates/wimao/src/dialogues.rs
+msgid "An unexpected error occurred: {cause}"
+msgstr "Se ha producido un error inesperado: {cause}"
+
+#: crates/wimao/src/assistant_fenetre.rs crates/wimao/src/fenetre/mod.rs
+msgid "Report copied"
+msgstr "Informe copiado"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Something went wrong"
+msgstr "Algo ha salido mal"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Close"
+msgstr "Cerrar"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Details were written to the log: {path}"
+msgstr "Los detalles se han escrito en el registro: {path}"
+
+#: crates/wimao/src/dialogues.rs
+msgid ""
+"A task is in progress (installation or backup). Quitting now may leave "
+"incomplete files."
+msgstr ""
+"Hay un trabajo en curso (instalación o copia). Salir ahora puede dejar "
+"archivos incompletos."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Keep working"
+msgstr "Continuar el trabajo"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Quit anyway"
+msgstr "Salir de todos modos"
+
+#: crates/wimao/src/dialogues.rs
+msgid "{name} is still open"
+msgstr "{name} sigue abierto"
+
+#: crates/wimao/src/dialogues.rs
+msgid ""
+"If you quit, {name} stays open but WiMao stops bridging the plugins it "
+"installs. WiMao will offer to bridge them the next time it starts."
+msgstr ""
+"Si sale, {name} sigue abierto, pero WiMao deja de puentear los plugins que "
+"instala. WiMao ofrecerá puentearlos la próxima vez que se inicie."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Keep WiMao open"
+msgstr "Mantener WiMao abierto"
+
+#: crates/wimao/src/dialogues.rs
+msgid "{name} uses this link to finish signing in from your web browser."
+msgstr ""
+"{name} usa este enlace para terminar el inicio de sesión desde su navegador."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Sign-in link"
+msgstr "Enlace de inicio de sesión"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Keep the current one"
+msgstr "Mantener el actual"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Use WiMao"
+msgstr "Usar WiMao"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Close the open programs?"
+msgstr "¿Cerrar los programas abiertos?"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Repair stops Wine, so it will close these open programs: {programs}."
+msgstr ""
+"Reparar detiene Wine, por lo que cerrará estos programas abiertos: "
+"{programs}."
+
+#: crates/wimao/src/dialogues.rs crates/wimao/src/historique_vue.rs
+#: crates/wimao/src/restaurer.rs
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Close and repair"
+msgstr "Cerrar y reparar"
+
+#: crates/wimao/src/dialogues.rs
+msgid ""
+"Wine will be stopped and these open programs will be closed: {programs}."
+msgstr "Se detendrá Wine y se cerrarán estos programas abiertos: {programs}."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Close and continue"
+msgstr "Cerrar y continuar"
+
+#: crates/wimao/src/dialogues.rs
+msgid "OK"
+msgstr "Aceptar"
+
+#. Installeurs pas encore identifiés (voir `MessageSession::Attente`).
+#: crates/wimao/src/dialogues.rs
+msgid ""
+"An installer may still be running. WiMao waits for it to finish, then "
+"bridges the new plugins."
+msgstr ""
+"Puede que un instalador siga en curso. WiMao espera a que termine y luego "
+"puentea los plugins nuevos."
+
+#: crates/wimao/src/dialogues.rs
+msgid ""
+"Still running: {programs}. WiMao waits for them to finish, then bridges the "
+"new plugins."
+msgstr ""
+"Todavía en curso: {programs}. WiMao espera a que terminen y luego puentea "
+"los plugins nuevos."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Installations in progress"
+msgstr "Instalaciones en curso"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Keep waiting"
+msgstr "Seguir esperando"
+
+#: crates/wimao/src/dialogues.rs crates/wimao/src/session_fenetre.rs
+msgid "Stop anyway"
+msgstr "Detener de todos modos"
+
+#: crates/wimao/src/dialogues.rs
+msgid "WiMao cannot start"
+msgstr "WiMao no puede iniciarse"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Open installer"
+msgstr "Abrir el instalador"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Installers and archives"
+msgstr "Instaladores y archivos comprimidos"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Choose the backup folder"
+msgstr "Elegir la carpeta de la copia de seguridad"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Backup checksums (*.sha256)"
+msgstr "Sumas de verificación de copias (*.sha256)"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Choose the backup to restore"
+msgstr "Elegir la copia de seguridad que restaurar"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Windows audio plugins on Linux"
+msgstr "Plugins de audio de Windows en Linux"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "Main menu"
+msgstr "Menú principal"
+
+#: crates/wimao/src/fenetre/entete.rs crates/wimao/src/historique_vue.rs
+msgid "History"
+msgstr "Historial"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "_Copy the report"
+msgstr "_Copiar el informe"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "System"
+msgstr "Sistema"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "_Language"
+msgstr "_Idioma"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "_User guide"
+msgstr "_Guía de uso"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "_About WiMao"
+msgstr "_Acerca de WiMao"
+
+#: crates/wimao/src/fenetre/entete.rs
+msgid "_Quit"
+msgstr "_Salir"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Back up"
+msgstr "Guardar copia"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "No plugin"
+msgstr "Ningún plugin"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Choose the installer of a Windows plugin, or drop it on this window."
+msgstr ""
+"Elija el instalador de un plugin de Windows, o suéltelo en esta ventana."
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Could not read the plugins"
+msgstr "No se pudieron leer los plugins"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Try again, or copy the report to ask for help."
+msgstr "Inténtelo de nuevo, o copie el informe para pedir ayuda."
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Plugins"
+msgstr "Plugins"
+
+#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
+msgid "A task is already running"
+msgstr "Ya hay un trabajo en curso"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "This file is not an installer or an archive"
+msgstr "Este archivo no es un instalador ni un archivo comprimido"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Warning: {message}"
+msgstr "Atención: {message}"
+
+#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/gestionnaires.rs
+msgid "{action} is not available while {name} is open"
+msgstr "{action} no está disponible mientras {name} está abierto"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Installing…"
+msgstr "Instalando…"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "No new or updated plugin found"
+msgstr "Ningún plugin nuevo ni actualizado"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Installation finished"
+msgstr "Instalación terminada"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Backing up…"
+msgstr "Guardando la copia…"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Backup saved in {folder}"
+msgstr "Copia guardada en {folder}"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Show"
+msgstr "Mostrar"
+
+#: crates/wimao/src/fenetre/mod.rs
+msgid "Preparing the report…"
+msgstr "Preparando el informe…"
+
+#: crates/wimao/src/fichier_toml.rs
+msgid "cannot use {path}: {cause}"
+msgstr "no se puede usar {path}: {cause}"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "In use"
+msgstr "Abierto"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Managers"
+msgstr "Gestores"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid ""
+"Publisher apps that download your plugins. WiMao bridges what they install."
+msgstr ""
+"Las aplicaciones de los editores que descargan sus plugins. WiMao puentea lo "
+"que instalan."
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Open"
+msgstr "Abrir"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Install"
+msgstr "Instalar"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "{name} is already open"
+msgstr "{name} ya está abierto"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Open {name}: WiMao bridges the plugins it installs"
+msgstr "Abrir {name}: WiMao puentea los plugins que instala"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Install {name}"
+msgstr "Instalar {name}"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Installing {name}…"
+msgstr "Instalando {name}…"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Activate {name}"
+msgstr "Activación de {name}"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Declaring the sign-in link…"
+msgstr "Declarando el enlace de inicio de sesión…"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Today"
+msgstr "Hoy"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Yesterday"
+msgstr "Ayer"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Go back to before this"
+msgstr "Volver a antes de esto"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Wait until the current task is finished"
+msgstr "Espere a que termine la tarea en curso"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Nothing yet"
+msgstr "Nada por ahora"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "What WiMao does will show up here."
+msgstr "Lo que haga WiMao aparecerá aquí."
+
+#: crates/wimao/src/historique_vue.rs
+msgid "{n} file will be removed"
+msgid_plural "{n} files will be removed"
+msgstr[0] "Se eliminará {n} archivo"
+msgstr[1] "Se eliminarán {n} archivos"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Point used: {reason} ({date})"
+msgstr "Punto usado: {reason} ({date})"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Everything done after this point will be undone too."
+msgstr "Todo lo que se haga después de este punto también se deshará."
+
+#: crates/wimao/src/historique_vue.rs
+msgid "{n} link removed"
+msgid_plural "{n} links removed"
+msgstr[0] "{n} enlace retirado"
+msgstr[1] "{n} enlaces retirados"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Rolled back: {summary}"
+msgstr "Vuelta atrás hecha: {summary}"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Looking at what will be removed…"
+msgstr "Buscando lo que se eliminará…"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Go back to before this?"
+msgstr "¿Volver a antes de esto?"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Go back"
+msgstr "Volver atrás"
+
+#: crates/wimao/src/historique_vue.rs
+msgid "Going back…"
+msgstr "Volviendo atrás…"
+
+#: crates/wimao/src/liste.rs
+msgid "{n} ready"
+msgid_plural "{n} ready"
+msgstr[0] "{n} listo"
+msgstr[1] "{n} listos"
+
+#: crates/wimao/src/liste.rs
+msgid "Check"
+msgstr "Revisar"
+
+#: crates/wimao/src/liste.rs
+msgid "Problem"
+msgstr "Problema"
+
+#: crates/wimao/src/liste.rs
+msgid "Not tested"
+msgstr "Sin probar"
+
+#: crates/wimao/src/liste.rs
+msgid "Updated"
+msgstr "Actualizado"
+
+#: crates/wimao/src/main.rs
+msgid "An interrupted operation was recovered"
+msgstr "Se ha recuperado una operación interrumpida"
+
+#. Pas de « Warning » ici : la fenêtre l'ajoute déjà devant chaque avertissement.
+#: crates/wimao/src/operations.rs
+msgid "Ignored recipe:"
+msgstr "Receta ignorada:"
+
+#: crates/wimao/src/operations.rs
+msgid "{n} installer run silently"
+msgid_plural "{n} installers run silently"
+msgstr[0] "{n} instalador ejecutado en silencio"
+msgstr[1] "{n} instaladores ejecutados en silencio"
+
+#: crates/wimao/src/operations.rs
+msgid "{n} plugin installed"
+msgid_plural "{n} plugins installed"
+msgstr[0] "{n} plugin instalado"
+msgstr[1] "{n} plugins instalados"
+
+#: crates/wimao/src/operations.rs
+msgid "{n} plugin updated"
+msgid_plural "{n} plugins updated"
+msgstr[0] "{n} plugin actualizado"
+msgstr[1] "{n} plugins actualizados"
+
+#: crates/wimao/src/operations.rs
+msgid "{n} with a problem"
+msgid_plural "{n} with a problem"
+msgstr[0] "{n} con un problema"
+msgstr[1] "{n} con un problema"
+
+#: crates/wimao/src/operations.rs
+msgid ""
+"The silent installation did not add or update a plugin (installer exit code "
+"{code}). Open the installer normally?"
+msgstr ""
+"La instalación silenciosa no añadió ni actualizó ningún plugin (código de "
+"salida del instalador: {code}). ¿Abrir el instalador normalmente?"
+
+#: crates/wimao/src/operations.rs
+msgid ""
+"The silent installation did not add or update a plugin. Open the installer "
+"normally?"
+msgstr ""
+"La instalación silenciosa no añadió ni actualizó ningún plugin. ¿Abrir el "
+"instalador normalmente?"
+
+#: crates/wimao/src/reglages.rs
+msgid "{warning} (the file was kept as {name})"
+msgstr "{warning} (el archivo se conservó con el nombre {name})"
+
+#: crates/wimao/src/reparation.rs
+msgid "Looking for problems…"
+msgstr "Buscando problemas…"
+
+#: crates/wimao/src/reparation.rs
+msgid "Repairing…"
+msgstr "Reparando…"
+
+#: crates/wimao/src/reparation.rs
+msgid "{n} plugin is not bridged yet"
+msgid_plural "{n} plugins are not bridged yet"
+msgstr[0] "{n} plugin aún no está puenteado"
+msgstr[1] "{n} plugins aún no están puenteados"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Restore a backup…"
+msgstr "Restaurar una copia de seguridad…"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Cancel the import"
+msgstr "Cancelar la importación"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Reading the backup…"
+msgstr "Leyendo la copia de seguridad…"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Backup: {name}"
+msgstr "Copia: {name}"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Date: {date}"
+msgstr "Fecha: {date}"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Your current environment will be kept as a copy."
+msgstr "Su entorno actual se conservará como copia."
+
+#: crates/wimao/src/restaurer.rs
+msgid "Restore this backup?"
+msgstr "¿Restaurar esta copia de seguridad?"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Restore the backup"
+msgstr "Restaurar la copia de seguridad"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Restoring the backup…"
+msgstr "Restaurando la copia de seguridad…"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Cancel the import?"
+msgstr "¿Cancelar la importación?"
+
+#: crates/wimao/src/restaurer.rs
+msgid "Cancelling the import…"
+msgstr "Cancelando la importación…"
+
+#: crates/wimao/src/restaurer.rs
+msgid "The import was cancelled; restart WiMao."
+msgstr "Se canceló la importación: reinicie WiMao."
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "{name} is open — WiMao bridges new plugins"
+msgstr "{name} está abierto — WiMao puentea los plugins nuevos"
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "I'm done"
+msgstr "He terminado"
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "Finishing the session — a silent installation may still be running…"
+msgstr ""
+"Terminando la sesión — puede que una instalación silenciosa siga en curso…"
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "Waiting for the installers to finish…"
+msgstr "Esperando a que terminen los instaladores…"
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "Sign in to {name}"
+msgstr "Inicie sesión en {name}"
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "{name} closed: {summary}"
+msgstr "{name} cerrado: {summary}"
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "{name} closed: no new or updated plugin"
+msgstr "{name} cerrado: ningún plugin nuevo o actualizado"
+
+#~ msgid "this restore point predates the restored backup"
+#~ msgstr ""
+#~ "este punto de restauración es anterior a la copia de seguridad restaurada"
+
+#~ msgid "Backup file missing: {file}"
+#~ msgstr "Falta el archivo de la copia: {file}"
+
+#~ msgid "Bitwig"
+#~ msgstr "Bitwig"
+
+#~ msgid "Repairing"
+#~ msgstr "Reparación"
+
+#~ msgid "Importing the old folder"
+#~ msgstr "Importar la carpeta antigua"
+
+#~ msgid ""
+#~ "Cancelling the import of {path} had been interrupted after the move: it "
+#~ "has been completed"
+#~ msgstr ""
+#~ "La cancelación de la importación de {path} se había interrumpido después "
+#~ "del traslado: se ha completado"
+
+#~ msgid "Wine is left running: its problem is not repaired"
+#~ msgstr "Wine sigue abierto: su problema no se repara"
+
+#~ msgid ""
+#~ "Repairing Wine will close these open programs: {programs}. You can also "
+#~ "leave them open and repair everything else."
+#~ msgstr ""
+#~ "Reparar Wine cerrará estos programas abiertos: {programs}. También puede "
+#~ "dejarlos abiertos y reparar todo lo demás."
+
+#~ msgid "Keep them open"
+#~ msgstr "Dejarlos abiertos"
+
+#~ msgid "Finishing the session…"
+#~ msgstr "Terminando la sesión…"
+
+#~ msgid "Publisher managers arrive in a later version"
+#~ msgstr "Los gestores de editores llegarán en una versión posterior"
+
+#~ msgid "Installers extracted with 7z arrive in a later version"
+#~ msgstr ""
+#~ "Los instaladores que se extraen con 7z llegarán en una versión posterior"

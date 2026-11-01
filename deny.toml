@@ -1,0 +1,38 @@
+# Configuration de cargo-deny (lancé par le job `chaine` de la CI : `cargo deny check`).
+# Contrôle les sources des dépendances, leurs licences (compatibles avec GPL-3.0-or-later)
+# et les avis de sécurité RustSec.
+
+[graph]
+# Seule la plateforme visée (amd64 Linux) compte pour les licences et les avis.
+targets = ["x86_64-unknown-linux-gnu"]
+
+[sources]
+# Uniquement crates.io : ni autre registre, ni dépendance git.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[advisories]
+# Une version retirée (yanked) de crates.io est une erreur.
+yanked = "deny"
+# Exception documentée : RUSTSEC-2021-0153 (`encoding` « non maintenu »), tirée par la crate `gettext`
+# (lecture des catalogues .mo, wimao-core). Ce n'est PAS une vulnérabilité : l'avis signale seulement
+# l'absence de mises à jour depuis 2016 ; aucune faille connue. `encoding` ne décode ici que les .mo
+# installés avec WiMao (contenu de confiance, jamais du réseau). À revoir si `gettext` change.
+ignore = ["RUSTSEC-2021-0153"]
+
+[licenses]
+# Liste explicite de licences compatibles avec GPL-3.0-or-later ; toute autre est refusée.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",           # données (tables de caractères de `encoding`)
+    "CDLA-Permissive-2.0", # données des autorités racine (webpki-roots)
+    "GPL-3.0-or-later",
+]

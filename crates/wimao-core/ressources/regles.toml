@@ -1,0 +1,53 @@
+# Règles d'erreurs : reconnaissent un texte d'erreur de Wine ou d'un installeur et
+# donnent un message compréhensible, avec si possible la réparation associée.
+#
+# Format : [[regle]] motif = "<regex>", message = "<msgid anglais>", reparation = "<Probleme>" (facultatif).
+# Les règles sont essayées dans l'ordre ; la première qui correspond gagne.
+# Chaque `message` doit aussi figurer dans `src/regles.rs` (tr_noop) pour être traduit.
+# Pour en ajouter une : voir CONTRIBUTING.md, « Ajouter une règle d'erreur ».
+
+# NOTES.md, « Étape 3 : tests de plugins » : Maschine 3 s'arrêtait sur msvcp140.dll.
+[[regle]]
+motif = '(?i)(msvcp140|vcruntime140|msvcp140_1)\.dll.*not found'
+message = "A Microsoft C++ library (msvcp140) is missing: use Repair to install it"
+reparation = "Msvcp140Absent"
+
+# Même source : la DLL de Wine est trop incomplète (« unimplemented function msvcp140.dll… »).
+[[regle]]
+motif = '(?i)unimplemented function msvcp140\.dll'
+message = "A Microsoft C++ library (msvcp140) is missing: use Repair to install it"
+reparation = "Msvcp140Absent"
+
+# NOTES.md, « Étape 3 : tests de plugins » : Mini Grand et Velvet (action .NET du MSI).
+# Volontairement précis : un simple « mscoree » correspondrait aussi aux traces
+# `err:mscoree:…` qu'écrit un Wine Mono bien installé (fausse alerte « Mono absent »).
+# Wine écrit « Wine Mono is not installed » quand Mono manque vraiment.
+[[regle]]
+motif = '(?i)wine mono is not installed|(could not load|cannot find|unable to load)[^\n]*mscoree|mscoree\.dll[^\n]*not found|\.NET Framework[^\n]*(is required|not installed|not found)'
+message = "Wine Mono (.NET support) is missing: use Repair to install it"
+reparation = "MonoAbsent"
+
+# NOTES.md, « Étape 3 : tests de plugins » : Serum 2 (Direct2D sur D3D11/DXGI) et DXVK.
+[[regle]]
+motif = '(?i)d3d11.*(failed|error)|DXGI_ERROR'
+message = "The graphics libraries (DXVK) are missing or broken: use Repair to reinstall them"
+reparation = "DxvkAbsent"
+
+# NOTES.md, « Étape 3 : tests de plugins » : Mini Grand (WiX Burn) échouait en 0x80070643.
+[[regle]]
+motif = '0x80070643'
+message = "The WiX installer failed, often because a .NET component is missing"
+reparation = "MonoAbsent"
+
+# Native Access sans dossier de téléchargement (registre `DownloadLocation` absent). Pas de
+# `reparation` : « Réparer » réapplique toujours le registre et les dossiers des recettes
+# (`reparer_gestionnaires`), sans correctif dédié.
+[[regle]]
+motif = 'ERROR_CODE_DOWNLOAD_DIR_MISSING'
+message = "Native Access has no download folder: use Repair"
+
+# Lien de connexion (native-access://…) que le gestionnaire n'a pas pu recevoir : le programme
+# lancé par le navigateur est mort avant de transmettre l'adresse.
+[[regle]]
+motif = 'Error: open EBADF'
+message = "A sign-in link could not reach the manager: open it again from the browser"

@@ -1,0 +1,6 @@
+nom = "Test"
+reconnaitre = ["a*.exe"]
+
+[consignes]
+connexion.fr = "Connecte-toi."
+connexion.en = "Sign in."

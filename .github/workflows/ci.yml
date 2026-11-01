@@ -1,0 +1,182 @@
+# Intégration continue : vérifie format, avertissements, documentation, tests unitaires et traductions à chaque envoi,
+# puis (job `integration`) installe de faux installeurs NSIS, MSI et Inno avec un vrai Wine, et joue une session de
+# faux gestionnaire d'éditeur (crates/wimao-recettes/tests/gestionnaire.rs).
+# Le job `unitaires` compile aussi l'interface GTK (crate `wimao`) : d'où libgtk-4-dev et libadwaita-1-dev.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Droits minimaux du jeton GITHUB_TOKEN : lecture du dépôt seulement (aucun job n'écrit, aucun secret).
+permissions:
+  contents: read
+
+jobs:
+  unitaires:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branche : Dependabot propose les mises à jour)
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      # gettext : msgfmt compile les traductions (build.rs), xgettext/msgmerge les vérifient.
+      # 7zip : les tests d'archives (wimao-recettes) lancent `7z`. xvfb/x11-utils/cabextract : outils appelés par wimao-core.
+      # libgtk-4-dev / libadwaita-1-dev : compilation de l'interface (crate `wimao`) ; ses tests n'ouvrent aucune fenêtre,
+      # donc pas d'écran virtuel requis.
+      # Aucune locale à générer : i18n.rs lit directement les fichiers .mo.
+      - name: Paquets système
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext 7zip xvfb x11-utils cabextract libgtk-4-dev libadwaita-1-dev
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      # Documentation de toutes les crates sans avertissement (liens `[...]` cassés, etc.).
+      - name: Documentation
+        run: cargo doc --locked --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -Dwarnings
+      - name: Tests
+        run: cargo test --locked --workspace
+      - name: Traductions complètes
+        run: scripts/verifier-traductions.sh
+
+  # Tests d'intégration avec un vrai Wine (ceux marqués #[ignore = "Wine requis"]).
+  # Voir CONTRIBUTING.md, « Tests d'intégration avec Wine », pour les lancer à la main.
+  integration:
+    runs-on: ubuntu-24.04
+    env:
+      # Versions et empreintes : yabridge 5.1.1, la même que celle utilisée par WiMao
+      # (scripts/install-yabridge.sh) ; l'archive est vérifiée avant d'être extraite.
+      YABRIDGE_VERSION: "5.1.1"
+      YABRIDGE_SHA256: d11f0307412b5566b09a75ed4aa191266db56d22f4de4d20e4fbde6296cd1a47
+      # Wine de WineHQ (branche stable), installé dans /opt/wine-stable avec un bin/ complet :
+      # c'est exactement la forme attendue par WiMao (<WIMAO_WINE_DIR>/bin/wine…), et il est
+      # plus proche du Wine 11 visé par WiMao que le Wine 9.0 d'Ubuntu 24.04.
+      WIMAO_WINE_DIR: /opt/wine-stable
+      # Pas d'installeur Inno Setup en CI : l'installeur d'Inno Setup 6.4 échoue sur l'image
+      # GitHub (« Error reading FPreparingMemo.Lines.Strings: A call to an OS function
+      # failed ») avec le Wine d'Ubuntu (9.0) comme avec celui de WineHQ (11.0), en toute
+      # langue et avec des polices, alors qu'il passe sur un poste de bureau. Le test Inno se
+      # fait en local (CONTRIBUTING.md, tests d'intégration). Cause non trouvée (2026-10-31).
+      WIMAO_FIXTURES_SANS_INNO: "1"
+      WIMAO_YABRIDGE_DIR: ${{ github.workspace }}/ci-yabridge/yabridge
+      # Dossier des installeurs factices fabriqués plus bas.
+      WIMAO_FIXTURES: ${{ github.workspace }}/ci-fixtures
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branche : Dependabot propose les mises à jour)
+        with:
+          toolchain: stable
+      # Wine de WineHQ : dépôt officiel (clé et liste de sources publiées par WineHQ, voir
+      # https://gitlab.winehq.org/wine/wine/-/wikis/Debian-Ubuntu), architecture i386 exigée par
+      # la partie 32 bits. nsis (makensis), msitools et wixl fabriquent les installeurs NSIS et MSI ;
+      # xvfb offre un écran virtuel aux installeurs et à ISCC ; gettext, 7zip, x11-utils et
+      # cabextract sont les mêmes outils que dans le job `unitaires`. curl télécharge Inno Setup
+      # et yabridge (déjà présent sur les images GitHub, listé par prudence).
+      - name: Paquets système (Wine, outils de fabrication des installeurs)
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo mkdir -pm755 /etc/apt/keyrings
+          curl -fsSL https://dl.winehq.org/wine-builds/winehq.key \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key
+          sudo curl -fsSL -o /etc/apt/sources.list.d/winehq-noble.sources \
+            https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources
+          sudo apt-get update
+          sudo apt-get install -y --install-recommends winehq-stable
+          sudo apt-get install -y nsis msitools wixl xvfb gettext 7zip x11-utils cabextract curl
+          # Polices : l'image GitHub n'en a presque pas ; un poste de bureau en a toujours.
+          sudo apt-get install -y fonts-liberation fonts-dejavu-core fontconfig
+          "${WIMAO_WINE_DIR}/bin/wine" --version
+      # yabridge 5.1.1 depuis sa publication GitHub, empreinte vérifiée avant extraction.
+      - name: yabridge ${{ env.YABRIDGE_VERSION }}
+        run: |
+          mkdir -p ci-yabridge
+          curl -fsSL -o ci-yabridge/yabridge.tar.gz \
+            "https://github.com/robbert-vdh/yabridge/releases/download/${YABRIDGE_VERSION}/yabridge-${YABRIDGE_VERSION}.tar.gz"
+          echo "${YABRIDGE_SHA256}  ci-yabridge/yabridge.tar.gz" | sha256sum -c -
+          tar xzf ci-yabridge/yabridge.tar.gz -C ci-yabridge
+          test -x "${WIMAO_YABRIDGE_DIR}/yabridgectl"
+      # Les installeurs factices NSIS et MSI, et faux-gestionnaire-setup.exe (7z ; fabriqué avant
+      # l'arrêt de WIMAO_FIXTURES_SANS_INNO). Inno Setup ignoré en CI, voir plus haut ; tout tourne
+      # sous Xvfb. Pas de mingw : FauxGestionnaire.exe et WiMaoTest.vst3 sont versionnés.
+      - name: Installeurs factices
+        run: tests/fabriquer-fixtures.sh "${WIMAO_FIXTURES}"
+      # `--ignored` lance seulement les tests qui exigent Wine (et ceux "installeurs réels",
+      # qui se sautent sans leur variable). xvfb-run : l'écran virtuel du test d'ouverture de plugin.
+      # HOME temporaire : même par erreur, rien n'est écrit dans le vrai dossier personnel.
+      - name: Tests d'intégration
+        run: |
+          # cargo et rustup cherchent leurs dossiers dans HOME : on les fixe avant de le changer.
+          export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+          export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
+          export HOME="$(mktemp -d)"
+          # XDG_* aussi : HOME seul ne suffit pas si l'image définit ces variables (menus de Wine).
+          export XDG_DATA_HOME="${HOME}/.local/share" XDG_CONFIG_HOME="${HOME}/.config" XDG_CACHE_HOME="${HOME}/.cache"
+          export WIMAO_DONNEES="${HOME}/donnees"
+          # --exclude wimao : l'interface GTK n'a aucun test qui demande Wine, et l'exclure évite
+          # d'installer GTK4/libadwaita ici (elle est compilée et testée par le job `unitaires`).
+          xvfb-run -a cargo test --locked --workspace --exclude wimao -- --ignored
+
+  # Sécurité de la chaîne d'approvisionnement : licences, sources et avis de sécurité des dépendances
+  # (deny.toml), avis RustSec sur Cargo.lock, et contrôle que les workflows sont bien figés
+  # (empreintes de commit, permissions, images) par paquets/verifier-workflows.sh.
+  # Les versions des outils sont figées ; Dependabot ne les suit pas, à relever à la main.
+  chaine:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable (branche : Dependabot propose les mises à jour)
+        with:
+          toolchain: stable
+      # Tous les scripts shell suivis par git (shellcheck est préinstallé sur l'image du runner), sans aucun
+      # avertissement ni info : `-x` suit les `source`. Les scripts sans extension .sh ne sont pas concernés.
+      - name: shellcheck
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck -x
+      - name: Workflows figés
+        run: paquets/verifier-workflows.sh
+      # Le contrôle lui-même est testé : chaque forme non figée doit être refusée.
+      - name: Test du contrôle des workflows
+        run: paquets/tester-verifier-workflows.sh
+      # Le script de signature des versions, en mode à blanc : refabrication simulée (SIGNER_REFABRIQUER),
+      # clé GnuPG jetable, faux gh ; aucun podman ni réseau. La vraie refabrication est éprouvée par le job
+      # `signature-a-blanc` de paquets.yml.
+      - name: Test de la signature des versions (à blanc)
+        run: scripts/tests/tester-signer-version.sh
+      # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
+      - name: Données personnelles (test du contrôle)
+        run: scripts/tests/tester-verifier-donnees-perso.sh
+      # Le script cherche dans les fichiers suivis le nom d'utilisateur, le nom de machine et l'e-mail git
+      # du runner (`runner`, un nom de machine de CI et, ici, aucun e-mail : tous ignorés ou sans effet),
+      # donc il ne prouve ici que son bon fonctionnement. Le vrai contrôle se lance sur la machine du
+      # propriétaire avant chaque version (docs/publier-une-version.md), où les termes sont les siens.
+      - name: Données personnelles
+        run: scripts/verifier-donnees-perso.sh
+      # Réglages du dépôt GitHub : on ne vérifie ICI que le script (faux `gh`, aucun accès à GitHub) et ses
+      # corps de requête (`--a-blanc` : affichage sans envoi). Les vrais réglages se posent à la main par
+      # un administrateur (`--appliquer`), pas depuis la CI. `jq` est préinstallé sur les runners.
+      - name: Réglages du dépôt (test)
+        run: scripts/tests/tester-regler-depot-github.sh
+      - name: Réglages du dépôt (à blanc)
+        run: scripts/regler-depot-github.sh --a-blanc
+      # Les deux outils sont mis en cache (clé = leurs versions) : la compilation prend plusieurs minutes.
+      - name: Cache des outils
+        id: cache-outils
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/bin/cargo-deny
+            ~/.cargo/bin/cargo-audit
+          key: outils-chaine-cargo-deny-0.20.2-cargo-audit-0.22.2
+      - name: Outils (cargo-deny, cargo-audit)
+        if: steps.cache-outils.outputs.cache-hit != 'true'
+        run: cargo install --locked cargo-deny@0.20.2 cargo-audit@0.22.2
+      - name: cargo deny
+        run: cargo deny --locked check
+      # Les avertissements font échouer l'audit, comme cargo deny ; même exception justifiée que dans
+      # deny.toml : RUSTSEC-2021-0153 (`encoding` non maintenu, via gettext), sans faille connue.
+      - name: cargo audit
+        run: cargo audit --deny warnings --ignore RUSTSEC-2021-0153

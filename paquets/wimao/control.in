@@ -1,0 +1,17 @@
+Package: wimao
+Version: @VERSION@
+Section: sound
+Priority: optional
+Architecture: amd64
+Depends: wimao-wine (>= 11.20+wimao1), wimao-bridge (>= 5.1.1+dxvk3.1.1-1), libadwaita-1-0 (>= 1.5), xvfb, 7zip | p7zip-full, cabextract, zstd, tar@DEPENDANCES@
+Recommends: carla, x11-utils
+Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Homepage: https://github.com/F1ghtc0re/WiMao
+Description: gestionnaire Wine pour la production musicale (plugins audio Windows)
+ WiMao installe et gère des plugins audio Windows (VST2, VST3, CLAP) sous
+ Linux : préfixes Wine, yabridge, DXVK et recettes d'installation, avec une
+ interface GTK4 / libadwaita (wimao) et une ligne de commande (wimao-cli).
+ .
+ WiMao installs and manages Windows audio plugins (VST2, VST3, CLAP) on Linux:
+ Wine prefixes, yabridge, DXVK and install recipes, with a GTK4 / libadwaita
+ interface (wimao) and a command line tool (wimao-cli).

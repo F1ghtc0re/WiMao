@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=WiMao
+Comment=Windows audio plugins on Linux
+Comment[fr]=Plugins audio Windows sous Linux
+Comment[es]=Plugins de audio de Windows en Linux
+Exec=wimao
+Icon=fr.wimao.WiMao
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupNotify=true

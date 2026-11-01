@@ -1,0 +1,24 @@
+# Paquets Ubuntu 24.04 nécessaires pour fabriquer le paquet wimao (paquets/fabriquer-wimao.sh).
+# Un paquet par ligne ; les commentaires (« # ») et les lignes vides sont ignorés.
+# Lu par DEUX consommateurs, pour qu'ils ne divergent jamais :
+#   - le job `wimao` de .github/workflows/paquets.yml (et `reproductible`, avec la liste de bridge) ;
+#   - scripts/signer-version.sh (refabrication locale dans un conteneur, pour comparer avec la CI).
+# Lecture : sed 's/#.*//' paquets/wimao/paquets-compilation.txt | xargs apt-get install -y --no-install-recommends
+
+# git : paquets/commun.sh lit la date du dernier commit (SOURCE_DATE_EPOCH). ca-certificates et curl : téléchargements (Rust).
+git
+ca-certificates
+curl
+# build-essential : compilateur et éditeur de liens de Rust. pkg-config : recherche de GTK.
+build-essential
+pkg-config
+# Bibliothèques de l'interface (crate wimao).
+libgtk-4-dev
+libadwaita-1-dev
+# gettext : msgfmt (build.rs de wimao-core et compilation des traductions).
+gettext
+# jq : version du workspace. dpkg-dev : dpkg-deb et dpkg-shlibdeps. binutils (strip) et file : contrôles du script.
+jq
+dpkg-dev
+binutils
+file

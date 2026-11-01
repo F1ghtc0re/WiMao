@@ -1,0 +1,5 @@
+nom = "Test"
+reconnaitre = ["a*.exe"]
+
+[installation]
+methode = "magie"

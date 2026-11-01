@@ -1,0 +1,16 @@
+Package: wimao-bridge
+Version: @VERSION@
+Section: sound
+Priority: optional
+Architecture: amd64
+Depends: wimao-wine (>= 11.20+wimao1)@DEPENDANCES@
+Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Homepage: https://github.com/F1ghtc0re/WiMao
+Description: yabridge et DXVK pour WiMao (plugins audio Windows sous Linux)
+ yabridge 5.1.1 relie les plugins audio Windows (VST2, VST3, CLAP) aux
+ logiciels de musique Linux ; DXVK 3.1.1 fournit les DLL Direct3D sur Vulkan
+ pour les interfaces graphiques des plugins. Ce paquet est utilisé par WiMao.
+ .
+ yabridge 5.1.1 bridges Windows audio plugins (VST2, VST3, CLAP) to Linux
+ music software; DXVK 3.1.1 provides the Direct3D-on-Vulkan DLLs used by
+ plugin interfaces. This package is used by WiMao.

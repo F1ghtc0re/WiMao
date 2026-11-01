@@ -1,0 +1,17 @@
+# Paquets Ubuntu 24.04 nécessaires pour fabriquer le paquet wimao-bridge (paquets/fabriquer-bridge.sh).
+# Un paquet par ligne ; les commentaires (« # ») et les lignes vides sont ignorés.
+# Lu par DEUX consommateurs, pour qu'ils ne divergent jamais :
+#   - le job `bridge` de .github/workflows/paquets.yml (et `reproductible`, avec la liste de wimao) ;
+#   - scripts/signer-version.sh (refabrication locale dans un conteneur, pour comparer avec la CI).
+# Lecture : sed 's/#.*//' paquets/bridge/paquets-compilation.txt | xargs apt-get install -y --no-install-recommends
+
+# git : paquets/commun.sh lit la date du dernier commit (SOURCE_DATE_EPOCH).
+git
+ca-certificates
+# curl : téléchargement vérifié de yabridge et de DXVK. dpkg-dev : assemblage (dpkg-deb, dpkg-shlibdeps).
+curl
+dpkg-dev
+# libstdc++6 et libgcc-s1 : bibliothèques des binaires de yabridge, que dpkg-shlibdeps doit pouvoir résoudre
+# (absentes, les dépendances relevées seraient incomplètes). libc6 est déjà dans l'image.
+libstdc++6
+libgcc-s1

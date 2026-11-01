@@ -1,0 +1,44 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: yabridge and DXVK (binaries redistributed for WiMao)
+Source: https://github.com/robbert-vdh/yabridge https://github.com/doitsujin/dxvk
+
+Files: opt/wimao/yabridge/*
+Copyright: 2020-2024 Robbert van der Helm
+License: GPL-3+
+
+Files: opt/wimao/dxvk/*
+Copyright: 2017 Philip Rebohle
+ 2019 Joshua Ashton
+ 2019 Robin Kertels
+ 2023 Jeffrey Ellison
+License: Zlib
+ zlib/libpng license
+ .
+ This software is provided 'as-is', without any express or implied
+ warranty. In no event will the authors be held liable for any damages
+ arising from the use of this software.
+ .
+ Permission is granted to anyone to use this software for any purpose,
+ including commercial applications, and to alter it and redistribute it
+ freely, subject to the following restrictions:
+ .
+ - The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software. If you use this software
+   in a product, an acknowledgment in the product documentation would be
+   appreciated but is not required.
+ .
+ - Altered source versions must be plainly marked as such, and must not
+   be misrepresented as being the original software.
+ .
+ - This notice may not be removed or altered from any source distribution.
+
+Comment: The packaging scripts and this file belong to WiMao
+ (https://github.com/F1ghtc0re/WiMao). The Wine launcher scripts
+ yabridge-host.exe and yabridge-host-32.exe are modified: their default
+ WINELOADER is /opt/wimao/wine/bin/wine. No Microsoft DLL is included.
+ .
+ The complete corresponding source of yabridge 5.1.1 (GPL obligation) is at
+ https://github.com/robbert-vdh/yabridge/tree/5.1.1 . yabridge also bundles
+ third-party code under its own licences (Asio, Bitsery, CLAP headers,
+ function2, ghc::filesystem, toml++, VST3 SDK); see its COPYING and
+ subprojects/ directory. DXVK 3.1.1 source: https://github.com/doitsujin/dxvk/tree/v3.1.1

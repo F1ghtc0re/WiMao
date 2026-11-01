@@ -1,0 +1,17 @@
+Package: wimao-wine
+Version: @VERSION@
+Section: otherosfs
+Priority: optional
+Architecture: amd64
+Depends: libfreetype6, libfontconfig1, libx11-6, libxext6, libxrender1, libxrandr2, libxi6, libxcursor1, libxcomposite1, libxfixes3, libvulkan1, libgnutls30t64, libpulse0@DEPENDANCES@
+Recommends: libgl1, libegl1, libxinerama1, libxxf86vm1, libcups2t64, libsdl2-2.0-0, libdbus-1-3
+Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Homepage: https://github.com/F1ghtc0re/WiMao
+Description: Wine 11.20 réglé pour les plugins audio, utilisé par WiMao
+ Wine 11.20 (mode WoW64, sans staging) avec le seul correctif nécessaire aux
+ fenêtres de plugins audio sous X11 (annulation de la garde wm_state_serial
+ de Wine 9.22). Installé dans /opt/wimao/wine, sans toucher au Wine du système.
+ .
+ Wine 11.20 (WoW64 mode, no staging) with the single patch needed for audio
+ plugin windows on X11 (revert of the Wine 9.22 wm_state_serial guard).
+ Installed in /opt/wimao/wine, leaving the system Wine untouched.

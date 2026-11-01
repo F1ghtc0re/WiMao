@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fiche AppStream de WiMao : décrit l'application aux logithèques (GNOME Logiciels, KDE
+  Discover...). Installée dans /usr/share/metainfo/fr.wimao.WiMao.metainfo.xml.
+  Les textes ne passent pas par gettext : chaque langue est écrite ici avec xml:lang
+  (anglais par défaut, puis français et espagnol). Validation :
+  appstreamcli validate (option no-net) crates/wimao/data/fr.wimao.WiMao.metainfo.xml
+-->
+<component type="desktop-application">
+  <id>fr.wimao.WiMao</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>WiMao</name>
+  <summary>Windows audio plugins on Linux</summary>
+  <summary xml:lang="fr">Plugins audio Windows sous Linux</summary>
+  <summary xml:lang="es">Plugins de audio de Windows en Linux</summary>
+
+  <description>
+    <p>WiMao installs and manages Windows VST2, VST3 and CLAP audio plugins on Linux, so that your digital audio workstation (DAW) can load them. It takes care of a dedicated Wine environment, yabridge and DXVK for you, with a modern and simple interface.</p>
+    <p xml:lang="fr">WiMao installe et gère les plugins audio Windows VST2, VST3 et CLAP sous Linux, pour que votre station audio numérique (DAW) puisse les charger. Il s'occupe à votre place d'un environnement Wine dédié, de yabridge et de DXVK, avec une interface moderne et simple.</p>
+    <p xml:lang="es">WiMao instala y gestiona los plugins de audio de Windows VST2, VST3 y CLAP en Linux, para que su estación de audio digital (DAW) pueda cargarlos. Se encarga por usted de un entorno Wine dedicado, de yabridge y de DXVK, con una interfaz moderna y sencilla.</p>
+  </description>
+
+  <launchable type="desktop-id">fr.wimao.WiMao.desktop</launchable>
+  <url type="homepage">https://github.com/F1ghtc0re/WiMao</url>
+  <url type="bugtracker">https://github.com/F1ghtc0re/WiMao/issues</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/F1ghtc0re/WiMao/main/docs/captures/clair-liste.png</image>
+      <caption>Your installed plugins</caption>
+      <caption xml:lang="fr">Vos plugins installés</caption>
+      <caption xml:lang="es">Sus plugins instalados</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/F1ghtc0re/WiMao/main/docs/captures/clair-assistant.png</image>
+      <caption>The installation assistant</caption>
+      <caption xml:lang="fr">L'assistant d'installation</caption>
+      <caption xml:lang="es">El asistente de instalación</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/F1ghtc0re/WiMao/main/docs/captures/clair-historique.png</image>
+      <caption>The history</caption>
+      <caption xml:lang="fr">L'historique</caption>
+      <caption xml:lang="es">El historial</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/F1ghtc0re/WiMao/main/docs/captures/sombre-liste.png</image>
+      <caption>The dark theme</caption>
+      <caption xml:lang="fr">Le thème sombre</caption>
+      <caption xml:lang="es">El tema oscuro</caption>
+    </screenshot>
+  </screenshots>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+  </categories>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.4.0" date="2026-11-01">
+      <description>
+        <p>Debian packages (.deb) and a hardened build chain.</p>
+        <p xml:lang="fr">Paquets Debian (.deb) et chaîne de construction sécurisée.</p>
+        <p xml:lang="es">Paquetes Debian (.deb) y cadena de construcción reforzada.</p>
+      </description>
+    </release>
+  </releases>
+</component>

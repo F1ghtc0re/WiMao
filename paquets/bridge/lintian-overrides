@@ -1,0 +1,5 @@
+# Écarts voulus par rapport à la charte Debian (WiMao cherche ses outils à ces endroits fixes).
+# /opt/wimao est l'emplacement prévu par WiMao pour yabridge et DXVK (crates/wimao-core/src/chemins.rs).
+wimao-bridge: dir-or-file-in-opt
+# Les bibliothèques de yabridge sont livrées telles quelles par l'amont (droits 0755).
+wimao-bridge: shared-library-is-executable

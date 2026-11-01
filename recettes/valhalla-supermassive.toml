@@ -1,0 +1,14 @@
+# Valhalla Supermassive (gratuit). NOTES.md : zip officiel de valhalladsp.com/demos-downloads,
+# contenant un installeur Inno Setup 32 bits ; la méthode « auto » ouvre le zip puis reconnaît
+# l'installeur.
+nom = "Valhalla Supermassive"
+editeur = "Valhalla DSP"
+# Pas de `telecharger` : NOTES.md ne donne pas l'adresse directe du zip (hébergement S3, adresse
+# non relevée). WiMao demande alors à l'utilisateur de choisir le fichier.
+# Pas d'`empreinte` : NOTES.md ne la donne que tronquée (67e0cedb…14911d).
+type = "installeur"
+# Noms de fichiers HYPOTHÉTIQUES (non relevés dans NOTES.md) : à confirmer à la vérification réelle.
+reconnaitre = ["ValhallaSupermassive*.zip", "ValhallaSupermassive*.exe"]
+
+[installation]
+methode = "auto"

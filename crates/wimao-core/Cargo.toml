@@ -1,0 +1,24 @@
+[package]
+name = "wimao-core"
+description = "Noyau de WiMao : chemins, erreurs, lancement de commandes"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+gettext = "0.4.0"
+libc.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11.0"
+toml = "1.0"
+ureq = "3"
+walkdir = "2.5.0"
+regex = "1.13.1"
+
+[dev-dependencies]
+serial_test = "3.5.0"
+tempfile = "3.27.0"
+tiny_http = "0.12.0"

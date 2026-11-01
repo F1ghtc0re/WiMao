@@ -1,0 +1,20 @@
+# Arturia Software Center. NOTES.md : installeur public Inno Setup, installé dans
+# Program Files (x86)\Arturia ; connexion faite par l'utilisateur dans l'application.
+nom = "Arturia Software Center"
+editeur = "Arturia"
+# Version 2.13.0.3440 relevée dans NOTES.md ; l'adresse change avec chaque version.
+telecharger = "https://downloads.arturia.net/products/asc/soft/Arturia_Software_Center__2_13_0_3440.exe"
+# Pas d'empreinte : NOTES.md n'en donne aucune.
+type = "gestionnaire"
+reconnaitre = ["Arturia_Software_Center*.exe"]
+
+[installation]
+methode = "inno"
+
+[gestionnaire]
+programme = 'C:\Program Files (x86)\Arturia\Arturia Software Center\Arturia Software Center.exe'
+
+[consignes]
+connexion.fr = "Connectez-vous à votre compte Arturia dans la fenêtre du Software Center. Une erreur WebView2 au démarrage est sans conséquence."
+connexion.en = "Sign in to your Arturia account in the Software Center window. A WebView2 error at startup is harmless."
+connexion.es = "Inicie sesión en su cuenta de Arturia en la ventana del Software Center. Un error de WebView2 al arrancar es inofensivo."

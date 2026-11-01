@@ -1,0 +1,38 @@
+# Native Access 2 (Native Instruments). Valeurs relevées à la main : NOTES.md, section
+# « Étape 3 : tests de plugins ».
+nom = "Native Access 2"
+editeur = "Native Instruments"
+telecharger = "https://assets.native-instruments.com/downloads/Native-Access_2.exe"
+# Pas d'empreinte : NOTES.md n'en donne aucune pour cet installeur.
+type = "gestionnaire"
+reconnaitre = ["Native-Access*.exe", "Native Access*.exe"]
+
+[installation]
+# L'installeur est un NSIS interactif : on en extrait directement l'application (Electron).
+methode = "extraire-7z"
+# Les liens native-access:// (retour de connexion du navigateur) sont relayés vers Wine.
+lien-connexion = "native-access"
+
+[[installation.extraire]]
+archive = '$PLUGINSDIR/app-64.7z'
+vers = 'C:\Program Files\Native Instruments\Native Access'
+
+# Le service NTKDaemon est déposé par Native Access lui-même (InstallAware).
+[[dependances]]
+fichier = 'C:\Program Files\Native Instruments\Native Access\resources\daemon\win\NTKDaemon * Setup PC.exe'
+methode = "installaware"
+
+[correctifs]
+# Sans ce dossier, Native Access échoue avec ERROR_CODE_DOWNLOAD_DIR_MISSING.
+registre = [{ cle = 'HKCU\Software\Native Instruments\Native Access', valeur = "DownloadLocation", donnee = '{telechargements}\NI' }]
+dossiers = ['{telechargements}\NI']
+services = ["NTKDaemonService"]
+
+[gestionnaire]
+programme = 'C:\Program Files\Native Instruments\Native Access\Native Access.exe'
+arguments = ["--no-sandbox", "--disable-gpu"]
+
+[consignes]
+connexion.fr = "Connectez-vous à votre compte Native Instruments dans la fenêtre de Native Access. Votre navigateur s'ouvre, puis le lien de retour revient dans Wine."
+connexion.en = "Sign in to your Native Instruments account in the Native Access window. Your browser opens, then the return link comes back into Wine."
+connexion.es = "Inicie sesión en su cuenta de Native Instruments en la ventana de Native Access. Se abre su navegador y el enlace de vuelta regresa a Wine."

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Paquet MSI factice : installe le bundle WiMaoTest.vst3 dans le dossier VST3 commun.
+     Fabriqué par tests/fabriquer-fixtures.sh avec wixl (paquet msitools) ; la variable
+     PLUGIN est donnée par `wixl -D PLUGIN=<dossier plugin>`.
+     Sert uniquement aux tests d'intégration de WiMao : aucun code d'un éditeur. -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="WiMaoTest" Language="1033" Version="1.0.0"
+           Manufacturer="WiMao" UpgradeCode="6f1d6a4e-3b0c-4f6e-9a57-2d5b1c8e7a10">
+    <Package InstallerVersion="200" Compressed="yes" Platform="x64" />
+    <Media Id="1" Cabinet="plugin.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="CommunFiles" Name="Common Files">
+          <Directory Id="DossierVst3" Name="VST3">
+            <Directory Id="Bundle" Name="WiMaoTest.vst3">
+              <Directory Id="DossierContents" Name="Contents">
+                <Directory Id="DossierBinaire" Name="x86_64-win">
+                  <Component Id="CompPlugin" Guid="a3c1e5b2-7d94-4a08-b6f3-0e92d1c47a55" Win64="yes">
+                    <File Id="FichierPlugin" Name="WiMaoTest.vst3"
+                          Source="$(var.PLUGIN)/WiMaoTest.vst3/Contents/x86_64-win/WiMaoTest.vst3" KeyPath="yes" />
+                  </Component>
+                </Directory>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="Complet" Level="1">
+      <ComponentRef Id="CompPlugin" />
+    </Feature>
+  </Product>
+</Wix>

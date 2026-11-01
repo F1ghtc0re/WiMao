@@ -1,0 +1,6 @@
+wimao-bridge (5.1.1+dxvk3.1.1-1) unstable; urgency=medium
+
+  * Premier paquet : yabridge 5.1.1 et DXVK 3.1.1 (binaires officiels),
+    installés dans /opt/wimao/yabridge et /opt/wimao/dxvk.
+
+ -- F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>  Sun, 01 Nov 2026 12:00:00 +0000

@@ -1,0 +1,14 @@
+# Serum 2 (Xfer Records). NOTES.md : Install_Xfer_Serum2_2.1.5.exe, installeur NSIS 32 bits,
+# `/S` silencieux OK. Pas de `telecharger` : le fichier demande un compte Xfer.
+nom = "Serum 2"
+editeur = "Xfer Records"
+type = "installeur"
+reconnaitre = ["Install_Xfer_Serum2*.exe"]
+
+[installation]
+methode = "nsis"
+
+[consignes]
+activation.fr = "Au premier lancement, entrez votre compte Xfer. Si le bouton d'autorisation ne réagit pas (le navigateur ne reçoit pas le lien de Wine), relevez l'adresse http://localhost:<port> avec la commande « ss -ltnp | grep wineserver », puis ouvrez-la depuis un terminal Linux avec votre navigateur."
+activation.en = "At first launch, enter your Xfer account. If the authorization button does nothing (the browser does not receive Wine's link), find the http://localhost:<port> address with the command \"ss -ltnp | grep wineserver\", then open it from a Linux terminal with your browser."
+activation.es = "En el primer arranque, introduzca su cuenta de Xfer. Si el botón de autorización no reacciona (el navegador no recibe el enlace de Wine), localice la dirección http://localhost:<puerto> con el comando «ss -ltnp | grep wineserver» y ábrala desde un terminal de Linux con su navegador."

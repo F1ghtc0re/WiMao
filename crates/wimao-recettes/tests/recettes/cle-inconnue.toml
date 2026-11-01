@@ -1,0 +1,4 @@
+nom = "Test"
+editeur = "Exemple"
+telechargerr = "https://exemple.org/a.exe"
+reconnaitre = ["a*.exe"]

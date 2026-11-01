@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Icône de WiMao : une onde sonore dans un carré arrondi (fiche jack stylisée). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#78aeed"/>
+      <stop offset="1" stop-color="#3584e4"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#fond)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round">
+    <path d="M28 64v0"/>
+    <path d="M44 48v32"/>
+    <path d="M60 30v68"/>
+    <path d="M76 44v40"/>
+    <path d="M92 54v20"/>
+    <path d="M104 64v0"/>
+  </g>
+</svg>
