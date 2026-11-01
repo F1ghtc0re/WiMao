@@ -265,9 +265,12 @@ grep -qx 'No problem found' "$JOURNAUX/diagnostiquer.log" \
 # wimao-bridge lancent Wine avec WINELOADER=/opt/wimao/wine/bin/wine. `verifier` ouvre chaque plugin
 # ponté dans Carla (écran Xvfb à lui) avec un serveur JACK factice lancé ci-dessous. Verdicts exigés :
 #   Dexed     ✅ « The plugin opens » : sa fenêtre apparaît, la chaîne Wine + yabridge des paquets marche ;
-#   WiMaoTest ❌ « The plugin host stopped » : sa fabrique VST3 est vide (tests/fixtures/plugin/WiMaoTest.c),
-#             Carla s'arrête en l'examinant ; c'est attendu, il ne sert qu'à tester installeur et pontage.
-# `verifier` rend donc le code 2 (un ❌), accepté seulement si ces deux verdicts exacts sont obtenus.
+#   WiMaoTest ❌ « The plugin host stopped » OU ⚠️ « Loaded, but the interface could not be checked » :
+#             sa fabrique VST3 est vide (tests/fixtures/plugin/WiMaoTest.c). Selon le moment, Carla
+#             s'arrête en l'examinant (❌) ou le « charge » sans pouvoir ouvrir d'interface (⚠️) : constaté
+#             3 fois sur 7 sur ubuntu-24.04 le 2026-11-01, les deux issues sont donc admises. Il ne sert qu'à
+#             tester installeur et pontage ; ce qui compte est qu'il ne soit JAMAIS ✅.
+# `verifier` rend le code 2 si WiMaoTest est ❌, 0 s'il est ⚠️ ; aucun autre verdict n'est accepté.
 # Exception : sur une distribution sans Carla (décidé par apt-cache policy), le seul verdict accepté pour
 # les deux est ⚠️ « Install Carla to test plugins » (code 0) ; pontage et lien yabridge restent exigés.
 if [ "$CARLA_DISPONIBLE" = 1 ]; then
@@ -302,8 +305,18 @@ cat "$JOURNAUX/verifier.log"
 # ⚠️ = U+26A0 U+FE0F, écrit en octets : indépendant de la locale du script.
 AVERTISSEMENT=$'\xe2\x9a\xa0\xef\xb8\x8f'
 if [ "$CARLA_DISPONIBLE" = 1 ]; then
-    code_attendu=2
-    attendus=("Dexed | VST3 | ✅ | The plugin opens" "WiMaoTest | VST3 | ❌ | The plugin host stopped")
+    # Dexed : un seul verdict admis. WiMaoTest : deux issues admises (voir plus haut) ; le code attendu
+    # de `verifier` dépend de celle obtenue, lue dans son journal avant la comparaison.
+    attendus=("Dexed | VST3 | ✅ | The plugin opens")
+    wimaotest_echec="WiMaoTest | VST3 | ❌ | The plugin host stopped"
+    wimaotest_remarque="WiMaoTest | VST3 | $AVERTISSEMENT | Loaded, but the interface could not be checked"
+    if grep -q -x -F "$wimaotest_remarque" "$JOURNAUX/verifier.log"; then
+        attendus+=("$wimaotest_remarque")
+        code_attendu=0
+    else
+        attendus+=("$wimaotest_echec")
+        code_attendu=2
+    fi
 else
     code_attendu=0
     attendus=("Dexed | VST3 | $AVERTISSEMENT | Install Carla to test plugins"
