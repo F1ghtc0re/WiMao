@@ -28,10 +28,10 @@ de `docs/superpowers/specs/2026-11-01-wimao-sous-projet-4-design.md`.
 À cocher dans l'ordre. Les points marqués (guidé) font l'objet d'un accompagnement pas à pas avec le
 contrôleur du projet ; ne transmettez jamais un mot de passe ni une phrase de passe.
 
-- [ ] **Double authentification** activée sur le compte GitHub (guidé).
-- [ ] **Clé de signature** créée, sauvegardée, et clé publique ajoutée au dépôt
+- [x] **Double authentification** activée sur le compte GitHub (guidé).
+- [x] **Clé de signature** créée, sauvegardée, et clé publique ajoutée au dépôt
       (`docs/cle-publique.asc`) : voir « Créer la clé de signature » plus bas (guidé).
-- [ ] **Règles du dépôt** : posées et contrôlées par `scripts/regler-depot-github.sh`
+- [x] **Règles du dépôt** : posées et contrôlées par `scripts/regler-depot-github.sh`
       (`--appliquer` juste après le passage en public, `--verifier` à tout moment ; valeurs exactes dans
       la spec du sous-projet 5, § 4). Sur un compte GitHub gratuit, ces règles n'existent que pour un
       dépôt **public** (refus « Upgrade to GitHub Pro or make this repository public », constaté le
@@ -48,11 +48,11 @@ contrôleur du projet ; ne transmettez jamais un mot de passe ni une phrase de p
         `signer-version.sh` le détecte (l'attestation doit porter sur le commit de l'étiquette signée
         que vous avez en local), mais mieux vaut l'empêcher. Vous pouvez donc toujours supprimer une
         étiquette ratée (voir « L'étiquette signée »).
-- [ ] **Alertes et correctifs Dependabot** : posés par `scripts/regler-depot-github.sh --appliquer` sur le
+- [x] **Alertes et correctifs Dependabot** : posés par `scripts/regler-depot-github.sh --appliquer` sur le
       nouveau dépôt (l'ancien dépôt les avait depuis le 2026-11-01).
-- [ ] **Signalement privé des failles** activé, car `SECURITY.md` y renvoie : fait par
+- [x] **Signalement privé des failles** activé, car `SECURITY.md` y renvoie : fait par
       `scripts/regler-depot-github.sh --appliquer` (vérifiable avec `--verifier`).
-- [ ] **Données personnelles retirées avant de rendre le dépôt public.** Les fichiers ont été corrigés
+- [x] **Données personnelles retirées avant de rendre le dépôt public.** Les fichiers ont été corrigés
       (`NOTES.md`, `crates/wimao-core/src/rapport.rs`, le plan du sous-projet 1) ; l'ancien historique,
       qui contenait le nom d'utilisateur du propriétaire dans sept commits, n'est pas publié (dépôt
       neuf). Le contrôle se fait par `scripts/verifier-donnees-perso.sh`, **à lancer avant chaque
@@ -66,10 +66,10 @@ contrôleur du projet ; ne transmettez jamais un mot de passe ni une phrase de p
       `.git/donnees-perso` avec votre vrai nom, vos adresses e-mail personnelles et les noms de vos autres
       machines (un terme par ligne) : `git config user.email` est une adresse `noreply`, donc sans ce
       fichier rien de personnel ne serait cherché.
-- [ ] **Dépôt rendu public.** Obligatoire *avant* la première étiquette : les attestations de
+- [x] **Dépôt rendu public** (2026-11-01, dépôt neuf à commit unique ; l'ancien, renommé `WiMao-archive`, reste privé). Obligatoire *avant* la première étiquette : les attestations de
       provenance exigent un dépôt public (sur un dépôt privé, il faudrait GitHub Enterprise Cloud ;
       l'étape d'attestation du job `brouillon` échouerait).
-- [ ] **Outils sur votre machine** (voir « Ce qu'il faut sur votre machine »).
+- [x] **Outils sur votre machine** (voir « Ce qu'il faut sur votre machine »).
 
 ## Créer la clé de signature
 

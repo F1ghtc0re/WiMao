@@ -279,11 +279,9 @@ Relevés pendant les relectures du sous-projet 4. Voir `paquets/README.md` et
 
 - **Date de publication de la fiche AppStream.** La date du `<release>` de
   `crates/wimao/data/fr.wimao.WiMao.metainfo.xml` est provisoire : la fixer à la date réelle de la publication.
-- **Clé publique.** `docs/cle-publique.asc` n'existe pas encore (le README l'annonce « à venir avec la
-  première version ») : à créer et publier selon `docs/publier-une-version.md`.
-- **Dépôt privé.** Les attestations de provenance exigent un dépôt public : la première étiquette `v*`
-  vient après le passage en public et après le retrait des données personnelles (voir la liste de
-  contrôle de `docs/publier-une-version.md`).
+- **Mises à jour Dependabot.** Sur le nouveau dépôt public, Dependabot a reproposé (2026-11-01) les mises à jour
+  majeures des actions `actions/cache`, `actions/download-artifact`, `actions/upload-artifact` et de la crate
+  `serial_test` : à examiner une par une après la première version (changements incompatibles possibles).
 
 ### Paquets et fabrication
 
