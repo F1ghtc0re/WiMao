@@ -33,10 +33,13 @@ tant qu'elles n'ont pas été re-publiées.
 
 ## Empreinte de la clé de signature
 
-L'empreinte de la clé **principale** de signature sera publiée ici, sur une ligne commençant exactement
-par « Empreinte de la clé de signature : » (lue par `scripts/signer-version.sh`, qui refuse de signer tant
-qu'elle manque ou si l'étiquette n'est pas signée par cette clé). Comparez-la avec celle de
-`docs/cle-publique.asc` (`gpg --show-keys --fingerprint docs/cle-publique.asc`).
+Empreinte de la clé de signature : 3980 C3D2 0A17 566A 075A  65CB CB97 DE3F BF41 DD46
+
+C'est l'empreinte de la clé **principale** (identité `F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>`,
+créée le 2026-11-01, valable jusqu'au 2028-10-31) ; les versions sont signées par sa sous-clé de signature
+(`5F1D4F6002B80C81`). La ligne ci-dessus est lue par `scripts/signer-version.sh`, qui refuse de signer si
+l'étiquette n'est pas signée par cette clé. Comparez-la avec celle de `docs/cle-publique.asc`
+(`gpg --show-keys --fingerprint docs/cle-publique.asc`).
 
 ## Vérifier une version
 

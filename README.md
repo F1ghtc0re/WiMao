@@ -51,8 +51,7 @@ GitHub. Ils fonctionnent sur **Ubuntu 24.04 et plus récent** et **Debian 13 et 
 
 1. Téléchargez, depuis la page de la Release, les trois `.deb` ainsi que `SHA256SUMS` et
    `SHA256SUMS.asc` dans un même dossier.
-2. Vérifiez-les. La clé publique de signature est publiée dans `docs/cle-publique.asc` (à venir avec
-   la première version) : prenez-la dans une copie du dépôt (`git clone`) ou téléchargez-la à
+2. Vérifiez-les. La clé publique de signature est publiée dans `docs/cle-publique.asc` : prenez-la dans une copie du dépôt (`git clone`) ou téléchargez-la à
    l'adresse `https://raw.githubusercontent.com/F1ghtc0re/WiMao/main/docs/cle-publique.asc`, puis
    comparez son empreinte (`gpg --show-keys --fingerprint docs/cle-publique.asc`) avec celle de
    `SECURITY.md` :

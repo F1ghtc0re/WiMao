@@ -346,3 +346,22 @@ s'ouvre sous Xvfb, aucune étape n'a dû passer par la CLI (la CLI a seulement s
   (« avant l'installation de … », « 7363 fichiers supprimés » restent en français une fois l'interface en espagnol).
   Le test d'ouverture de Serum n'a pas pu conclure dans l'environnement isolé (pas de PipeWire joignable) ; il reste
   vérifié par le sous-projet 1 sur le vrai préfixe.
+
+## WiMao sous-projet 5 — première version publique (2026-11-01)
+
+- Ancien dépôt renommé `F1ghtc0re/WiMao-archive` (privé, tout l'historique de développement) ; sauvegarde
+  complète dans un `git bundle` hors du dépôt. Nouveau dépôt public `F1ghtc0re/WiMao`, parti d'un commit unique
+  signé dont l'arbre est identique à l'ancien `main` (le nom d'utilisateur du propriétaire figurait dans des
+  commits anciens que GitHub aurait gardés via les PR).
+- Le quota gratuit de GitHub Actions des dépôts privés était épuisé (compilations de Wine du sous-projet 4) :
+  la dernière PR de l'ancien dépôt a été fusionnée sur la foi des vérifications locales (566 tests, scripts) ;
+  sur le dépôt public, les minutes sont illimitées.
+- Réglages de sécurité posés par `scripts/regler-depot-github.sh --appliquer`, tous ✅. Le premier essai a reçu
+  « Repository has been locked » (GitHub verrouille quelques secondes un dépôt qui vient de passer en public) :
+  il suffit de relancer.
+- Outils : podman 5.7.0 ; GitHub CLI officiel 2.103.3 (le paquet ESM d'Ubuntu, 2.46, avait la priorité 510 :
+  épinglage du dépôt `cli.github.com` à 600 dans `/etc/apt/preferences.d/github-cli`).
+- Clé OpenPGP créée (principale `[C]` 2 ans, sous-clé `[S]` 1 an), identité pseudonyme + adresse `noreply` ;
+  sauvegarde hors ligne vérifiée dans un trousseau jetable ; clé principale secrète retirée de la machine
+  (`sec#`). Sous `!` dans Claude Code, `gpg` sans `--batch` échoue (« cannot open '/dev/tty' ») : avec
+  `--batch`, la phrase de passe est demandée par la fenêtre GNOME (pinentry-gnome3).
