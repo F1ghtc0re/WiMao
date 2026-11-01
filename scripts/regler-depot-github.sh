@@ -238,16 +238,20 @@ corps_ruleset_etiquettes() {
 # (Les valeurs `false` comptent : on garde des objets entiers plutôt que `valeur // null`, qui avalerait false.)
 # Filtre jq qui ne garde d'un ruleset que ce qui compte pour nous. GitHub ajoute des champs (id, dates,
 # paramètres par défaut) : comparer les JSON entiers échouerait toujours, on compare ce résumé.
+# Attention : dans la construction d'un objet, jq 1.7 (celui d'Ubuntu 24.04, donc des runners de la CI)
+# n'accepte comme valeur qu'un terme simple : `clé: (…)? // null` y est une erreur de syntaxe (jq 1.8
+# l'accepte). Toute valeur qui utilise `?` ou `//` doit donc être entièrement entre parenthèses :
+# `clé: ((…)? // null)`.
 resume_ruleset='{
     target, enforcement,
     include: .conditions.ref_name.include,
     contournement: [(.bypass_actors // [])[] | {actor_id, actor_type, bypass_mode}] | sort_by(.actor_id),
     regles: [.rules[].type] | sort,
-    pr: (first(.rules[] | select(.type == "pull_request")).parameters
-         | {required_approving_review_count, required_review_thread_resolution, dismiss_stale_reviews_on_push,
-            require_code_owner_review, require_last_push_approval})? // null,
-    strict: (first(.rules[] | select(.type == "required_status_checks")).parameters
-             | {strict_required_status_checks_policy})? // null,
+    pr: ((first(.rules[] | select(.type == "pull_request")).parameters
+          | {required_approving_review_count, required_review_thread_resolution, dismiss_stale_reviews_on_push,
+             require_code_owner_review, require_last_push_approval})? // null),
+    strict: ((first(.rules[] | select(.type == "required_status_checks")).parameters
+              | {strict_required_status_checks_policy})? // null),
     controles: ([.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | sort)
 }'
 
