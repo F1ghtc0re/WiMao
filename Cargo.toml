@@ -9,7 +9,10 @@ version = "0.4.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/F1ghtc0re/WiMao"
-rust-version = "1.87"
+# Version minimale de Rust, vérifiée le 2026-11-02 (cargo +1.93.1 test --workspace --no-run) : gtk4 et pango
+# exigent 1.92 pour compiler l'application, serial_test 4 (tests seulement) 1.93.1. Pour la remonter
+# ensuite : `cargo metadata --format-version 1 | jq -r '.packages[].rust_version // empty' | sort -V | tail -1`.
+rust-version = "1.93.1"
 
 [workspace.dependencies]
 libc = "0.2"
