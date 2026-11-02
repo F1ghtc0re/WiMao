@@ -19,6 +19,6 @@ walkdir = "2.5.0"
 regex = "1.13.1"
 
 [dev-dependencies]
-serial_test = "3.5.0"
+serial_test = "4.0.1"
 tempfile = "3.27.0"
 tiny_http = "0.12.0"
