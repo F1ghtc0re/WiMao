@@ -146,6 +146,10 @@ jobs:
       # `signature-a-blanc` de paquets.yml.
       - name: Test de la signature des versions (à blanc)
         run: scripts/tests/tester-signer-version.sh
+      # Fonctions communes de vérification de signature du dépôt APT (scripts/lib/publication.sh) : clés
+      # GnuPG jetables A et B ; prouve qu'une signature valide d'une autre clé que la publiée est refusée.
+      - name: Test des fonctions de publication (signatures)
+        run: scripts/tests/tester-publication.sh
       # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
       - name: Données personnelles (test du contrôle)
         run: scripts/tests/tester-verifier-donnees-perso.sh

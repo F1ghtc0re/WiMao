@@ -194,8 +194,10 @@ if [ -z "$principale" ] || [ -z "$autre" ] || [ "$principale" = "$autre" ]; then
 fi
 
 depot="$temporaire/depot-reel"
-mkdir -p "$depot/scripts" "$depot/docs" "$depot/.github/workflows"
+mkdir -p "$depot/scripts/lib" "$depot/docs" "$depot/.github/workflows"
 cp "$signer" "$depot/scripts/signer-version.sh"
+# La bibliothèque commune que signer-version.sh source (chemin relatif à lui-même).
+cp "$racine/scripts/lib/publication.sh" "$depot/scripts/lib/publication.sh"
 gpg --armor --export "$principale" > "$depot/docs/cle-publique.asc"
 cat > "$depot/.github/workflows/paquets.yml" << 'EOF'
 jobs:

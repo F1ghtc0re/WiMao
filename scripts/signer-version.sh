@@ -65,6 +65,9 @@ set -euo pipefail
 RACINE_DEPOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Dépôt GitHub qui porte les Releases et les attestations.
 DEPOT_GITHUB="F1ghtc0re/WiMao"
+# Fonctions communes de vérification de signature (empreinte_publiee, …), partagées avec le dépôt APT.
+# shellcheck source=scripts/lib/publication.sh
+source "$RACINE_DEPOT/scripts/lib/publication.sh"
 # rustup-init (Linux x86_64) : version figée, adresse VERSIONNÉE (archive/) et empreinte SHA-256 écrite ici,
 # vérifiée avant toute exécution. Pour changer de version : télécharger la nouvelle, recalculer sha256sum.
 # La chaîne Rust elle-même est ensuite vérifiée par rustup (manifestes signés et empreintes).
@@ -145,26 +148,6 @@ nettoyer() {
 }
 trap nettoyer EXIT
 
-# empreinte_publiee : affiche l'empreinte (40 chiffres hexadécimaux, majuscules) de la clé de signature publiée
-# dans SECURITY.md, ligne « Empreinte de la clé de signature : XXXX XXXX … » (espaces admis). Rend 1 avec un
-# message si la ligne manque ou est mal formée : tant que la clé n'est pas créée et publiée, on ne signe pas.
-empreinte_publiee() {
-    local ligne valeur
-    ligne="$(grep -m1 '^Empreinte de la clé de signature : ' "$RACINE_DEPOT/SECURITY.md" 2> /dev/null || true)"
-    if [ -z "$ligne" ]; then
-        echo "ERREUR : SECURITY.md ne publie pas encore l'empreinte de la clé de signature." >&2
-        echo "  Ajoutez-y une ligne « Empreinte de la clé de signature : <40 chiffres hexadécimaux> » (voir docs/publier-une-version.md)." >&2
-        return 1
-    fi
-    valeur="${ligne#Empreinte de la clé de signature : }"
-    valeur="$(tr -d ' ' <<< "$valeur" | tr 'a-f' 'A-F')"
-    if [[ ! "$valeur" =~ ^[0-9A-F]{40}$ ]]; then
-        echo "ERREUR : l'empreinte publiée dans SECURITY.md n'a pas 40 chiffres hexadécimaux : « $ligne »" >&2
-        return 1
-    fi
-    echo "$valeur"
-}
-
 # --- 1. Mode réel : dépôt propre et étiquette signée ---
 empreinte=""          # clé de signature attendue (mode réel : lue dans SECURITY.md)
 commit_etiquette=""   # commit de l'étiquette signée (mode réel)
@@ -175,7 +158,7 @@ if [ "$a_blanc" -eq 0 ]; then
     git -C "$RACINE_DEPOT" rev-parse -q --verify "refs/tags/$version" > /dev/null \
         || arreter "l'étiquette $version n'existe pas localement (git fetch --tags ?)"
     # Empreinte PUBLIÉE de la clé de signature : seule cette clé a le droit de signer une version.
-    empreinte="$(empreinte_publiee)" || exit 1
+    empreinte="$(empreinte_publiee "$RACINE_DEPOT")" || exit 1
     echo "Clé de signature attendue (SECURITY.md) : $empreinte"
     # Vérification de l'étiquette en OpenPGP (l'étiquette est signée par la sous-clé, alors que les
     # commits le sont par une clé SSH : voir docs/publier-une-version.md). --raw donne les lignes
