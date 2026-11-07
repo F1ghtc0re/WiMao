@@ -208,8 +208,6 @@ Relevés pendant les relectures du sous-projet 3, réécrits ici sans le détail
   - La marque « Mis à jour » n'est posée qu'en fin de session de gestionnaire.
   - Elle est perdue quand on change de langue, car la fenêtre est reconstruite.
 - **Assistant et import.**
-  - Après un échec suivi d'un retour avec un environnement à moitié créé, « Créer » relance sur un
-    environnement déjà présent.
   - Les icônes « prêt » et « erreur » ne suivent pas la couleur d'accent.
   - Les tailles s'affichent en « 1024,0 KiB » au lieu de « 1 MiB » à la limite.
 - **Mode d'emploi.** La touche F1 et le bouton « Problèmes fréquents » n'ont pas été vérifiés à

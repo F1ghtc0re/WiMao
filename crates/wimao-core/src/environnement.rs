@@ -44,7 +44,9 @@ const DOSSIERS_PERSONNELS: [&str; 10] = [
 /// Crée l'environnement Wine s'il n'existe pas, puis applique les correctifs manquants.
 ///
 /// Idempotent : un environnement complet n'est pas touché, chaque étape déjà
-/// faite est seulement annoncée (« Already done »). Quand le préfixe est à créer, les points
+/// faite est seulement annoncée (« Already done »). Reprend un essai interrompu : préfixe
+/// inachevé (sans `system.reg`) recommencé dans le même dossier, liens personnels restants
+/// remplacés, correctifs manquants posés. Quand le préfixe est à créer, les points
 /// de restauration existants sont d'abord périmés
 /// ([`restauration::perimer_tous_les_points`]) : ils décrivent un autre environnement.
 ///
@@ -54,6 +56,11 @@ const DOSSIERS_PERSONNELS: [&str; 10] = [
 pub fn creer_environnement(c: &Chemins, p: &dyn Progression) -> Resultat<()> {
     if c.prefixe.join(FICHIER_PREFIXE_PRET).exists() {
         annoncer_deja_fait(p, &tr("Wine environment"));
+        // Reprise d'un essai interrompu entre `wineboot` (qui écrit `system.reg` en dernier)
+        // et le remplacement des dossiers personnels : le préfixe paraît complet, mais ses
+        // liens vers `~/Documents`… seraient restés pour toujours. Sans effet (0 lien)
+        // sur un environnement déjà propre ; aucun programme Windows ne tourne ici.
+        remplacer_dossiers_relies(c)?;
     } else {
         p.etape(&tr("Creating the Wine environment…"));
         // Un préfixe neuf n'est pas celui que décrivent les points de restauration existants
@@ -285,6 +292,112 @@ mod tests {
         assert!(liste.points.is_empty(), "{liste:?}");
         assert_eq!(liste.perimes.len(), 1, "{liste:?}");
         assert_eq!(liste.perimes[0].id, point.id);
+    }
+
+    /// Faux Wine pour les tests de reprise : `wineboot` note chaque appel dans `appels`
+    /// puis écrit `system.reg` (comme le vrai, en dernier) ; `wineserver` ne fait rien.
+    /// Aucun correctif ne peut s'appliquer ensuite (pas de `wine`) : `creer_environnement`
+    /// échoue au premier, ce qui laisse observer l'état laissé par le début de la création.
+    fn installer_faux_wine(c: &mut Chemins, racine: &std::path::Path) -> PathBuf {
+        c.wine_dir = racine.join("faux-wine");
+        let appels = racine.join("appels-wineboot");
+        crate::test_utils::ecrire_executable(
+            &c.wine_bin().join("wineserver"),
+            "#!/bin/sh\nexit 0\n",
+        );
+        crate::test_utils::ecrire_executable(
+            &c.wine_bin().join("wineboot"),
+            &format!(
+                "#!/bin/sh\necho appel >> '{}'\nmkdir -p \"$WINEPREFIX/drive_c\"\n\
+                 echo reg > \"$WINEPREFIX/system.reg\"\n",
+                appels.display()
+            ),
+        );
+        appels
+    }
+
+    /// Nombre de lancements de `wineboot` relevés par le faux Wine.
+    fn nombre_d_appels(appels: &std::path::Path) -> usize {
+        std::fs::read_to_string(appels).map_or(0, |t| t.lines().count())
+    }
+
+    /// Cas du défaut reporté : un essai précédent a échoué avant que `wineboot` n'ait fini
+    /// (dossier du préfixe présent, `drive_c` entamé, pas de `system.reg`). « Créer » doit
+    /// reprendre dans CE dossier : un seul `wineboot`, pas de second préfixe, et les points de
+    /// restauration (qui ne décrivent pas ce préfixe inachevé) sont périmés comme pour tout
+    /// préfixe neuf.
+    #[test]
+    fn creer_reprend_un_prefixe_interrompu_avant_la_fin_de_wineboot() {
+        let d = tempfile::tempdir().unwrap();
+        let mut c = Chemins::pour_test(d.path());
+        let appels = installer_faux_wine(&mut c, d.path());
+        std::fs::create_dir_all(c.drive_c().join("windows")).unwrap();
+        // Un point pris sur un ancien environnement complet, puis l'essai raté qui a laissé
+        // un préfixe inachevé à sa place (sans `system.reg`, que `wineboot` écrit en dernier).
+        for nom in ["system.reg", "user.reg", "userdef.reg"] {
+            std::fs::write(c.prefixe.join(nom), nom).unwrap();
+        }
+        let point = crate::restauration::creer(&c, "avant").unwrap();
+        std::fs::remove_file(c.prefixe.join(FICHIER_PREFIXE_PRET)).unwrap();
+
+        // Échoue ensuite au premier correctif (pas de `wine`), mais APRÈS wineboot.
+        creer_environnement(&c, &Enregistreuse::default()).unwrap_err();
+        assert_eq!(nombre_d_appels(&appels), 1);
+        assert!(c.prefixe.join(FICHIER_PREFIXE_PRET).exists());
+        // Un seul préfixe : rien de voisin dans le dossier des données.
+        let voisins: Vec<_> = std::fs::read_dir(&c.donnees)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert!(voisins.contains(&"prefixe".into()), "{voisins:?}");
+        assert_eq!(
+            voisins
+                .iter()
+                .filter(|n| n.to_string_lossy().contains("prefixe"))
+                .count(),
+            1,
+            "{voisins:?}"
+        );
+        let liste = crate::restauration::lister(&c).unwrap();
+        assert_eq!(liste.perimes.len(), 1, "{liste:?}");
+        assert_eq!(liste.perimes[0].id, point.id);
+    }
+
+    /// Cas du défaut reporté, second visage : `wineboot` a fini (`system.reg` présent) mais
+    /// l'essai précédent s'est arrêté avant le remplacement des dossiers personnels ou les
+    /// correctifs. « Créer » ne relance pas `wineboot`, finit le remplacement des liens
+    /// (sinon ils resteraient pour toujours, le préfixe paraissant complet), et ne périme pas
+    /// les points : l'environnement est bien celui qu'ils décrivent.
+    #[test]
+    fn creer_reprend_un_prefixe_dont_wineboot_est_fini() {
+        let d = tempfile::tempdir().unwrap();
+        let mut c = Chemins::pour_test(d.path());
+        let appels = installer_faux_wine(&mut c, d.path());
+        for nom in ["system.reg", "user.reg", "userdef.reg"] {
+            std::fs::create_dir_all(c.drive_c()).unwrap();
+            std::fs::write(c.prefixe.join(nom), nom).unwrap();
+        }
+        let cible = d.path().join("vrai-home/Documents");
+        std::fs::create_dir_all(&cible).unwrap();
+        let lien = c.drive_c().join("users/jeanne/Documents");
+        std::fs::create_dir_all(lien.parent().unwrap()).unwrap();
+        symlink(&cible, &lien).unwrap();
+        let point = crate::restauration::creer(&c, "avant").unwrap();
+
+        creer_environnement(&c, &Enregistreuse::default()).unwrap_err(); // correctifs
+        assert_eq!(
+            nombre_d_appels(&appels),
+            0,
+            "wineboot ne doit pas être relancé"
+        );
+        assert!(
+            dossiers_relies(&c).unwrap().is_empty(),
+            "liens non remplacés"
+        );
+        let liste = crate::restauration::lister(&c).unwrap();
+        assert!(liste.perimes.is_empty(), "{liste:?}");
+        assert_eq!(liste.points.len(), 1);
+        assert_eq!(liste.points[0].id, point.id);
     }
 
     #[test]
