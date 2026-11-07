@@ -157,6 +157,10 @@ jobs:
         run: |
           command -v apt-ftparchive > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y apt-utils; }
           scripts/tests/tester-publier-depot-apt.sh
+      # Assemblage du site APT : dépôt d'essai produit par publier-depot-apt.sh à blanc, faux téléchargements
+      # (aucun accès réseau ni clé réelle ; apt-utils est déjà installé par l'étape précédente).
+      - name: Test de l'assemblage du site APT
+        run: scripts/tests/tester-assembler-site-apt.sh
       # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
       - name: Données personnelles (test du contrôle)
         run: scripts/tests/tester-verifier-donnees-perso.sh
