@@ -203,7 +203,8 @@ impl TexteNeutre {
         if !CLES_CONNUES.contains(&self.cle.as_str()) {
             return None;
         }
-        // Modèle traduit, `{n}` déjà remplacé pour les clés à pluriel.
+        // Modèle traduit. Pour les clés à pluriel, `trn(…, &[])` remplace lui-même `{n}` à
+        // partir de son argument `n` (d'où la lecture de la valeur « n » ci-dessous).
         let modele = match self.cle.as_str() {
             CLE_FICHIERS_RETIRES => {
                 let n = self.valeurs.get("n")?.parse::<u64>().ok()?;
@@ -215,24 +216,23 @@ impl TexteNeutre {
             }
             cle => tr(cle),
         };
-        // Tout `{nom}` du modèle doit avoir sa valeur : sinon on ne montre pas un texte troué.
-        if PLACEHOLDER
-            .captures_iter(&modele)
-            .any(|m| !self.valeurs.contains_key(&m[1]))
-        {
+        // Une seule passe sur le modèle : une valeur qui contient elle-même `{x}` n'est pas
+        // substituée une seconde fois. Un `{nom}` sans valeur fait renoncer (`None`) : on ne
+        // montre jamais un texte troué.
+        let mut manquante = false;
+        let texte = PLACEHOLDER.replace_all(&modele, |m: &regex::Captures| {
+            match self.valeurs.get(&m[1]) {
+                Some(valeur) => valeur.clone(),
+                None => {
+                    manquante = true;
+                    String::new()
+                }
+            }
+        });
+        if manquante {
             return None;
         }
-        let args: Vec<(&str, &str)> = self
-            .valeurs
-            .iter()
-            .map(|(n, v)| (n.as_str(), v.as_str()))
-            .collect();
-        // Le modèle est déjà traduit : `trf` le retraduirait ; on substitue à la main.
-        let mut texte = modele;
-        for (nom, valeur) in args {
-            texte = texte.replace(&format!("{{{nom}}}"), valeur);
-        }
-        Some(texte)
+        Some(texte.into_owned())
     }
 
     /// Texte à écrire dans le champ brut : le texte traduit, ou à défaut la clé elle-même.
@@ -640,8 +640,7 @@ mod tests {
         let es = e.sujet_affiche();
         init_langue(Some("en"));
         assert_eq!(fr, "avant l'installation de Serum 2");
-        assert_ne!(es, fr);
-        assert!(es.contains("Serum 2") && !es.contains('{'), "{es}");
+        assert_eq!(es, "antes de instalar Serum 2");
     }
 
     #[test]
@@ -656,6 +655,37 @@ mod tests {
         let fr = trois.traduit().unwrap();
         init_langue(Some("en"));
         assert!(fr.contains('3') && fr != "3 files removed", "{fr}");
+    }
+
+    #[test]
+    #[serial]
+    fn pluriels_en_francais_et_en_espagnol() {
+        let texte = |n: &str| TexteNeutre::nouveau(CLE_FICHIERS_RETIRES, &[("n", n)]).traduit();
+        init_langue(Some("fr"));
+        let fr: Vec<_> = ["0", "1", "2"].map(texte).into_iter().collect();
+        init_langue(Some("es"));
+        let es: Vec<_> = ["1", "2"].map(texte).into_iter().collect();
+        init_langue(Some("en"));
+        // En français, 0 et 1 sont au singulier.
+        assert_eq!(fr[0].as_deref(), Some("0 fichier supprimé"));
+        assert_eq!(fr[1].as_deref(), Some("1 fichier supprimé"));
+        assert_eq!(fr[2].as_deref(), Some("2 fichiers supprimés"));
+        assert_eq!(es[0].as_deref(), Some("1 archivo eliminado"));
+        assert_eq!(es[1].as_deref(), Some("2 archivos eliminados"));
+    }
+
+    #[test]
+    fn valeur_contenant_un_placeholder_n_est_pas_resubstituee() {
+        // `{file}` reçoit une valeur qui ressemble à un placeholder : elle reste telle quelle.
+        let t = TexteNeutre::nouveau(CLE_AVANT_INSTALLATION, &[("file", "{name}")]);
+        assert_eq!(t.traduit().as_deref(), Some("before installing {name}"));
+        // Même avec une autre valeur fournie pour `name`.
+        let t = TexteNeutre::nouveau(CLE_AVANT_INSTALLATION, &[("file", "{name}"), ("name", "X")]);
+        assert_eq!(t.traduit().as_deref(), Some("before installing {name}"));
+        // Valeur manquante : toujours `None`.
+        assert!(TexteNeutre::nouveau(CLE_AVANT_INSTALLATION, &[])
+            .traduit()
+            .is_none());
     }
 
     #[test]

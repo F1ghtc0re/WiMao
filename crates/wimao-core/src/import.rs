@@ -1005,8 +1005,8 @@ pub fn reprendre_interruption(c: &Chemins) -> Resultat<Option<String>> {
 }
 
 /// Relance `yabridgectl sync` pour la configuration de l'utilisateur (étape 4 de [`annuler`]).
-/// Rend l'avertissement (texte neutre, déjà affiché traduit) affiché si WiMao n'a pas pu le faire (déjà passé à `p.etape`), `None`
-/// si tout s'est bien passé.
+/// Rend l'avertissement (texte neutre, déjà affiché traduit) si WiMao n'a pas pu le faire
+/// (déjà passé à `p.etape`), `None` si tout s'est bien passé.
 fn synchroniser_liens_utilisateur(
     c: &Chemins,
     ancien: &Path,
@@ -1537,6 +1537,21 @@ mod tests {
             messages.iter().any(|m| m.contains("yabridgectl sync")),
             "{messages:?}"
         );
+    }
+
+    #[test]
+    fn annuler_avec_avertissement_ecrit_des_details_neutres() {
+        let d = tempfile::tempdir().unwrap();
+        let c = banc(d.path());
+        importer(&c, &ProgressionMuette).unwrap();
+        std::fs::remove_file(config_utilisateur(&c)).unwrap();
+        annuler(&c, &ProgressionMuette).unwrap();
+        let entrees = historique::lire(&c).unwrap();
+        assert_eq!(entrees[0].action, Action::AnnulationImport);
+        let neutre = entrees[0].details_neutre.as_ref().expect("détails neutres");
+        assert!(historique::CLES_CONNUES.contains(&neutre.cle.as_str()));
+        assert_eq!(neutre.cle, historique::CLE_SANS_REGLAGES_YABRIDGECTL);
+        assert_eq!(entrees[0].details_affiches(), entrees[0].details);
     }
 
     #[test]
