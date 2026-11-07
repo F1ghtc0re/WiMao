@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:38+0100\n"
+"POT-Creation-Date: 2026-11-07 23:41+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1985,6 +1985,12 @@ msgstr[1] ""
 #: crates/wimao/src/operations.rs
 msgid "{n} plugin updated"
 msgid_plural "{n} plugins updated"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/wimao/src/operations.rs
+msgid "{n} to check"
+msgid_plural "{n} to check"
 msgstr[0] ""
 msgstr[1] ""
 

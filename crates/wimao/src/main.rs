@@ -127,7 +127,7 @@ fn ouvrir_une_fenetre(
 ) {
     let reprise = import::reprendre_interruption(chemins);
     let fenetre = if chemins.prefixe.join("system.reg").exists() {
-        let principale = Fenetre::nouvelle(app, chemins.clone(), avertissement);
+        let principale = Fenetre::nouvelle(app, chemins.clone(), avertissement, Default::default());
         principale.presenter();
         principale.fenetre.clone()
     } else {

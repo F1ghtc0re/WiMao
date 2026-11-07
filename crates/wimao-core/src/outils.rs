@@ -230,6 +230,13 @@ pub fn taille_lisible(octets: u64) -> String {
         rang += 1;
     }
     let mut texte = format!("{valeur:.1}");
+    // Juste sous une puissance de 1024 (1 048 575 octets), l'arrondi à une décimale rend
+    // « 1024.0 » : on passe alors à l'unité suivante, « 1.0 MiB » (sauf à la dernière unité).
+    if texte == "1024.0" && rang < 4 {
+        valeur /= 1024.0;
+        rang += 1;
+        texte = format!("{valeur:.1}");
+    }
     if matches!(langue_courante().as_str(), "fr" | "es") {
         texte = texte.replace('.', ",");
     }
@@ -253,7 +260,7 @@ mod tests {
     #[test]
     #[serial_test::serial]
     fn les_tailles_sont_lisibles_dans_chaque_langue() {
-        let cas: [(u64, [&str; 3]); 8] = [
+        let cas: [(u64, [&str; 3]); 10] = [
             (0, ["0 B", "0 o", "0 B"]),
             (1023, ["1023 B", "1023 o", "1023 B"]),
             (1024, ["1.0 KiB", "1,0 Kio", "1,0 KiB"]),
@@ -268,6 +275,9 @@ mod tests {
                 ["16777216.0 TiB", "16777216,0 Tio", "16777216,0 TiB"],
             ),
             (122_700_000_000, ["114.3 GiB", "114,3 Gio", "114,3 GiB"]),
+            // L'arrondi à une décimale donnerait « 1024.0 » : on passe à l'unité suivante.
+            (1_048_575, ["1.0 MiB", "1,0 Mio", "1,0 MiB"]),
+            (1_073_741_823, ["1.0 GiB", "1,0 Gio", "1,0 GiB"]),
         ];
         for (rang, langue) in ["en", "fr", "es"].into_iter().enumerate() {
             crate::i18n::init_langue(Some(langue));

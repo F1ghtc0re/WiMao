@@ -381,10 +381,10 @@ pub fn bilan_session(bilan: &BilanSession) -> Option<String> {
     (!morceaux.is_empty()).then(|| morceaux.join(", "))
 }
 
-/// Morceaux communs aux bilans : plugins nouveaux, mis à jour, avec un problème.
+/// Morceaux communs aux bilans : plugins nouveaux, mis à jour, à vérifier, avec un problème.
 ///
-/// Un plugin « avec un problème » est un plugin dont le verdict n'est pas ✅ (même règle que
-/// le tableau, [`brut_depuis_installation`]). Chaque morceau est traduit avec son pluriel
+/// Les verdicts suivent le tableau ([`brut_depuis_installation`]) : un plugin ⚠️ est « à
+/// vérifier », un plugin ❌ est « avec un problème » ; un ✅ n'ajoute rien. Chaque morceau est traduit avec son pluriel
 /// (`trn`) ; l'appelant les joint par une virgule.
 fn morceaux_du_bilan(plugins: &PluginsTraites, mis_a_jour: &BTreeSet<PathBuf>) -> Vec<String> {
     let maj = plugins
@@ -392,10 +392,15 @@ fn morceaux_du_bilan(plugins: &PluginsTraites, mis_a_jour: &BTreeSet<PathBuf>) -
         .filter(|(plugin, _, _)| mis_a_jour.contains(&plugin.chemin))
         .count() as u64;
     let nouveaux = plugins.len() as u64 - maj;
-    let problemes = plugins
-        .iter()
-        .filter(|(_, etat, test)| brut_depuis_installation(etat, test.as_ref()).0 != Statut::Bon)
-        .count() as u64;
+    // Un seul verdict par plugin : ⚠️ « à vérifier », ❌ « avec un problème ».
+    let nombre_de = |voulu: Statut| {
+        plugins
+            .iter()
+            .filter(|(_, etat, test)| brut_depuis_installation(etat, test.as_ref()).0 == voulu)
+            .count() as u64
+    };
+    let a_verifier = nombre_de(Statut::Avertissement);
+    let problemes = nombre_de(Statut::Echec);
     let mut morceaux = Vec::new();
     if nouveaux > 0 {
         morceaux.push(trn(
@@ -407,6 +412,9 @@ fn morceaux_du_bilan(plugins: &PluginsTraites, mis_a_jour: &BTreeSet<PathBuf>) -
     }
     if maj > 0 {
         morceaux.push(trn("{n} plugin updated", "{n} plugins updated", maj, &[]));
+    }
+    if a_verifier > 0 {
+        morceaux.push(trn("{n} to check", "{n} to check", a_verifier, &[]));
     }
     if problemes > 0 {
         morceaux.push(trn(
@@ -537,6 +545,40 @@ mod tests {
             "2 plugins installés, 1 plugin mis à jour, 1 avec un problème"
         );
         wimao_core::i18n::init_langue(Some("en"));
+    }
+
+    // Un ⚠️ est « à vérifier », seul un ❌ est « avec un problème ».
+    #[test]
+    #[serial_test::serial]
+    fn bilan_distingue_a_verifier_et_probleme() {
+        wimao_core::i18n::init_langue(Some("en"));
+        let doublon = (plugin("A"), EtatPontage::Doublon, None);
+        let echec = (
+            plugin("B"),
+            EtatPontage::Ponte,
+            Some(ResultatTest::Probleme("x".into())),
+        );
+        let les_deux = rapport(vec![doublon.clone(), echec], &[]);
+        assert_eq!(
+            bilan_installation(&les_deux).unwrap(),
+            "2 plugins installed, 1 to check, 1 with a problem"
+        );
+        wimao_core::i18n::init_langue(Some("fr"));
+        assert_eq!(
+            bilan_installation(&les_deux).unwrap(),
+            "2 plugins installés, 1 à vérifier, 1 avec un problème"
+        );
+        // Un ⚠️ seul : aucun « avec un problème ».
+        let seul = rapport(vec![doublon], &[]);
+        assert_eq!(
+            bilan_installation(&seul).unwrap(),
+            "1 plugin installé, 1 à vérifier"
+        );
+        wimao_core::i18n::init_langue(Some("en"));
+        assert_eq!(
+            bilan_installation(&seul).unwrap(),
+            "1 plugin installed, 1 to check"
+        );
     }
 
     fn session(

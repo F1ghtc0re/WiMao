@@ -44,6 +44,12 @@ use crate::travail::en_arriere_plan;
 const LARGEUR_CONTENU: i32 = 640;
 /// Étiquette de la page dans le `NavigationView`.
 const PAGE_HISTORIQUE: &str = "historique";
+
+/// Faut-il pousser la page Historique ? Non si elle est déjà la page visible : un second
+/// Ctrl+H n'empile pas de doublon. `page_visible` est l'étiquette de la page à l'écran.
+pub(crate) fn doit_ouvrir_historique(page_visible: Option<&str>) -> bool {
+    page_visible != Some(PAGE_HISTORIQUE)
+}
 /// Nom (sans `win.`) de l'action « Go back to before this » ; paramètre : identifiant du point.
 pub const ACTION_REVENIR: &str = "revenir";
 /// Réponses du dialogue de confirmation.
@@ -310,6 +316,18 @@ impl Fenetre {
     /// Ouvre la page Historique (ou la recharge si elle est déjà affichée). Les données sont
     /// lues dans un fil : consulter l'historique reste possible pendant un travail.
     pub(crate) fn ouvrir_historique(&self) {
+        // Déjà à l'écran : un second Ctrl+H ne fait rien (le rechargement après un retour en
+        // arrière passe par `charger_et_montrer_historique`).
+        let visible = self.navigation.visible_page().and_then(|p| p.tag());
+        if !doit_ouvrir_historique(visible.as_deref()) {
+            return;
+        }
+        self.charger_et_montrer_historique();
+    }
+
+    /// Charge les données de l'historique puis les montre (empile la page ou remplace celle
+    /// qui est visible).
+    fn charger_et_montrer_historique(&self) {
         let (moi, c) = (self.clone(), (*self.chemins).clone());
         en_arriere_plan(
             move |_| operations::charger_historique(&c),
@@ -395,7 +413,7 @@ impl Fenetre {
                 // Seulement si l'historique est encore à l'écran : sinon rien à recharger.
                 let visible = moi.navigation.visible_page().and_then(|p| p.tag());
                 if visible.as_deref() == Some(PAGE_HISTORIQUE) {
-                    moi.ouvrir_historique();
+                    moi.charger_et_montrer_historique();
                 }
             },
         );
@@ -404,6 +422,15 @@ impl Fenetre {
 
 #[cfg(test)]
 mod tests {
+    use super::doit_ouvrir_historique;
+
+    #[test]
+    fn double_ctrl_h_ne_pousse_pas_de_seconde_page() {
+        assert!(doit_ouvrir_historique(None));
+        assert!(doit_ouvrir_historique(Some("principale")));
+        assert!(!doit_ouvrir_historique(Some("historique")));
+    }
+
     use super::*;
     use std::path::PathBuf;
 

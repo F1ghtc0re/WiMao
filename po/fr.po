@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:36+0100\n"
+"POT-Creation-Date: 2026-11-07 23:40+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -2140,6 +2140,12 @@ msgid "{n} plugin updated"
 msgid_plural "{n} plugins updated"
 msgstr[0] "{n} plugin mis à jour"
 msgstr[1] "{n} plugins mis à jour"
+
+#: crates/wimao/src/operations.rs
+msgid "{n} to check"
+msgid_plural "{n} to check"
+msgstr[0] "{n} à vérifier"
+msgstr[1] "{n} à vérifier"
 
 #: crates/wimao/src/operations.rs
 msgid "{n} with a problem"
