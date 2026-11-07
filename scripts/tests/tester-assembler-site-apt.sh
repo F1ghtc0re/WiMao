@@ -12,7 +12,9 @@
 # altéré -> 1 ; index signé par une autre clé -> 1 ; Packages altéré (empreinte de Release fausse) -> 1 ;
 # .deb téléchargé de taille ou de SHA256 différents -> 1 ; .deb absent de la source -> 1 ; Filename
 # « pool/../x.deb », « /etc/x.deb », « pool/v1.2/x.deb » (index signé par la bonne clé) -> 1 sans aucun
-# appel à curl ; dossier de site non vide -> 1 ; un refus n'écrit rien dans le site ; depot-apt/ absent -> 3
+# appel à curl ; paragraphe en double, sans Size, Packages.gz différent, deux lignes SHA256 dans Release
+# (index re-signé) -> 1 ; fichier en trop, autre architecture, lien symbolique dans depot-apt/ -> 1 ;
+# WIMAO_SOURCE_RELEASES sans --racine -> 2 ; --cle invalide avec dépôt vide -> 2 ; dossier de site non vide -> 1 ; un refus n'écrit rien dans le site ; depot-apt/ absent -> 3
 # (rien écrit) ; option inconnue, site manquant, --cle sans --racine -> 2.
 #
 # Usage     : scripts/tests/tester-assembler-site-apt.sh
@@ -117,12 +119,17 @@ attendre_vide() {
     [ ! -e "$1" ] || [ -z "$(ls -A "$1")" ] || echec "$2 : le site a été écrit malgré le refus"
 }
 
-# resigner <racine> : après modification de Packages* ou de Release, recalcule ce qu'il faut pour que l'index
+# attendre_message <texte> <description> : la sortie du script contient ce texte (refus pour la bonne raison).
+attendre_message() {
+    grep -qF -- "$1" "$temporaire/sortie.log" || { cat "$temporaire/sortie.log" >&2; echec "$2 : message « $1 » absent"; }
+}
+
+# resigner <racine> [gz-deja-fait] : après modification de Packages* ou de Release, recalcule ce qu'il faut pour que l'index
 # reste signé PAR LA BONNE CLÉ : empreintes de Release mises à jour, puis InRelease et Release.gpg refaits.
 # Sert à prouver qu'un refus vient du CONTENU (Filename) et non d'une signature cassée.
 resigner() {
     local d="$1/depot-apt/dists/stable" fichier
-    gzip -9n -c "$d/main/binary-amd64/Packages" > "$d/main/binary-amd64/Packages.gz"
+    [ "${2:-}" = "gz-deja-fait" ] || gzip -9n -c "$d/main/binary-amd64/Packages" > "$d/main/binary-amd64/Packages.gz"
     for fichier in Packages Packages.gz; do
         sed -i -E "s#^ [0-9a-f]{64} +[0-9]+ main/binary-amd64/$fichier\$# $(sha256sum "$d/main/binary-amd64/$fichier" | cut -d' ' -f1) $(stat -c %s "$d/main/binary-amd64/$fichier") main/binary-amd64/$fichier#" "$d/Release"
     done
@@ -147,6 +154,8 @@ page="$site/index.html"
 grep -q '<title>Dépôt APT de WiMao</title>' "$page" || echec "index.html : titre"
 grep -qF 'https://f1ghtc0re.github.io/WiMao' "$page" || echec "index.html : adresse du dépôt"
 grep -qF 'curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | sudo tee /etc/apt/keyrings/wimao.asc &gt; /dev/null' "$page" || echec "index.html : commande curl"
+grep -qF 'sudo install -d -m 0755 /etc/apt/keyrings' "$page" || echec "index.html : commande install"
+grep -qF 'sudo tee /etc/apt/sources.list.d/wimao.list' "$page" || echec "index.html : commande tee de la source"
 grep -qF 'sudo apt update &amp;&amp; sudo apt install wimao' "$page" || echec "index.html : commande apt"
 grep -qF 'stable main"' "$page" || echec "index.html : ligne deb"
 groupes="$(sed 's/.\{4\}/& /g; s/ $//' <<< "$empreinte_a")"
@@ -244,6 +253,62 @@ for mauvais in 'pool/../x.deb' '/etc/x.deb' 'pool/v1.2/x.deb' 'pool/v1.2.3/../x.
     attendre_vide "$temporaire/s-filename" "Filename $mauvais"
 done
 
+# --- Paragraphe de Packages en double (même Filename), index re-signé ---
+r="$(nouvelle_racine r-double)"
+idx="$r/depot-apt/dists/stable/main/binary-amd64/Packages"
+{ awk '/^$/ { exit } { print }' "$idx"; echo; cat "$idx"; } > "$temporaire/Packages.double"
+cp "$temporaire/Packages.double" "$idx"
+resigner "$r"
+lancer "$r" "$temporaire/s-double" "$source_ok"
+attendre_code 1 "paragraphe en double"
+attendre_message "Filename en double" "paragraphe en double"
+attendre_vide "$temporaire/s-double" "paragraphe en double"
+
+# --- Paragraphe sans Size ---
+r="$(nouvelle_racine r-sans-size)"
+sed -i '0,/^Size: /{/^Size: /d}' "$r/depot-apt/dists/stable/main/binary-amd64/Packages"
+resigner "$r"
+lancer "$r" "$temporaire/s-sans-size" "$source_ok"
+attendre_code 1 "paragraphe sans Size"
+attendre_message "manquant ou en double" "paragraphe sans Size"
+attendre_vide "$temporaire/s-sans-size" "paragraphe sans Size"
+
+# --- Packages.gz différent de Packages (Release recalculée et re-signée) ---
+r="$(nouvelle_racine r-gz)"
+echo "Package: intrus" | gzip -9n > "$r/depot-apt/dists/stable/main/binary-amd64/Packages.gz"
+resigner "$r" gz-deja-fait
+lancer "$r" "$temporaire/s-gz" "$source_ok"
+attendre_code 1 "Packages.gz différent"
+attendre_message "Packages.gz ne contient pas exactement Packages" "Packages.gz différent"
+attendre_vide "$temporaire/s-gz" "Packages.gz différent"
+
+# --- Deux lignes SHA256 pour Packages dans Release, re-signé ---
+r="$(nouvelle_racine r-release-double)"
+sed -i -E '/ main\/binary-amd64\/Packages$/p' "$r/depot-apt/dists/stable/Release"
+resigner "$r"
+lancer "$r" "$temporaire/s-release-double" "$source_ok"
+attendre_code 1 "deux lignes SHA256 pour Packages"
+attendre_message "exactement une empreinte SHA256" "deux lignes SHA256"
+attendre_vide "$temporaire/s-release-double" "deux lignes SHA256"
+
+# --- Éléments inattendus dans depot-apt/ : fichier en trop, autre architecture, lien symbolique ---
+r="$(nouvelle_racine r-en-trop)"
+echo x > "$r/depot-apt/dists/stable/en-trop"
+lancer "$r" "$temporaire/s-en-trop" "$source_ok"
+attendre_code 1 "fichier en trop"
+attendre_message "contenu attendu" "fichier en trop"
+attendre_vide "$temporaire/s-en-trop" "fichier en trop"
+r="$(nouvelle_racine r-arch)"
+mkdir "$r/depot-apt/dists/stable/main/binary-arm64"
+lancer "$r" "$temporaire/s-arch" "$source_ok"
+attendre_code 1 "autre architecture"
+attendre_vide "$temporaire/s-arch" "autre architecture"
+r="$(nouvelle_racine r-lien)"
+ln -s Release "$r/depot-apt/dists/stable/lien"
+lancer "$r" "$temporaire/s-lien" "$source_ok"
+attendre_code 1 "lien symbolique"
+attendre_vide "$temporaire/s-lien" "lien symbolique"
+
 # --- depot-apt/ absent : code 3, rien écrit ---
 r="$(nouvelle_racine r-vide)"
 rm -rf "$r/depot-apt"
@@ -257,6 +322,16 @@ lancer "$r" "$temporaire/s-vide" "$source_ok"
 attendre_code 3 "depot-apt/ sans InRelease"
 
 # --- Usage ---
+# --cle invalide : code 2 même si le dépôt est vide (arguments validés avant le test « dépôt vide »).
+code=0
+"$assembler" "$temporaire/s-usage" --cle zzz --racine "$r" > /dev/null 2>&1 || code=$?
+attendre_code 2 "--cle invalide avec dépôt vide"
+# WIMAO_SOURCE_RELEASES hors mode essai (sans --racine) : refusée, jamais ignorée.
+code=0
+WIMAO_SOURCE_RELEASES="$source_ok" "$assembler" "$temporaire/s-usage" > "$temporaire/sortie.log" 2>&1 || code=$?
+attendre_code 2 "WIMAO_SOURCE_RELEASES hors essai"
+attendre_message "WIMAO_SOURCE_RELEASES" "WIMAO_SOURCE_RELEASES hors essai"
+[ ! -e "$temporaire/s-usage" ] || echec "WIMAO_SOURCE_RELEASES hors essai : site créé"
 code=0
 "$assembler" --inconnue > /dev/null 2>&1 || code=$?
 attendre_code 2 "option inconnue"

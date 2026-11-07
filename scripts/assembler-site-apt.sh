@@ -27,14 +27,17 @@
 #      SHA256 présents ;
 #   6. téléchargement de https://github.com/F1ghtc0re/WiMao/releases/download/<étiquette>/<nom> (curl,
 #      HTTPS seul), contrôle de la taille et du SHA256 annoncés ;
-#   7. assemblage : dists/ (copie de depot-apt/dists), pool/<étiquette>/*.deb, wimao.asc (copie de
+#      Avant l'étape 3, tout élément de depot-apt/ qui n'est pas l'un des cinq fichiers ordinaires attendus
+#      (lien symbolique, fichier en trop, autre architecture...) est refusé (code 1) ;
+#   7. assemblage : InRelease, Release, Release.gpg, Packages et Packages.gz (les seuls fichiers copiés), pool/<étiquette>/*.deb, wimao.asc (copie de
 #      docs/cle-publique.asc) et index.html (page autonome : commandes d'installation et empreinte).
 #   Tout est construit dans un dossier temporaire puis copié à la fin : un contrôle qui échoue n'écrit rien.
 #
 # Variables : WIMAO_SOURCE_RELEASES  (ESSAIS SEULEMENT) dossier local « <étiquette>/<nom> » qui remplace
-#             l'adresse des Releases : les fichiers y sont copiés au lieu d'être téléchargés. Ne jamais la
-#             définir en CI.
-# Écrit     : <dossier du site> uniquement, en cas de succès ; dossiers temporaires supprimés en sortie.
+#             l'adresse des Releases : les fichiers y sont copiés au lieu d'être téléchargés. Elle n'est admise
+#             qu'avec --racine (mode essai) ; définie sans --racine, elle est REFUSÉE (code 2), jamais ignorée
+#             en silence : une CI qui l'aurait par erreur n'assemblerait pas un site à partir d'un dossier local.
+# Écrit     : <dossier du site> uniquement, en cas de succès (si la copie finale échoue, il est vidé) ; dossiers temporaires supprimés en sortie.
 # Code      : 0 = site complet ; 1 = contrôle échoué ; 2 = usage ; 3 = dépôt APT vide (rien écrit).
 # Dépend de : gpg, gpgv, curl (téléchargement réel), gzip, sha256sum, awk.
 set -euo pipefail
@@ -96,8 +99,13 @@ done
 if [ -n "$cle$racine_essai" ]; then
     [ -n "$cle" ] && [ -n "$racine_essai" ] || erreur_usage "--cle et --racine vont ensemble (réservés aux essais)"
     racine="$racine_essai"
+    empreinte_essai="$(tr -d ' ' <<< "$cle" | tr 'a-f' 'A-F')"
+    [[ "$empreinte_essai" =~ ^[0-9A-F]{40}$ ]] || erreur_usage "--cle : empreinte invalide (40 chiffres hexadécimaux attendus) : $cle"
 else
     racine="$RACINE_DEPOT"
+    # La source locale des Releases est réservée aux essais : hors essai on refuse, on n'ignore pas.
+    [ -z "${WIMAO_SOURCE_RELEASES:-}" ] \
+        || erreur_usage "WIMAO_SOURCE_RELEASES n'est admise qu'avec --racine (essais) : retirez-la de l'environnement"
 fi
 depot_apt="$racine/depot-apt"
 dists="$depot_apt/dists/stable"
@@ -107,6 +115,25 @@ echo "== 1. Dépôt APT"
 if [ ! -f "$dists/InRelease" ]; then
     echo "dépôt APT vide : rien à assembler"
     exit 3
+fi
+
+# Contenu de depot-apt/ : exactement cet arbre, fait de dossiers et de fichiers ORDINAIRES (le type vient de
+# find : un lien symbolique est « l »). Tout le reste (fichier en trop, autre architecture, lien) est refusé,
+# puisque seuls les cinq fichiers attendus seront copiés et que le reste n'est ni signé ni contrôlé.
+attendus="d dists
+d dists/stable
+d dists/stable/main
+d dists/stable/main/binary-amd64
+f dists/stable/InRelease
+f dists/stable/Release
+f dists/stable/Release.gpg
+f dists/stable/main/binary-amd64/Packages
+f dists/stable/main/binary-amd64/Packages.gz"
+trouves="$(find "$depot_apt" -mindepth 1 -printf '%y %P\n' | sort)"
+if [ "$trouves" != "$(sort <<< "$attendus")" ]; then
+    inattendus="$(comm -23 <(printf '%s\n' "$trouves") <(sort <<< "$attendus") | tr '\n' ';')"
+    manquants="$(comm -13 <(printf '%s\n' "$trouves") <(sort <<< "$attendus") | tr '\n' ';')"
+    arreter "depot-apt/ n'a pas le contenu attendu (inattendu : ${inattendus:-rien} ; manquant : ${manquants:-rien})"
 fi
 
 for outil in gpg gpgv gzip sha256sum awk; do
@@ -127,8 +154,7 @@ trap 'rm -rf "$temporaire"' EXIT
 # --- 2. Clé attendue et trousseau ---
 echo "== 2. Clé attendue"
 if [ -n "$cle" ]; then
-    empreinte="$(tr -d ' ' <<< "$cle" | tr 'a-f' 'A-F')"
-    [[ "$empreinte" =~ ^[0-9A-F]{40}$ ]] || erreur_usage "--cle : empreinte invalide (40 chiffres hexadécimaux attendus) : $cle"
+    empreinte="$empreinte_essai"  # déjà validée avec les arguments
     echo "Essai : clé $empreinte (SECURITY.md ignoré)"
 else
     empreinte="$(empreinte_publiee "$racine")" || exit 1
@@ -211,7 +237,9 @@ echo "$(wc -l < "$temporaire/entrees.tsv") entrée(s), toutes en pool/vX.Y.Z/."
 echo "== 6. Téléchargement des paquets"
 construit="$temporaire/site"
 mkdir -p "$construit"
-while IFS=$'\t' read -r fichier taille somme; do
+# La liste est lue sur le descripteur 3, pas sur l'entrée standard : curl (ou toute commande du corps de
+# boucle) ne peut ainsi pas en avaler des lignes.
+while IFS=$'\t' read -r fichier taille somme <&3; do
     # Filename a la forme stricte pool/<étiquette>/<nom> : on en tire l'étiquette et le nom.
     etiquette="$(cut -d/ -f2 <<< "$fichier")"
     nom="$(cut -d/ -f3 <<< "$fichier")"
@@ -230,11 +258,14 @@ while IFS=$'\t' read -r fichier taille somme; do
         || arreter "$nom : taille $(stat -c %s -- "$destination") au lieu de $taille annoncée"
     [ "$(sha256sum -- "$destination" | cut -d' ' -f1)" = "$somme" ] \
         || arreter "$nom : SHA256 différent de celui de l'index signé"
-done < "$temporaire/entrees.tsv"
+done 3< "$temporaire/entrees.tsv"
 
 # --- 7. Assemblage ---
 echo "== 7. Assemblage du site"
-cp -r -- "$depot_apt/dists" "$construit/dists"
+# Seuls les cinq fichiers vérifiés sont copiés (l'arbre de depot-apt/ a été contrôlé plus haut).
+mkdir -p "$construit/dists/stable/main/binary-amd64"
+cp -- "$dists/InRelease" "$dists/Release" "$dists/Release.gpg" "$construit/dists/stable/"
+cp -- "$paquets" "$paquets_gz" "$construit/dists/stable/main/binary-amd64/"
 cp -- "$racine/docs/cle-publique.asc" "$construit/wimao.asc"
 # Empreinte en groupes de 4 (lisible, comparable à l'œil) ; hexadécimal pur, donc rien à échapper en HTML.
 empreinte_groupes="$(sed 's/.\{4\}/& /g; s/ $//' <<< "$empreinte")"
@@ -281,6 +312,10 @@ sudo apt update &amp;&amp; sudo apt install wimao</code></pre>
 HTML
 
 # Rien n'a échoué : on copie dans le dossier du site (créé au besoin).
-mkdir -p -- "$site"
-cp -r -- "$construit/." "$site/"
+# Si la copie échoue en route (disque plein...), le site resterait À MOITIÉ rempli et pourrait être publié tel
+# quel : on le vide (il était absent ou vide au départ) et on sort en code 1.
+if ! { mkdir -p -- "$site" && cp -r -- "$construit/." "$site/"; }; then
+    find "$site" -mindepth 1 -delete 2> /dev/null || true
+    arreter "la copie vers $site a échoué ; le dossier a été vidé"
+fi
 echo "Site assemblé dans $site."
