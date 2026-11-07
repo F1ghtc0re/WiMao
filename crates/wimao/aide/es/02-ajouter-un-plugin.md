@@ -19,9 +19,9 @@ Algunos instaladores se niegan a instalarse en silencio. WiMao lo detecta: no se
 
 ## El estado de los plugins
 
-- **Listo**: el plugin se abre y se puede usar en su programa de música.
-- **Revisar**: el plugin se carga, pero no se pudo comprobar su interfaz. Pruébelo en su programa de música.
-- **Problema**: la prueba ha fallado. Vea [Problemas frecuentes](aide:problemes).
+- **Listo**: el plugin se carga correctamente en Wine. Según el caso, WiMao vio abrirse su interfaz o no pudo comprobarla: la explicación bajo su nombre lo indica ("Se carga correctamente; ábralo en su software de música para comprobar su interfaz"). En ambos casos se puede usar; ábralo en su programa de música para ver su interfaz.
+- **Revisar**: la prueba no pudo concluir, por ejemplo porque el plugin no terminó de cargarse en 5 minutos. Pruébelo en su programa de música.
+- **Problema**: el plugin no se carga o falla en Wine. Vea [Problemas frecuentes](aide:problemes).
 - **Sin probar**: el plugin aún no se ha probado. Los plugins CLAP aún no se prueban.
 
 Bajo el nombre de cada plugin, una breve explicación acompaña a este estado.

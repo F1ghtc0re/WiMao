@@ -194,9 +194,6 @@ Relevés pendant les relectures du sous-projet 3, réécrits ici sans le détail
 ### Ce que voit l'utilisateur
 
 - **Historique.**
-  - Les libellés d'action sont à l'infinitif (« Réparer ») ; des noms (« Réparation ») seraient plus
-    naturels dans une colonne.
-  - Deux Ctrl+H rapides empilent deux pages « Historique ».
   - Le bouton de retour reste muet quand un travail est en cours.
 - **Retour en arrière.**
   - L'aperçu ne montre pas tous les fichiers de pontage yabridge qui seront retirés.
@@ -206,10 +203,6 @@ Relevés pendant les relectures du sous-projet 3, réécrits ici sans le détail
     ignoré (disposition peu réaliste).
 - **Mise à jour d'un plugin.**
   - La marque « Mis à jour » n'est posée qu'en fin de session de gestionnaire.
-  - Elle est perdue quand on change de langue, car la fenêtre est reconstruite.
-- **Assistant et import.**
-  - Les icônes « prêt » et « erreur » ne suivent pas la couleur d'accent.
-  - Les tailles s'affichent en « 1024,0 KiB » au lieu de « 1 MiB » à la limite.
 - **Mode d'emploi.** La touche F1 et le bouton « Problèmes fréquents » n'ont pas été vérifiés à
   l'écran, et les titres balisés, les titres du type « 2024. foo » et les adresses contenant une
   parenthèse fermante ne sont pas testés.
@@ -219,10 +212,9 @@ Relevés pendant les relectures du sous-projet 3, réécrits ici sans le détail
   quelques secondes de plus, sans autre effet.
 - **Concurrence.** Deux processus (interface et ligne de commande) qui écrivent l'historique en
   même temps ne sont pas protégés l'un de l'autre.
-- **Langue de l'historique.** Le sujet et les détails d'une entrée sont écrits dans la langue du
-  moment (« avant l'installation de … », « 7363 fichiers supprimés ») et ne changent pas avec la
-  langue. Il faudrait stocker des données neutres dans `historique.jsonl` et traduire à l'affichage.
-- **Bilan d'installation.** Un plugin seulement « À vérifier » est compté « avec un problème ».
+- **Langue de l'historique : causes d'échec.** Le sujet et les détails d'une entrée sont traduits à
+  l'affichage, mais la cause d'un échec (texte d'une erreur) est stockée telle quelle : elle reste
+  dans la langue du moment où elle a été écrite et ne change pas quand on change de langue.
 - **Points périmés (cas limites).**
   - Une coupure entre la mise à jour de la trace d'import et le marquage des points laisse des
     points utilisables ; `reprendre_interruption` ne refait pas ce marquage. Inverser l'ordre suffit
@@ -231,17 +223,6 @@ Relevés pendant les relectures du sous-projet 3, réécrits ici sans le détail
     peut le périmer entre les deux. Revérifier après le verrou.
   - `creer_environnement` périme tous les points dès que `system.reg` manque, même si le reste de
     l'environnement est intact (prudent, mais un point qui aurait pu le réparer devient inutilisable).
-- **Test d'ouverture des plugins : fausses alertes** (vérifié le 2026-11-01 dans Bitwig 6, avec
-  l'environnement importé). Le test de WiMao passe par Carla, qui ne se comporte pas comme un vrai
-  logiciel de musique :
-  - **DrumSynth** (AIR) est marqué **Problème** (« l'hôte de plugins s'est arrêté ») : c'est Carla
-    qui plante (assertions JUCE `juce_VST3PluginFormat.cpp:3636` et Carla `parameterId < count`, puis
-    erreur de segmentation). Dans Bitwig, le plugin se charge et son interface s'affiche ;
-  - **Vocal Doubler** (iZotope) est marqué **À vérifier** alors qu'il se charge et s'affiche dans
-    Bitwig.
-  Pistes : distinguer un plantage de l'hôte de test d'un plantage du plugin dans Wine (le journal
-  yabridge dit si le plugin a été chargé) ; essayer un autre hôte de test plus proche d'un vrai
-  logiciel de musique ; ou présenter ce cas comme « à essayer dans votre logiciel de musique ».
 
 ### Qualité du code
 
@@ -320,10 +301,6 @@ Ordre prévu, du plus simple au plus lourd (conseil retenu pendant la conception
 5. **PPA** (Launchpad : paquets sources, fabrication chez Canonical) ;
 6. **Snap** : déconseillé (confinement incompatible avec Wine et les plugins).
 
-- **Avertissement du lien yabridge invisible dans l'interface.** Quand `~/.local/share/yabridge` mène à un
-  autre yabridge que celui de WiMao, `wimao-cli diagnostiquer` l'affiche, mais le bouton « Réparer » de
-  l'interface répond « Aucun problème détecté » si c'est le seul avertissement. L'afficher aussi dans
-  l'interface (sans proposer de réparation automatique : le lien n'est jamais modifié par WiMao).
 - **Contrôle des secrets de `verifier-workflows.sh`** : un commentaire en fin de ligne qui contient
   « secrets. » est refusé à tort (faux positif sans danger ; le contrôle reste du côté du refus).
 - **Taille du site Pages du dépôt APT.** Chaque version ajoute environ 89 Mo dans `pool/` (mesuré sur la

@@ -19,9 +19,9 @@ Some installers refuse to install silently. WiMao notices it: no plugin was adde
 
 ## The state of the plugins
 
-- **Ready**: the plugin opens, it can be used in your music software.
-- **Check**: the plugin loads, but its interface could not be checked. Try it in your music software.
-- **Problem**: the test failed. See [Common problems](aide:problemes).
+- **Ready**: the plugin loads correctly in Wine. Depending on the case, WiMao saw its interface open, or could not check it: the explanation under its name says which ("Loads correctly; open it in your music software to check its interface"). Either way it can be used; open it in your music software to see its interface.
+- **Check**: the test could not conclude, for example because the plugin did not finish loading within 5 minutes. Try it in your music software.
+- **Problem**: the plugin does not load, or crashes in Wine. See [Common problems](aide:problemes).
 - **Not tested**: the plugin has not been tested yet. CLAP plugins are not tested yet.
 
 Under the name of each plugin, a short explanation goes with this state.
