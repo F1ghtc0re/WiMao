@@ -329,7 +329,11 @@ appel à `gh` ni à `git`), utilisée par `scripts/tests/tester-publier-depot-ap
 une clé expirée : passé cette date, la CI du dépôt APT échoue et vous ne pouvez plus rien publier. Prolonger
 ne change pas l'empreinte : `gpg --quick-set-expire <EMPREINTE> 1y '*'` sur la machine de signature (la clé
 principale doit y être, voir « Révocation »), puis exportez de nouveau `docs/cle-publique.asc` (PR), car la
-CI lit la date d'expiration dans ce fichier. Mettez-vous un rappel pour septembre 2027.
+CI lit la date d'expiration dans ce fichier. Le site du dépôt APT reprend cette clé (`wimao.asc`)
+automatiquement : la fusion de cette PR sur main relance le workflow « Dépôt APT », qui la republie.
+Les utilisateurs ont une copie locale de la clé : annoncez la prolongation (notes de version) pour qu'ils
+la retéléchargent (README, « EXPKEYSIG ») avant l'ancienne date. Mettez-vous un rappel pour
+août 2027.
 
 ## Révocation et clé perdue
 

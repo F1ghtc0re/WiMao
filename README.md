@@ -78,6 +78,11 @@ exemple le dépôt GitHub). `apt` refuse alors le dépôt si un seul octet de l'
 été modifié. Pour revenir à une version précédente : `sudo apt install wimao=<version>`. Pour
 retirer le dépôt : `sudo rm /etc/apt/sources.list.d/wimao.list /etc/apt/keyrings/wimao.asc`.
 
+**Si `apt update` signale un jour `EXPKEYSIG` pour le dépôt WiMao**, la sous-clé de signature a été
+prolongée et votre copie de la clé publique est périmée : relancez simplement la deuxième commande
+ci-dessus (`curl … | sudo tee /etc/apt/keyrings/wimao.asc`). L'empreinte ne change pas ; vérifiez-la
+de nouveau comme ci-dessus.
+
 ### Méthode 2 : télécharger les `.deb` et les vérifier soi-même
 
 Pour qui préfère tout contrôler à la main, sans ajouter de dépôt (pas de mises à jour automatiques).

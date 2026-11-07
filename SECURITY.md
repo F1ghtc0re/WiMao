@@ -86,7 +86,10 @@ modifier. L'HTTPS de GitHub Pages rend ce rejeu très difficile.
 
 **Expiration de la sous-clé.** Une clé expirée est refusée par nos vérifications. La sous-clé de signature
 expire le 2027-11-01 : le propriétaire doit la prolonger avant (`docs/publier-une-version.md`, étape 5),
-sinon plus aucune publication n'est possible.
+sinon plus aucune publication n'est possible. Les utilisateurs gardent une copie locale de la clé publique
+(`/etc/apt/keyrings/wimao.asc`) : après une prolongation, ils doivent la retélécharger (même empreinte),
+sinon `apt update` refusera l'index (`EXPKEYSIG`) à partir de l'ancienne date d'expiration. Le README
+l'explique ; la prolongation doit donc se faire assez tôt pour leur laisser le temps.
 
 Si la clé est perdue ou volée, la procédure de « Clé de signature perdue ou volée » s'applique aussi au
 dépôt : l'index doit être re-signé avec la nouvelle clé et la nouvelle clé publiée sur le site.
