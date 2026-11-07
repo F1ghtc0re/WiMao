@@ -189,6 +189,110 @@ jobs:
     steps:
       - run: echo"
 
+# Job `deployer` de depot-apt.yml (publication GitHub Pages) : seul à pouvoir écrire pages et id-token.
+attendre_droits droits-deployer-pages-permis 0 depot-apt.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  deployer:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - run: echo"
+
+# Même droits dans un AUTRE job de depot-apt.yml : refusés.
+attendre_droits droits-pages-autre-job-depot-apt 1 depot-apt.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  assembler:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+    steps:
+      - run: echo"
+
+attendre_droits droits-id-token-autre-job-depot-apt 1 depot-apt.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  installation:
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+    steps:
+      - run: echo"
+
+# Un job `deployer` d'un autre fichier n'a aucun droit d'écriture.
+attendre_droits droits-deployer-autre-fichier 1 autre.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  deployer:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - run: echo"
+
+# Dans `deployer`, les autres droits d'écriture restent refusés (contents, packages, attestations...).
+attendre_droits droits-deployer-contents-write 1 depot-apt.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  deployer:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+      contents: write
+    steps:
+      - run: echo"
+
+attendre_droits droits-deployer-attestations-write 1 depot-apt.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  deployer:
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+    steps:
+      - run: echo"
+
+# Au niveau racine, même `pages: write` est refusé.
+attendre_droits droits-pages-racine-depot-apt 1 depot-apt.yml "name: d
+on: push
+permissions:
+  pages: write
+jobs:
+  deployer:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo"
+
+# `deployer` de paquets.yml ne gagne pas non plus ces droits.
+attendre_droits droits-pages-paquets-yml 1 paquets.yml "name: d
+on: push
+permissions:
+  contents: read
+jobs:
+  deployer:
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+    steps:
+      - run: echo"
+
 # Contrôles 6 et 7 : déclencheurs dangereux et secrets. Comme pour les droits, un refus doit venir du bon
 # contrôle (motif cherché dans le message), sinon un autre contrôle pourrait refuser « par accident ».
 # Arguments : nom du cas, code attendu, motif du message (vide si accepté), contenu complet du workflow.
