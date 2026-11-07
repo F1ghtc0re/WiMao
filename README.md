@@ -8,8 +8,8 @@ station audio (DAW) et vérifie qu'ils fonctionnent.
 **État du projet : en développement.** Le noyau (environnement Wine, installation
 avec recettes, pontage yabridge, test d'ouverture, sauvegarde, diagnostic, historique des
 actions, import d'un environnement existant), la ligne de commande `wimao-cli` et une interface
-graphique (GTK4 + libadwaita) existent, et trois paquets Debian sont prêts (la première version
-publiée est à venir : voir « Installation »). Le journal des essais est dans `NOTES.md`, la
+graphique (GTK4 + libadwaita) existent, et trois paquets Debian sont publiés (version 0.4.0, avec un
+dépôt `apt` signé : voir « Installation »). Le journal des essais est dans `NOTES.md`, la
 conception dans `docs/superpowers/specs/`.
 
 ## Aperçu
@@ -39,15 +39,55 @@ retour en arrière est proposé pour les actions qui ont un point de restauratio
 
 ## Installation
 
-WiMao s'installe avec trois paquets Debian (`.deb`), publiés dans les « Releases » du dépôt
-GitHub. Ils fonctionnent sur **Ubuntu 24.04 et plus récent** et **Debian 13 et plus récent**, en
-**64 bits Intel/AMD (amd64)** seulement.
+WiMao s'installe avec trois paquets Debian (`.deb`), publiés dans un dépôt `apt` signé et dans les
+« Releases » du dépôt GitHub. Ils fonctionnent sur **Ubuntu 24.04 et plus récent** et **Debian 13 et
+plus récent**, en **64 bits Intel/AMD (amd64)** seulement.
 
 | Paquet | Contenu |
 |---|---|
 | `wimao-wine` | Wine 11.20 avec le correctif nécessaire aux fenêtres de plugins, dans `/opt/wimao/wine` (le Wine de votre système n'est pas touché) |
 | `wimao-bridge` | yabridge 5.1.1 (`/opt/wimao/yabridge`) et DXVK 3.1.1 (`/opt/wimao/dxvk`) |
 | `wimao` | l'interface `wimao`, la ligne de commande `wimao-cli`, les recettes, les traductions |
+
+### Méthode 1 (recommandée) : le dépôt `apt`
+
+Avec cette méthode, WiMao se met à jour avec le reste du système (« Mises à jour de logiciels » ou
+`sudo apt upgrade`). Si `curl` n'est pas installé (c'est possible sur un système neuf, Debian 13 notamment) :
+`sudo apt install curl`. Sans `curl`, la clé téléchargée serait vide et `apt update` échouerait avec une erreur
+de signature. Copiez ensuite ces quatre commandes dans un terminal, l'une après l'autre :
+
+```sh
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | sudo tee /etc/apt/keyrings/wimao.asc > /dev/null
+echo "deb [signed-by=/etc/apt/keyrings/wimao.asc] https://f1ghtc0re.github.io/WiMao stable main" \
+  | sudo tee /etc/apt/sources.list.d/wimao.list
+sudo apt update && sudo apt install wimao
+```
+
+Ce que font ces commandes : la première crée le dossier des clés, la deuxième y place la clé publique
+de WiMao, la troisième déclare le dépôt (`signed-by` limite la confiance de cette clé à ce seul
+dépôt), la quatrième installe `wimao` et ses deux dépendances (`wimao-bridge`, `wimao-wine`).
+
+**Comparez l'empreinte de la clé** avant de lui faire confiance (`gpg --show-keys --fingerprint
+/etc/apt/keyrings/wimao.asc`). Elle doit être exactement :
+
+```text
+3980 C3D2 0A17 566A 075A  65CB CB97 DE3F BF41 DD46
+```
+
+C'est aussi celle de `SECURITY.md` ; mieux vaut la lire sur une autre source que ce site (par
+exemple le dépôt GitHub). `apt` refuse alors le dépôt si un seul octet de l'index ou d'un paquet a
+été modifié. Pour revenir à une version précédente : `sudo apt install wimao=<version>`. Pour
+retirer le dépôt : `sudo rm /etc/apt/sources.list.d/wimao.list /etc/apt/keyrings/wimao.asc`.
+
+**Si `apt update` signale un jour `EXPKEYSIG` pour le dépôt WiMao**, la sous-clé de signature a été
+prolongée et votre copie de la clé publique est périmée : relancez simplement la deuxième commande
+ci-dessus (`curl … | sudo tee /etc/apt/keyrings/wimao.asc`). L'empreinte ne change pas ; vérifiez-la
+de nouveau comme ci-dessus.
+
+### Méthode 2 : télécharger les `.deb` et les vérifier soi-même
+
+Pour qui préfère tout contrôler à la main, sans ajouter de dépôt (pas de mises à jour automatiques).
 
 1. Téléchargez, depuis la page de la Release, les trois `.deb` ainsi que `SHA256SUMS` et
    `SHA256SUMS.asc` dans un même dossier.

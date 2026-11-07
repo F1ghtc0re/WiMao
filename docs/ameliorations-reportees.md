@@ -319,7 +319,8 @@ Ordre prévu, du plus simple au plus lourd (conseil retenu pendant la conception
 2. **AUR** (Arch Linux) : un `PKGBUILD` qui s'appuie sur les mêmes sources et les mêmes empreintes ;
 3. **Flatpak / Flathub** : difficile, car l'interface a besoin de lancer Wine et yabridge et d'écrire dans
    `~/.vst3`, ce que le bac à sable limite ; demande une étude ;
-4. **Dépôt APT signé** (publier les `.deb` dans un dépôt que `apt` met à jour tout seul) ;
+4. **Dépôt APT signé** (fait, sous-projet 6 : `.deb` publiés dans un dépôt que `apt` met à jour tout seul,
+   sur GitHub Pages ; voir `docs/publier-une-version.md`, étape 5) ;
 5. **PPA** (Launchpad : paquets sources, fabrication chez Canonical) ;
 6. **Snap** : déconseillé (confinement incompatible avec Wine et les plugins).
 
@@ -329,3 +330,8 @@ Ordre prévu, du plus simple au plus lourd (conseil retenu pendant la conception
   l'interface (sans proposer de réparation automatique : le lien n'est jamais modifié par WiMao).
 - **Contrôle des secrets de `verifier-workflows.sh`** : un commentaire en fin de ligne qui contient
   « secrets. » est refusé à tort (faux positif sans danger ; le contrôle reste du côté du refus).
+- **Taille du site Pages du dépôt APT.** Chaque version ajoute environ 89 Mo dans `pool/` (mesuré sur la
+  v0.4.0), alors que GitHub limite un site Pages publié à 1 Go : le déploiement échouera vers la 11e ou 12e
+  version. Ne garder que les N dernières versions (par exemple 5) : retirer les anciennes entrées de
+  `Packages` dans `scripts/publier-depot-apt.sh` et laisser `scripts/assembler-site-apt.sh` ignorer (ne plus
+  télécharger) ce qui n'y figure plus. À faire avant la 10e version.

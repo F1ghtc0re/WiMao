@@ -6,7 +6,9 @@
 #   3. chaque image `container:` / `image:` est figée par `@sha256:<64 hexadécimaux>` ;
 #   4. toute matrice est un bloc lisible (jamais `matrix: ${{ fromJSON(...) }}` ni autre valeur en ligne) ;
 #   5. aucun droit d'écriture (`write`, `write-all`, valeur en ligne autre que `read-all`/`{}`) dans un bloc
-#      `permissions:`, sauf `contents`, `id-token` et `attestations` du seul job `brouillon` de paquets.yml ;
+#      `permissions:`, sauf :
+#        - `contents`, `id-token` et `attestations` du seul job `brouillon` de paquets.yml ;
+#        - `pages` et `id-token` du seul job `deployer` de depot-apt.yml (publication GitHub Pages) ;
 #   6. aucun déclencheur `pull_request_target` ni `workflow_run` : ils exécutent le code d'une demande de
 #      fusion (ou d'un autre workflow) avec un jeton en écriture, le schéma classique d'attaque des workflows ;
 #   7. aucune expression `secrets.` (`secrets[...]`, `secrets: inherit`) : la chaîne n'utilise aucun secret.
@@ -89,11 +91,14 @@ for f in "${fichiers[@]}"; do
     # 5. Droits d'écriture. Lecture ligne à ligne : le job courant est la dernière clé à 2 espaces
     # d'indentation sous `jobs:` ; un bloc `permissions:` couvre les lignes plus indentées qui le suivent.
     # Un `permissions:` avec valeur en ligne n'est admis que s'il vaut `read-all` ou `{}` ; tout le reste
-    # (write-all, {contents: write}…) est refusé. Seul le job `brouillon` de paquets.yml peut écrire, et
-    # seulement ces trois droits : contents, id-token, attestations.
+    # (write-all, {contents: write}…) est refusé. Deux exceptions, chacune limitée à un fichier ET à un job :
+    #   - `brouillon` de paquets.yml : contents, id-token, attestations ;
+    #   - `deployer` de depot-apt.yml : pages, id-token.
+    # Tout autre droit d'écriture, ou les mêmes droits ailleurs (autre job, autre fichier, racine), est refusé.
     while IFS= read -r ligne; do
         echec "${f}: ${ligne}"
-    done < <(awk -v brouillon_permis="$([ "$(basename "${f}")" = "paquets.yml" ] && echo 1 || echo 0)" '
+    done < <(awk -v brouillon_permis="$([ "$(basename "${f}")" = "paquets.yml" ] && echo 1 || echo 0)" \
+        -v deployer_permis="$([ "$(basename "${f}")" = "depot-apt.yml" ] && echo 1 || echo 0)" '
         function indent(l) { match(l, /^ */); return RLENGTH }
         /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
         {
@@ -112,7 +117,10 @@ for f in "${fichiers[@]}"; do
             }
             if (bloc && $0 ~ /write/) {
                 cle = $0; sub(/^[[:space:]]*/, "", cle); sub(/:.*/, "", cle)
-                if (!(brouillon_permis == 1 && job == "brouillon" && (cle == "contents" || cle == "id-token" || cle == "attestations") && $0 ~ /:[[:space:]]*write[[:space:]]*(#.*)?$/))
+                ecrit_simple = ($0 ~ /:[[:space:]]*write[[:space:]]*(#.*)?$/)
+                permis_brouillon = (brouillon_permis == 1 && job == "brouillon" && (cle == "contents" || cle == "id-token" || cle == "attestations") && ecrit_simple)
+                permis_deployer = (deployer_permis == 1 && job == "deployer" && (cle == "pages" || cle == "id-token") && ecrit_simple)
+                if (!permis_brouillon && !permis_deployer)
                     print "droit d\047écriture interdit (job « " job " ») : " $0
             }
         }' "${f}")

@@ -12,7 +12,7 @@
 #
 # Cas couverts : voir les titres `# ---` ci-dessous (--a-blanc et valeurs du tableau de la spec § 4,
 # --appliquer refusé sur dépôt privé, ruleset existant mis à jour sans doublon, 404 → ⚠️, erreur → ❌,
-# --verifier tout conforme, option inconnue).
+# --verifier tout conforme, Pages / environnement / politique de branches, option inconnue).
 #
 # Usage     : scripts/tests/tester-regler-depot-github.sh
 # Écrit     : uniquement dans un dossier temporaire, supprimé à la fin.
@@ -123,6 +123,11 @@ verifier_corps PUT "actions/permissions" '.allowed_actions == "selected"'
 verifier_corps PUT "actions/permissions/selected-actions" '.patterns_allowed == ["dtolnay/rust-toolchain@*"]'
 verifier_corps PUT "actions/permissions/fork-pr-contributor-approval" '.approval_policy == "all_external_contributors"'
 verifier_corps PATCH "" '.security_and_analysis.secret_scanning_push_protection.status == "enabled"'
+# GitHub Pages : en --a-blanc, on ignore si Pages existe, donc la création (POST) ET le réglage (PUT) sont imprimés.
+verifier_corps POST "pages" '. == {build_type: "workflow"}'
+verifier_corps PUT "pages" '. == {build_type: "workflow", https_enforced: true}'
+verifier_corps PUT "environments/github-pages" '. == {deployment_branch_policy: {protected_branches: false, custom_branch_policies: true}}'
+verifier_corps POST "environments/github-pages/deployment-branch-policies" '. == {name: "main", type: "branch"}'
 for r in private-vulnerability-reporting vulnerability-alerts automated-security-fixes immutable-releases; do
     [[ -f "$(corps PUT "$r")" ]] || echec "requête PUT $r absente"
 done
@@ -141,6 +146,11 @@ tout_conforme() {
     cp "$(corps PUT actions/permissions/workflow)" "$REPONSES/GET_repos_${depot//\//_}_actions_permissions_workflow.json"
     cp "$(corps PUT actions/permissions)" "$REPONSES/GET_repos_${depot//\//_}_actions_permissions.json"
     cp "$(corps PUT actions/permissions/selected-actions)" "$REPONSES/GET_repos_${depot//\//_}_actions_permissions_selected-actions.json"
+    # Pages, environnement et politique de branches : ce que GitHub renverrait après nos écritures.
+    cp "$(corps PUT pages)" "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+    cp "$(corps PUT environments/github-pages)" "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages.json"
+    echo '{"total_count":1,"branch_policies":[{"id":7,"name":"main","type":"branch"}]}' \
+        > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages_deployment-branch-policies.json"
     cp "$(corps PUT actions/permissions/fork-pr-contributor-approval)" "$REPONSES/GET_repos_${depot//\//_}_actions_permissions_fork-pr-contributor-approval.json"
 }
 
@@ -243,6 +253,104 @@ lancer --appliquer --depot "$depot"
 attendre_code 1 "422 sur le POST du ruleset"
 grep -Fq "❌ Ruleset « main protégée » (création)" <<< "$sortie" || echec "pas de ❌ pour le 422 : $sortie"
 grep -Fq "Validation Failed" <<< "$sortie" || echec "le message de GitHub n'est pas cité : $sortie"
+
+# --- Pages, environnement et politique de branches : --verifier -------------------------------------------
+# Chaque cas part de « tout conforme » puis dégrade UN réglage ; il doit donner un ❌ précis et le code 1.
+neuf pages-absent
+tout_conforme
+echo "gh: Not Found (HTTP 404)" > "$REPONSES/GET_repos_${depot//\//_}_pages.err"
+rm "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "Pages non activé"
+grep -Fq "❌ GitHub Pages" <<< "$sortie" || echec "pas de ❌ pour Pages absent : $sortie"
+
+neuf pages-legacy
+tout_conforme
+echo '{"build_type":"legacy","https_enforced":true}' > "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "Pages en mode legacy"
+grep -Fq "❌ GitHub Pages : source" <<< "$sortie" || echec "pas de ❌ pour build_type legacy : $sortie"
+
+neuf pages-http
+tout_conforme
+echo '{"build_type":"workflow","https_enforced":false}' > "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "HTTPS non imposé"
+grep -Fq "❌ GitHub Pages : HTTPS" <<< "$sortie" || echec "pas de ❌ pour HTTPS : $sortie"
+
+neuf env-protegees
+tout_conforme
+echo '{"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}' \
+    > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "environnement sans politique personnalisée"
+grep -Fq "❌ Environnement github-pages" <<< "$sortie" || echec "pas de ❌ pour l'environnement : $sortie"
+
+neuf politique-autre
+tout_conforme
+echo '{"total_count":2,"branch_policies":[{"id":7,"name":"main","type":"branch"},{"id":8,"name":"dev","type":"branch"}]}' \
+    > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages_deployment-branch-policies.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "seconde politique de branche"
+grep -Fq "❌ Branches autorisées" <<< "$sortie" || echec "pas de ❌ pour la seconde politique : $sortie"
+
+neuf politique-etiquette
+tout_conforme
+echo '{"total_count":1,"branch_policies":[{"id":7,"name":"main","type":"tag"}]}' \
+    > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages_deployment-branch-policies.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "politique « main » de type tag"
+grep -Fq "❌ Branches autorisées" <<< "$sortie" || echec "pas de ❌ pour la politique de type tag : $sortie"
+
+neuf politique-vide
+tout_conforme
+echo '{"total_count":0,"branch_policies":[]}' \
+    > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages_deployment-branch-policies.json"
+lancer --verifier --depot "$depot"
+attendre_code 1 "aucune politique de branche"
+
+# --- Pages, environnement et politique de branches : --appliquer ------------------------------------------
+# Pages déjà activé (GET répond 200), politique « main » déjà là : PUT seulement, aucun POST.
+neuf pages-existe
+tout_conforme
+lancer --appliquer --depot "$depot"
+attendre_code 0 "--appliquer, Pages et politique déjà en place"
+grep -Fq "PUT repos/$depot/pages " "$JOURNAL" || echec "pas de PUT pages : $(cat "$JOURNAL")"
+grep -Fq "PUT repos/$depot/environments/github-pages " "$JOURNAL" || echec "pas de PUT environnement : $(cat "$JOURNAL")"
+! grep -Eq '^POST [^ ]*(/pages|deployment-branch-policies) ' "$JOURNAL" || echec "POST inutile : $(cat "$JOURNAL")"
+
+# Pages absent (404 sur GET pages) : POST de création PUIS PUT. Politique absente : POST de la politique.
+neuf pages-cree
+tout_conforme
+echo "gh: Not Found (HTTP 404)" > "$REPONSES/GET_repos_${depot//\//_}_pages.err"
+rm "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+echo '{"total_count":0,"branch_policies":[]}' \
+    > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages_deployment-branch-policies.json"
+lancer --appliquer --depot "$depot"
+# Le 404 simulé persiste pour la vérification finale : le code 1 est donc attendu, l'ordre des appels compte ici.
+ordre="$(grep -E '^(POST|PUT) [^ ]*/pages ' "$JOURNAL" | cut -d' ' -f1 | tr '\n' ' ')"
+[[ "$ordre" == "POST PUT " ]] || echec "Pages absent : ordre « $ordre » au lieu de « POST PUT » : $(cat "$JOURNAL")"
+grep -Fq "POST repos/$depot/pages {\"build_type\":\"workflow\"}" "$JOURNAL" || echec "corps du POST pages : $(cat "$JOURNAL")"
+grep -Fq "POST repos/$depot/environments/github-pages/deployment-branch-policies {\"name\":\"main\",\"type\":\"branch\"}" "$JOURNAL" \
+    || echec "pas de POST de la politique main : $(cat "$JOURNAL")"
+
+# Erreur autre que 404 sur GET pages (HTTP 500) : ❌ « lecture impossible », ni POST ni PUT sur /pages.
+neuf pages-500
+tout_conforme
+echo "gh: Server Error (HTTP 500)" > "$REPONSES/GET_repos_${depot//\//_}_pages.err"
+rm "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+lancer --appliquer --depot "$depot"
+attendre_code 1 "GET pages en erreur 500"
+grep -Fq "❌ GitHub Pages : lecture impossible" <<< "$sortie" || echec "pas de ❌ lecture impossible : $sortie"
+! grep -Eq '^(POST|PUT) [^ ]*/pages ' "$JOURNAL" || echec "écriture sur /pages malgré l'erreur : $(cat "$JOURNAL")"
+
+# Refus de GitHub (HTTP 500) sur l'écriture de l'environnement → ❌ et code 1.
+neuf env-refus
+tout_conforme
+echo "gh: Server Error (HTTP 500)" > "$REPONSES/PUT_repos_${depot//\//_}_environments_github-pages.err"
+lancer --appliquer --depot "$depot"
+attendre_code 1 "refus sur l'environnement"
+grep -Fq "❌ Environnement github-pages" <<< "$sortie" || echec "pas de ❌ pour l'environnement : $sortie"
 
 # --- Erreurs d'usage -----------------------------------------------------------------------------------
 lancer --nimporte-quoi
