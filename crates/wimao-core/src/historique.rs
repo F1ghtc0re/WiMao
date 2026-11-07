@@ -4,6 +4,9 @@
 //!   si besoin, le point de restauration associé et un détail. À ne pas confondre avec le
 //!   [`journal`], qui trace les *commandes* lancées pour le diagnostic technique.
 //! - [`ajouter`] écrit à la fin du fichier ; [`lire`] relit tout, la plus récente en premier.
+//! - [`ajouter_neutre`] écrit en plus le sujet et les détails sous forme de [`TexteNeutre`]
+//!   (clé anglaise + valeurs) : [`Entree::sujet_affiche`] et [`Entree::details_affiches`] les
+//!   traduisent **au moment de l'affichage**, dans la langue alors choisie (spec 5).
 //!
 //! # Choix non évidents
 //!
@@ -13,6 +16,13 @@
 //!   édition à la main…) : le reste de l'historique reste consultable.
 //! - Si le fichier ne se termine pas par un saut de ligne (écriture interrompue), [`ajouter`]
 //!   en commence un, pour que la nouvelle entrée ne soit pas collée à la ligne abîmée.
+//! - `sujet` et `details` restent écrits (dans la langue du moment) en plus du texte neutre :
+//!   les anciennes versions et la lecture directe du fichier n'ont ainsi rien à savoir du neutre.
+//! - Une clé neutre doit être **déclarée** dans [`CLES_CONNUES`] ; une clé inconnue (fichier
+//!   édité à la main, version plus récente) ou une valeur manquante fait retomber l'affichage
+//!   sur le texte brut, jamais sur un `{name}` laissé tel quel.
+//! - Les causes d'échec (messages d'erreur) restent du texte libre, traduit à l'écriture : limite
+//!   assumée.
 //! - La date est écrite avec son décalage horaire (`+01:00`) pour rester non ambiguë.
 //!
 //! Utilise `chemins`, `journal` et `outils::heure_locale` ; utilisé par le moteur
@@ -20,11 +30,14 @@
 
 use crate::chemins::Chemins;
 use crate::erreur::Resultat;
-use crate::i18n::{tr, trc};
+use crate::i18n::{tr, tr_noop, trc, trn};
 use crate::journal;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::sync::LazyLock;
 
 /// Nom du fichier d'historique, dans le dossier de données.
 pub const FICHIER_HISTORIQUE: &str = "historique.jsonl";
@@ -80,6 +93,152 @@ pub struct Entree {
     /// Précision libre (cause d'un échec, par exemple) ; absente si vide.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub details: String,
+    /// Sujet sous forme neutre (clé anglaise + valeurs), traduit à l'affichage ; absent pour les
+    /// anciennes entrées et pour les sujets qui ne sont qu'un nom propre.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sujet_neutre: Option<TexteNeutre>,
+    /// Précision sous forme neutre, traduite à l'affichage ; absente si la précision est vide
+    /// ou est un texte libre (cause d'une erreur).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub details_neutre: Option<TexteNeutre>,
+}
+
+impl Entree {
+    /// Sujet à afficher : le texte neutre traduit dans la langue **courante** s'il existe et
+    /// si sa clé est connue, sinon le `sujet` brut (ancienne entrée, clé inconnue).
+    pub fn sujet_affiche(&self) -> String {
+        self.sujet_neutre
+            .as_ref()
+            .and_then(TexteNeutre::traduit)
+            .unwrap_or_else(|| self.sujet.clone())
+    }
+
+    /// Précision à afficher (même règle que [`Entree::sujet_affiche`], avec `details`).
+    pub fn details_affiches(&self) -> String {
+        self.details_neutre
+            .as_ref()
+            .and_then(TexteNeutre::traduit)
+            .unwrap_or_else(|| self.details.clone())
+    }
+}
+
+// --- Clés des textes neutres ---------------------------------------------------------------
+//
+// Chaque clé est un msgid anglais. Les clés simples passent par `tr_noop` pour que `xgettext`
+// les extraie ; les clés **à pluriel** sont de simples littéraux, car leur msgid est déjà extrait
+// par l'appel `trn` de `TexteNeutre::traduit` (un `tr_noop` en plus donnerait deux entrées
+// contradictoires pour le même msgid).
+
+/// Sujet : réparation (valeur : aucune).
+pub const CLE_REPARATION: &str = tr_noop("Repair");
+/// Sujet : retour vers le point créé avant une réparation.
+pub const CLE_AVANT_REPARATION: &str = tr_noop("before a repair");
+/// Sujet : retour vers le point d'une session de gestionnaire (valeur `name`).
+pub const CLE_AVANT_SESSION: &str = tr_noop("before the {name} session");
+/// Sujet : retour vers le point d'une installation (valeur `file`).
+pub const CLE_AVANT_INSTALLATION: &str = tr_noop("before installing {file}");
+/// Détail à pluriel : fichiers retirés par un retour en arrière (valeur `n`).
+pub const CLE_FICHIERS_RETIRES: &str = "{n} file removed";
+/// Détail à pluriel : plugins traités par une installation (valeur `n`).
+pub const CLE_PLUGINS_TRAITES: &str = "{n} plugin processed";
+/// Détail : import terminé après une interruption (valeur `path`).
+pub const CLE_IMPORT_REPRIS: &str =
+    tr_noop("The import of {path} had been interrupted: it has been completed");
+/// Détail : annulation d'import terminée après une interruption (valeurs `path`, `command`).
+pub const CLE_ANNULATION_REPRISE: &str = tr_noop(
+    "Cancelling the import of {path} had been interrupted: it has been completed. If you use yabridgectl yourself, run \"{command}\"",
+);
+/// Détail : pas de réglages yabridgectl à mettre à jour (valeurs `path`, `command`).
+pub const CLE_SANS_REGLAGES_YABRIDGECTL: &str = tr_noop(
+    "No yabridgectl settings in {path}: if you use yabridgectl yourself, run \"{command}\" to update your plugin links",
+);
+/// Détail : liens yabridgectl non mis à jour (valeurs `error`, `command`).
+pub const CLE_LIENS_NON_MIS_A_JOUR: &str =
+    tr_noop("Your plugin links could not be updated ({error}): run \"{command}\" yourself");
+
+/// Toutes les clés qu'un texte neutre peut porter. Une clé absente d'ici n'est jamais traduite.
+pub const CLES_CONNUES: &[&str] = &[
+    CLE_REPARATION,
+    CLE_AVANT_REPARATION,
+    CLE_AVANT_SESSION,
+    CLE_AVANT_INSTALLATION,
+    CLE_FICHIERS_RETIRES,
+    CLE_PLUGINS_TRAITES,
+    CLE_IMPORT_REPRIS,
+    CLE_ANNULATION_REPRISE,
+    CLE_SANS_REGLAGES_YABRIDGECTL,
+    CLE_LIENS_NON_MIS_A_JOUR,
+];
+
+/// Un `{nom}` à remplacer dans un modèle de phrase.
+static PLACEHOLDER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{([A-Za-z_][A-Za-z0-9_]*)\}").expect("regex statique valide"));
+
+/// Texte neutre : une clé (msgid anglais de [`CLES_CONNUES`]) et les valeurs de ses `{nom}`.
+/// Les valeurs ne sont jamais traduites (noms de plugins, nombres, chemins).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct TexteNeutre {
+    /// Msgid anglais, par exemple `before installing {file}`.
+    pub cle: String,
+    /// Valeur de chaque `{nom}` de la clé.
+    #[serde(default)]
+    pub valeurs: BTreeMap<String, String>,
+}
+
+impl TexteNeutre {
+    /// Construit un texte neutre à partir d'une clé et de ses valeurs `(nom, valeur)`.
+    pub fn nouveau(cle: &str, valeurs: &[(&str, &str)]) -> Self {
+        Self {
+            cle: cle.to_owned(),
+            valeurs: valeurs
+                .iter()
+                .map(|(n, v)| ((*n).to_owned(), (*v).to_owned()))
+                .collect(),
+        }
+    }
+
+    /// Texte traduit dans la langue courante ; `None` si la clé est inconnue ou si une valeur
+    /// manque (l'appelant retombe alors sur le texte brut).
+    pub fn traduit(&self) -> Option<String> {
+        if !CLES_CONNUES.contains(&self.cle.as_str()) {
+            return None;
+        }
+        // Modèle traduit, `{n}` déjà remplacé pour les clés à pluriel.
+        let modele = match self.cle.as_str() {
+            CLE_FICHIERS_RETIRES => {
+                let n = self.valeurs.get("n")?.parse::<u64>().ok()?;
+                trn("{n} file removed", "{n} files removed", n, &[])
+            }
+            CLE_PLUGINS_TRAITES => {
+                let n = self.valeurs.get("n")?.parse::<u64>().ok()?;
+                trn("{n} plugin processed", "{n} plugins processed", n, &[])
+            }
+            cle => tr(cle),
+        };
+        // Tout `{nom}` du modèle doit avoir sa valeur : sinon on ne montre pas un texte troué.
+        if PLACEHOLDER
+            .captures_iter(&modele)
+            .any(|m| !self.valeurs.contains_key(&m[1]))
+        {
+            return None;
+        }
+        let args: Vec<(&str, &str)> = self
+            .valeurs
+            .iter()
+            .map(|(n, v)| (n.as_str(), v.as_str()))
+            .collect();
+        // Le modèle est déjà traduit : `trf` le retraduirait ; on substitue à la main.
+        let mut texte = modele;
+        for (nom, valeur) in args {
+            texte = texte.replace(&format!("{{{nom}}}"), valeur);
+        }
+        Some(texte)
+    }
+
+    /// Texte à écrire dans le champ brut : le texte traduit, ou à défaut la clé elle-même.
+    pub fn en_clair(&self) -> String {
+        self.traduit().unwrap_or_else(|| self.cle.clone())
+    }
 }
 
 /// Nom de l'action dans la langue courante (« Installation », « Sauvegarde »…).
@@ -157,6 +316,9 @@ pub fn jour_local_iso(jours: i32) -> String {
 
 /// Ajoute une action à l'historique. Ne renvoie rien : en cas d'erreur d'écriture, elle est
 /// notée au journal technique et l'action elle-même n'est pas affectée.
+///
+/// Pour un sujet qui n'est qu'un nom propre (plugin, gestionnaire, archive) : rien à traduire,
+/// donc pas de texte neutre. Pour une phrase, voir [`ajouter_neutre`].
 pub fn ajouter(
     c: &Chemins,
     action: Action,
@@ -165,14 +327,79 @@ pub fn ajouter(
     point: Option<&str>,
     details: &str,
 ) {
-    let entree = Entree {
-        date: date_locale_iso(),
-        action,
-        sujet: sujet.to_owned(),
-        resultat,
-        point: point.map(str::to_owned),
-        details: details.to_owned(),
-    };
+    noter_entree(
+        c,
+        Entree {
+            date: date_locale_iso(),
+            action,
+            sujet: sujet.to_owned(),
+            resultat,
+            point: point.map(str::to_owned),
+            details: details.to_owned(),
+            sujet_neutre: None,
+            details_neutre: None,
+        },
+    );
+}
+
+/// Comme [`ajouter`], pour un sujet (et éventuellement des détails) qui sont des phrases
+/// traduisibles : ils sont écrits sous forme neutre, et aussi, traduits dans la langue du moment,
+/// dans `sujet` / `details`.
+///
+/// `details` (neutre) l'emporte sur `details_libre` (cause d'erreur déjà traduite, texte libre) :
+/// l'appelant en fournit un seul des deux, l'autre vaut `None` / `""`.
+pub fn ajouter_neutre(
+    c: &Chemins,
+    action: Action,
+    sujet: &TexteNeutre,
+    resultat: ResultatAction,
+    point: Option<&str>,
+    details: Option<&TexteNeutre>,
+    details_libre: &str,
+) {
+    noter_entree(
+        c,
+        Entree {
+            date: date_locale_iso(),
+            action,
+            sujet: sujet.en_clair(),
+            resultat,
+            point: point.map(str::to_owned),
+            details: details.map_or_else(|| details_libre.to_owned(), TexteNeutre::en_clair),
+            sujet_neutre: Some(sujet.clone()),
+            details_neutre: details.cloned(),
+        },
+    );
+}
+
+/// Comme [`ajouter`], pour un sujet qui est un nom propre (rien à traduire) mais dont les
+/// détails sont une phrase traduisible (« 2 plugins processed »). Les détails sont écrits sous
+/// forme neutre et, traduits, dans `details`.
+pub fn ajouter_details_neutres(
+    c: &Chemins,
+    action: Action,
+    sujet: &str,
+    resultat: ResultatAction,
+    point: Option<&str>,
+    details: &TexteNeutre,
+) {
+    noter_entree(
+        c,
+        Entree {
+            date: date_locale_iso(),
+            action,
+            sujet: sujet.to_owned(),
+            resultat,
+            point: point.map(str::to_owned),
+            details: details.en_clair(),
+            sujet_neutre: None,
+            details_neutre: Some(details.clone()),
+        },
+    );
+}
+
+/// Écrit `entree` ; une erreur d'écriture est seulement notée au journal technique.
+fn noter_entree(c: &Chemins, entree: Entree) {
     if let Err(e) = ecrire(c, &entree) {
         journal::noter("historique", &format!("écriture impossible : {e}"));
     }
@@ -373,5 +600,142 @@ mod tests {
         let re = Regex::new(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$").unwrap();
         let d = date_locale_iso();
         assert!(re.is_match(&d), "{d}");
+    }
+
+    /// Entrée minimale pour les tests d'affichage.
+    fn entree_de_test(sujet_neutre: Option<TexteNeutre>) -> Entree {
+        Entree {
+            date: "2026-11-07T10:00:00+01:00".to_owned(),
+            action: Action::Retour,
+            sujet: "before installing Serum 2".to_owned(),
+            resultat: ResultatAction::Reussi,
+            point: None,
+            details: String::new(),
+            sujet_neutre,
+            details_neutre: None,
+        }
+    }
+
+    #[test]
+    fn ancienne_entree_sans_neutre_affiche_le_brut() {
+        // Une ligne écrite avant le sous-projet 7 : aucun champ neutre.
+        let json =
+            r#"{"date":"d","action":"retour","sujet":"brut","resultat":"reussi","details":"x"}"#;
+        let e: Entree = serde_json::from_str(json).unwrap();
+        assert!(e.sujet_neutre.is_none() && e.details_neutre.is_none());
+        assert_eq!(e.sujet_affiche(), "brut");
+        assert_eq!(e.details_affiches(), "x");
+    }
+
+    #[test]
+    #[serial]
+    fn entree_neutre_traduite_en_fr_puis_es() {
+        let e = entree_de_test(Some(TexteNeutre::nouveau(
+            CLE_AVANT_INSTALLATION,
+            &[("file", "Serum 2")],
+        )));
+        init_langue(Some("fr"));
+        let fr = e.sujet_affiche();
+        init_langue(Some("es"));
+        let es = e.sujet_affiche();
+        init_langue(Some("en"));
+        assert_eq!(fr, "avant l'installation de Serum 2");
+        assert_ne!(es, fr);
+        assert!(es.contains("Serum 2") && !es.contains('{'), "{es}");
+    }
+
+    #[test]
+    #[serial]
+    fn pluriel_suit_la_langue_et_le_nombre() {
+        let un = TexteNeutre::nouveau(CLE_FICHIERS_RETIRES, &[("n", "1")]);
+        let trois = TexteNeutre::nouveau(CLE_FICHIERS_RETIRES, &[("n", "3")]);
+        init_langue(Some("en"));
+        assert_eq!(un.traduit().unwrap(), "1 file removed");
+        assert_eq!(trois.traduit().unwrap(), "3 files removed");
+        init_langue(Some("fr"));
+        let fr = trois.traduit().unwrap();
+        init_langue(Some("en"));
+        assert!(fr.contains('3') && fr != "3 files removed", "{fr}");
+    }
+
+    #[test]
+    fn cle_inconnue_retombe_sur_le_brut() {
+        let e = entree_de_test(Some(TexteNeutre::nouveau("not a known key", &[])));
+        assert_eq!(e.sujet_affiche(), "before installing Serum 2");
+    }
+
+    #[test]
+    fn valeur_manquante_retombe_sur_le_brut() {
+        // `{file}` n'a pas de valeur : aucun `{…}` ne doit s'afficher.
+        let e = entree_de_test(Some(TexteNeutre::nouveau(CLE_AVANT_INSTALLATION, &[])));
+        let affiche = e.sujet_affiche();
+        assert_eq!(affiche, "before installing Serum 2");
+        assert!(!affiche.contains('{'));
+        // Pluriel sans `n` ou avec un `n` illisible : même repli.
+        assert!(TexteNeutre::nouveau(CLE_FICHIERS_RETIRES, &[])
+            .traduit()
+            .is_none());
+        assert!(TexteNeutre::nouveau(CLE_FICHIERS_RETIRES, &[("n", "x")])
+            .traduit()
+            .is_none());
+    }
+
+    #[test]
+    fn aller_retour_json() {
+        let (_d, c) = chemins_de_test();
+        // Sans neutre : les champs sont absents du fichier.
+        ajouter(&c, Action::Import, "x", ResultatAction::Reussi, None, "");
+        let t = std::fs::read_to_string(c.donnees.join(FICHIER_HISTORIQUE)).unwrap();
+        assert!(!t.contains("neutre"), "{t}");
+        // Avec neutre : relu à l'identique, brut écrit en clair.
+        let sujet = TexteNeutre::nouveau(CLE_AVANT_SESSION, &[("name", "Native Access")]);
+        let details = TexteNeutre::nouveau(CLE_PLUGINS_TRAITES, &[("n", "2")]);
+        ajouter_neutre(
+            &c,
+            Action::Retour,
+            &sujet,
+            ResultatAction::Reussi,
+            None,
+            Some(&details),
+            "ignoré",
+        );
+        let l = lire(&c).unwrap();
+        assert_eq!(l[0].sujet_neutre.as_ref(), Some(&sujet));
+        assert_eq!(l[0].details_neutre.as_ref(), Some(&details));
+        assert!(l[0].sujet.contains("Native Access"), "{:?}", l[0]);
+        assert!(l[0].details.starts_with('2'), "{:?}", l[0]);
+    }
+
+    #[test]
+    fn details_libres_sans_neutre() {
+        let (_d, c) = chemins_de_test();
+        let sujet = TexteNeutre::nouveau(CLE_REPARATION, &[]);
+        ajouter_neutre(
+            &c,
+            Action::Reparation,
+            &sujet,
+            ResultatAction::Echec,
+            None,
+            None,
+            "cause",
+        );
+        let e = &lire(&c).unwrap()[0];
+        assert!(e.details_neutre.is_none());
+        assert_eq!(e.details_affiches(), "cause");
+    }
+
+    #[test]
+    fn toutes_les_cles_se_traduisent_avec_leurs_valeurs() {
+        // Garde-fou : chaque clé déclarée fonctionne avec les valeurs que ses placeholders
+        // réclament (une faute de frappe dans un appelant ferait retomber sur le brut).
+        for cle in CLES_CONNUES {
+            let noms: Vec<String> = PLACEHOLDER
+                .captures_iter(cle)
+                .map(|m| m[1].to_owned())
+                .collect();
+            let valeurs: Vec<(&str, &str)> = noms.iter().map(|n| (n.as_str(), "1")).collect();
+            let t = TexteNeutre::nouveau(cle, &valeurs).traduit();
+            assert!(t.is_some_and(|t| !t.contains('{')), "{cle}");
+        }
     }
 }

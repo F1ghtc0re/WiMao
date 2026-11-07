@@ -65,7 +65,7 @@
 use crate::chemins::Chemins;
 use crate::diagnostic::poser_verrou_installation;
 use crate::erreur::{Erreur, Resultat};
-use crate::historique::{self, Action, ResultatAction};
+use crate::historique::{self, Action, ResultatAction, TexteNeutre};
 use crate::i18n::{tr, trf};
 use crate::inventaire::Inventaire;
 use crate::journal;
@@ -803,14 +803,24 @@ fn annuler_dans(c: &Chemins, p: &dyn Progression, op: &Injections) -> Resultat<(
     // 4. Liens yabridge de l'utilisateur.
     let avertissement = synchroniser_liens_utilisateur(c, &ancien, &identifiant, p);
     // 5. Historique.
-    historique::ajouter(
-        c,
-        Action::AnnulationImport,
-        SUJET,
-        ResultatAction::Reussi,
-        None,
-        avertissement.as_deref().unwrap_or(""),
-    );
+    match &avertissement {
+        Some(neutre) => historique::ajouter_details_neutres(
+            c,
+            Action::AnnulationImport,
+            SUJET,
+            ResultatAction::Reussi,
+            None,
+            neutre,
+        ),
+        None => historique::ajouter(
+            c,
+            Action::AnnulationImport,
+            SUJET,
+            ResultatAction::Reussi,
+            None,
+            "",
+        ),
+    }
     Ok(())
 }
 
@@ -953,19 +963,18 @@ pub fn reprendre_interruption(c: &Chemins) -> Resultat<Option<String>> {
             ecrire_trace(c, &trace)?;
             // Comme à la fin d'un import non interrompu (étape 7 d'`importer`).
             restauration::perimer_tous_les_points(c, "import repris");
-            let message = trf(
-                "The import of {path} had been interrupted: it has been completed",
-                &[("path", &chemin)],
-            );
-            historique::ajouter(
+            // Même texte neutre pour l'historique (traduit à l'affichage) et pour le message
+            // rendu à l'appelant (traduit tout de suite).
+            let neutre = TexteNeutre::nouveau(historique::CLE_IMPORT_REPRIS, &[("path", &chemin)]);
+            historique::ajouter_details_neutres(
                 c,
                 Action::Import,
                 SUJET,
                 ResultatAction::Reussi,
                 None,
-                &message,
+                &neutre,
             );
-            Ok(Some(message))
+            Ok(Some(neutre.en_clair()))
         }
         (EtatImport::EnCours, FormeAncien::Dossier) if prefixe_absent => {
             archiver_trace(c, DEBUT_ABANDONNE, &identifiant)?;
@@ -996,25 +1005,25 @@ pub fn reprendre_interruption(c: &Chemins) -> Resultat<Option<String>> {
 }
 
 /// Relance `yabridgectl sync` pour la configuration de l'utilisateur (étape 4 de [`annuler`]).
-/// Rend l'avertissement affiché si WiMao n'a pas pu le faire (déjà passé à `p.etape`), `None`
+/// Rend l'avertissement (texte neutre, déjà affiché traduit) affiché si WiMao n'a pas pu le faire (déjà passé à `p.etape`), `None`
 /// si tout s'est bien passé.
 fn synchroniser_liens_utilisateur(
     c: &Chemins,
     ancien: &Path,
     identifiant: &str,
     p: &dyn Progression,
-) -> Option<String> {
+) -> Option<TexteNeutre> {
     let config = c.home.join(CONFIG_YABRIDGECTL);
     if !config.is_file() {
-        let message = trf(
-            "No yabridgectl settings in {path}: if you use yabridgectl yourself, run \"{command}\" to update your plugin links",
+        let neutre = TexteNeutre::nouveau(
+            historique::CLE_SANS_REGLAGES_YABRIDGECTL,
             &[
                 ("path", &config.display().to_string()),
                 ("command", COMMANDE_SYNC),
             ],
         );
-        p.etape(&message);
-        return Some(message);
+        p.etape(&neutre.en_clair());
+        return Some(neutre);
     }
     p.etape(&tr("Updating your plugin links (yabridgectl sync)…"));
     match sync_sur_une_copie(c, &config, ancien, identifiant) {
@@ -1024,12 +1033,12 @@ fn synchroniser_liens_utilisateur(
                 "import",
                 &format!("yabridgectl sync de l'utilisateur : {e}"),
             );
-            let message = trf(
-                "Your plugin links could not be updated ({error}): run \"{command}\" yourself",
+            let neutre = TexteNeutre::nouveau(
+                historique::CLE_LIENS_NON_MIS_A_JOUR,
                 &[("error", &e.to_string()), ("command", COMMANDE_SYNC)],
             );
-            p.etape(&message);
-            Some(message)
+            p.etape(&neutre.en_clair());
+            Some(neutre)
         }
     }
 }
@@ -1068,19 +1077,19 @@ fn terminer_annulation_reprise(
     archiver_trace(c, DEBUT_ANNULE, identifiant)?;
     // Comme à la fin d'une annulation non interrompue (voir `annuler`).
     restauration::perimer_tous_les_points(c, "annulation d'import reprise");
-    let message = trf(
-        "Cancelling the import of {path} had been interrupted: it has been completed. If you use yabridgectl yourself, run \"{command}\"",
+    let neutre = TexteNeutre::nouveau(
+        historique::CLE_ANNULATION_REPRISE,
         &[("path", chemin), ("command", COMMANDE_SYNC)],
     );
-    historique::ajouter(
+    historique::ajouter_details_neutres(
         c,
         Action::AnnulationImport,
         SUJET,
         ResultatAction::Reussi,
         None,
-        &message,
+        &neutre,
     );
-    Ok(Some(message))
+    Ok(Some(neutre.en_clair()))
 }
 
 #[cfg(test)]
@@ -1557,6 +1566,12 @@ mod tests {
         let entrees = historique::lire(&c).unwrap();
         assert_eq!(entrees[0].action, Action::Import);
         assert_eq!(entrees[0].resultat, ResultatAction::Reussi);
+        let cle = &entrees[0]
+            .details_neutre
+            .as_ref()
+            .expect("détails neutres")
+            .cle;
+        assert!(historique::CLES_CONNUES.contains(&cle.as_str()), "{cle}");
         // Une seconde reprise n'a plus rien à faire.
         assert_eq!(reprendre_interruption(&c).unwrap(), None);
     }
@@ -1667,6 +1682,13 @@ mod tests {
         assert_eq!(archives(&c, DEBUT_ANNULE), 1);
         let entrees = historique::lire(&c).unwrap();
         assert_eq!(entrees[0].action, Action::AnnulationImport);
+        let cle = &entrees[0]
+            .details_neutre
+            .as_ref()
+            .expect("détails neutres")
+            .cle;
+        assert!(historique::CLES_CONNUES.contains(&cle.as_str()), "{cle}");
+        assert_eq!(entrees[0].details_affiches(), message);
     }
 
     #[test]

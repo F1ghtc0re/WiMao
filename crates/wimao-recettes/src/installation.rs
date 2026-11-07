@@ -46,8 +46,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use wimao_core::diagnostic::{poser_verrou_installation, programmes_a_nommer_avant_reparer};
-use wimao_core::historique::{self, Action, ResultatAction};
-use wimao_core::i18n::{langue_courante, tr, trf, trn};
+use wimao_core::historique::{self, Action, ResultatAction, TexteNeutre};
+use wimao_core::i18n::{langue_courante, tr, trf};
 use wimao_core::pontage::{bundle_linux, ponter, EtatPontage};
 use wimao_core::processus::programmes_ouverts;
 use wimao_core::restauration::{self, PointRestauration};
@@ -277,13 +277,12 @@ pub(crate) fn installer_avec_delai(
     let sujet = recette.map_or_else(|| nom_du_fichier(fichier), |r| r.nom.clone());
     match &resultat {
         Ok(rapport) => {
-            let details = trn(
-                "{n} plugin processed",
-                "{n} plugins processed",
-                rapport.plugins.len() as u64,
-                &[],
+            // Détail neutre : le pluriel est choisi à l'affichage, dans la langue d'alors.
+            let details = TexteNeutre::nouveau(
+                historique::CLE_PLUGINS_TRAITES,
+                &[("n", &rapport.plugins.len().to_string())],
             );
-            historique::ajouter(
+            historique::ajouter_details_neutres(
                 c,
                 Action::Installation,
                 &sujet,
@@ -1322,6 +1321,11 @@ mod tests {
         assert_eq!(entrees[0].point, r.point.map(|pt| pt.id));
         // Un plugin traité (aucun test ne change la langue : l'anglais).
         assert_eq!(entrees[0].details, "1 plugin processed");
+        // Le détail est neutre (le sujet, un nom de fichier, ne l'est pas).
+        let neutre = entrees[0].details_neutre.as_ref().expect("détails neutres");
+        assert!(historique::CLES_CONNUES.contains(&neutre.cle.as_str()));
+        assert_eq!(neutre.valeurs["n"], "1");
+        assert!(entrees[0].sujet_neutre.is_none());
     }
 
     #[test]

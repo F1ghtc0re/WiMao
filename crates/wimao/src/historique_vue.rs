@@ -153,8 +153,9 @@ fn sous_titre(entree: &Entree) -> String {
         heure_de(&entree.date).to_owned(),
         libelle_action(entree.action),
     ];
-    if !entree.details.is_empty() {
-        morceaux.push(entree.details.clone());
+    let details = entree.details_affiches();
+    if !details.is_empty() {
+        morceaux.push(details);
     }
     morceaux.retain(|m| !m.is_empty());
     morceaux.join(" · ")
@@ -166,7 +167,7 @@ fn sous_titre(entree: &Entree) -> String {
 /// `point` est utilisable, le bouton « Go back to before this ».
 fn creer_rangee(entree: &Entree, point: Option<&PointRestauration>) -> adw::ActionRow {
     let rangee = adw::ActionRow::builder()
-        .title(&entree.sujet)
+        .title(entree.sujet_affiche())
         .subtitle(sous_titre(entree))
         // Un sujet ou une précision peut contenir « & » ou « < » : jamais de balisage Pango.
         .use_markup(false)
@@ -414,6 +415,8 @@ mod tests {
             resultat: ResultatAction::Reussi,
             point: point.map(str::to_owned),
             details: String::new(),
+            sujet_neutre: None,
+            details_neutre: None,
         }
     }
 

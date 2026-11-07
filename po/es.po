@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:23+0100\n"
+"POT-Creation-Date: 2026-11-07 23:31+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: Spanish\n"
@@ -583,12 +583,6 @@ msgstr ""
 msgid "Creating a restore point…"
 msgstr "Creando un punto de restauración…"
 
-#: crates/wimao-core/src/diagnostic.rs crates/wimao/src/aide.rs
-#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
-#: crates/wimao/src/reparation.rs
-msgid "Repair"
-msgstr "Reparar"
-
 #: crates/wimao-core/src/diagnostic.rs
 msgid "Stopping Wine"
 msgstr "Detención de Wine"
@@ -736,6 +730,73 @@ msgstr ""
 "Una importación del entorno Wine se interrumpió y no se puede terminar sin "
 "riesgo: no se ha modificado nada. Compruebe {old} y {new} usted mismo"
 
+#. --- Clés des textes neutres ---------------------------------------------------------------
+#.
+#. Chaque clé est un msgid anglais. Les clés simples passent par `tr_noop` pour que `xgettext`
+#. les extraie ; les clés **à pluriel** sont de simples littéraux, car leur msgid est déjà extrait
+#. par l'appel `trn` de `TexteNeutre::traduit` (un `tr_noop` en plus donnerait deux entrées
+#. contradictoires pour le même msgid).
+#. / Sujet : réparation (valeur : aucune).
+#: crates/wimao-core/src/historique.rs crates/wimao/src/aide.rs
+#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
+msgid "Repair"
+msgstr "Reparar"
+
+#. / Sujet : retour vers le point créé avant une réparation.
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before a repair"
+msgstr "antes de una reparación"
+
+#. / Sujet : retour vers le point d'une session de gestionnaire (valeur `name`).
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before the {name} session"
+msgstr "antes de la sesión de {name}"
+
+#. / Sujet : retour vers le point d'une installation (valeur `file`).
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before installing {file}"
+msgstr "antes de instalar {file}"
+
+#: crates/wimao-core/src/historique.rs
+msgid "The import of {path} had been interrupted: it has been completed"
+msgstr "La importación de {path} se había interrumpido: se ha completado"
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"Cancelling the import of {path} had been interrupted: it has been completed. "
+"If you use yabridgectl yourself, run \"{command}\""
+msgstr ""
+"La cancelación de la importación de {path} se había interrumpido: se ha "
+"completado. Si usa yabridgectl usted mismo, ejecute «{command}»"
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
+"\"{command}\" to update your plugin links"
+msgstr ""
+"No hay ajustes de yabridgectl en {path}: si usa yabridgectl usted mismo, "
+"ejecute «{command}» para actualizar los enlaces de sus plugins"
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
+msgstr ""
+"No se pudieron actualizar los enlaces de sus plugins ({error}): ejecute "
+"«{command}» usted mismo"
+
+#: crates/wimao-core/src/historique.rs crates/wimao/src/historique_vue.rs
+msgid "{n} file removed"
+msgid_plural "{n} files removed"
+msgstr[0] "{n} archivo eliminado"
+msgstr[1] "{n} archivos eliminados"
+
+#: crates/wimao-core/src/historique.rs
+msgid "{n} plugin processed"
+msgid_plural "{n} plugins processed"
+msgstr[0] "{n} plugin procesado"
+msgstr[1] "{n} plugins procesados"
+
 #: crates/wimao-core/src/historique.rs
 msgctxt "history"
 msgid "Installation"
@@ -866,10 +927,6 @@ msgid "Moving the Wine environment back…"
 msgstr "Devolución del entorno Wine a su lugar…"
 
 #: crates/wimao-core/src/import.rs
-msgid "The import of {path} had been interrupted: it has been completed"
-msgstr "La importación de {path} se había interrumpido: se ha completado"
-
-#: crates/wimao-core/src/import.rs
 msgid ""
 "The import of {path} had been interrupted before anything was moved: it has "
 "been abandoned"
@@ -886,31 +943,8 @@ msgstr ""
 "mover nada: la importación sigue vigente"
 
 #: crates/wimao-core/src/import.rs
-msgid ""
-"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
-"\"{command}\" to update your plugin links"
-msgstr ""
-"No hay ajustes de yabridgectl en {path}: si usa yabridgectl usted mismo, "
-"ejecute «{command}» para actualizar los enlaces de sus plugins"
-
-#: crates/wimao-core/src/import.rs
 msgid "Updating your plugin links (yabridgectl sync)…"
 msgstr "Actualización de los enlaces de sus plugins (yabridgectl sync)…"
-
-#: crates/wimao-core/src/import.rs
-msgid ""
-"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
-msgstr ""
-"No se pudieron actualizar los enlaces de sus plugins ({error}): ejecute "
-"«{command}» usted mismo"
-
-#: crates/wimao-core/src/import.rs
-msgid ""
-"Cancelling the import of {path} had been interrupted: it has been completed. "
-"If you use yabridgectl yourself, run \"{command}\""
-msgstr ""
-"La cancelación de la importación de {path} se había interrumpido: se ha "
-"completado. Si usa yabridgectl usted mismo, ejecute «{command}»"
 
 #: crates/wimao-core/src/journal.rs
 msgid ""
@@ -1032,18 +1066,6 @@ msgstr ""
 "navegador"
 
 #: crates/wimao-core/src/restauration.rs
-msgid "before a repair"
-msgstr "antes de una reparación"
-
-#: crates/wimao-core/src/restauration.rs
-msgid "before the {name} session"
-msgstr "antes de la sesión de {name}"
-
-#: crates/wimao-core/src/restauration.rs
-msgid "before installing {file}"
-msgstr "antes de instalar {file}"
-
-#: crates/wimao-core/src/restauration.rs
 msgid "no free name found for the restore point {id}"
 msgstr "no se encontró un nombre libre para el punto de restauración {id}"
 
@@ -1058,12 +1080,6 @@ msgstr "{file} del punto de restauración {id} (incompleto o dañado)"
 #: crates/wimao-core/src/restauration.rs
 msgid "{file} of the restore point {id}"
 msgstr "{file} del punto de restauración {id}"
-
-#: crates/wimao-core/src/restauration.rs crates/wimao/src/historique_vue.rs
-msgid "{n} file removed"
-msgid_plural "{n} files removed"
-msgstr[0] "{n} archivo eliminado"
-msgstr[1] "{n} archivos eliminados"
 
 #: crates/wimao-core/src/restauration.rs
 msgid "{path} is not a real folder (symbolic link?)"
@@ -1394,12 +1410,6 @@ msgstr "Tipo de instalador desconocido: hay que abrirlo normalmente"
 #: crates/wimao-recettes/src/installation.rs
 msgid "Updating the Wine environment…"
 msgstr "Actualizando el entorno de Wine…"
-
-#: crates/wimao-recettes/src/installation.rs
-msgid "{n} plugin processed"
-msgid_plural "{n} plugins processed"
-msgstr[0] "{n} plugin procesado"
-msgstr[1] "{n} plugins procesados"
 
 #: crates/wimao-recettes/src/installation.rs
 msgid ""

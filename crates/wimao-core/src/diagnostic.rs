@@ -19,7 +19,7 @@ use crate::chemins::Chemins;
 use crate::correctifs::{dxvk::Dxvk, mono::Mono, msvcp::Msvcp140, Correctif};
 use crate::environnement::{creer_environnement, dossiers_relies, remplacer_dossiers_relies};
 use crate::erreur::{Erreur, Resultat};
-use crate::historique::{self, Action, ResultatAction};
+use crate::historique::{self, Action, ResultatAction, TexteNeutre};
 use crate::i18n::{tr, trf, trn};
 use crate::inventaire::Inventaire;
 use crate::pontage::{
@@ -481,12 +481,14 @@ pub fn reparer(c: &Chemins, problemes: &[Probleme], p: &dyn Progression) -> Resu
         Ok(()) => (ResultatAction::Reussi, String::new()),
         Err(e) => (ResultatAction::Echec, e.to_string()),
     };
-    historique::ajouter(
+    // Sujet neutre (traduit à l'affichage) ; la cause d'un échec reste du texte libre.
+    historique::ajouter_neutre(
         c,
         Action::Reparation,
-        &tr("Repair"),
+        &TexteNeutre::nouveau(historique::CLE_REPARATION, &[]),
         issue,
         id_point.as_deref(),
+        None,
         &details,
     );
     resultat
@@ -1012,6 +1014,9 @@ mod tests {
         assert_eq!(entrees.len(), 1, "{entrees:?}");
         assert_eq!(entrees[0].action, Action::Reparation);
         assert_eq!(entrees[0].resultat, ResultatAction::Reussi);
+        // Le sujet est neutre, avec une clé déclarée.
+        let cle = &entrees[0].sujet_neutre.as_ref().expect("sujet neutre").cle;
+        assert!(historique::CLES_CONNUES.contains(&cle.as_str()), "{cle}");
         assert_eq!(
             entrees[0].point.as_deref(),
             Some(liste.points[0].id.as_str())
