@@ -330,3 +330,8 @@ Ordre prévu, du plus simple au plus lourd (conseil retenu pendant la conception
   l'interface (sans proposer de réparation automatique : le lien n'est jamais modifié par WiMao).
 - **Contrôle des secrets de `verifier-workflows.sh`** : un commentaire en fin de ligne qui contient
   « secrets. » est refusé à tort (faux positif sans danger ; le contrôle reste du côté du refus).
+- **Taille du site Pages du dépôt APT.** Chaque version ajoute environ 89 Mo dans `pool/` (mesuré sur la
+  v0.4.0), alors que GitHub limite un site Pages publié à 1 Go : le déploiement échouera vers la 11e ou 12e
+  version. Ne garder que les N dernières versions (par exemple 5) : retirer les anciennes entrées de
+  `Packages` dans `scripts/publier-depot-apt.sh` et laisser `scripts/assembler-site-apt.sh` ignorer (ne plus
+  télécharger) ce qui n'y figure plus. À faire avant la 10e version.

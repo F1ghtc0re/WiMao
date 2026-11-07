@@ -319,6 +319,9 @@ gzip -9n < "$travail/$indices/Packages" > "$travail/$indices/Packages.gz"
 
 # Release : champs du dépôt, SHA256 seulement. Le fichier Release de l'ancien dépôt n'est volontairement pas
 # repris (il serait listé dans lui-même) ; la date est posée par apt-ftparchive.
+# La sortie est écrite HORS de dists/stable (Release.tmp), puis déplacée : une redirection directe vers
+# dists/stable/Release créerait le fichier (vide) avant que apt-ftparchive parcoure le dossier, qui y listerait
+# alors Release lui-même, avec une empreinte fausse (celle d'un fichier tronqué).
 (cd "$travail" && apt-ftparchive \
     -o APT::FTPArchive::Release::Origin=WiMao \
     -o APT::FTPArchive::Release::Label=WiMao \
@@ -329,8 +332,9 @@ gzip -9n < "$travail/$indices/Packages" > "$travail/$indices/Packages.gz"
     -o "APT::FTPArchive::Release::Description=WiMao — Wine pour la MAO (paquets signés)" \
     -o APT::FTPArchive::MD5=false -o APT::FTPArchive::SHA1=false -o APT::FTPArchive::SHA512=false \
     -o APT::FTPArchive::Release::MD5=false -o APT::FTPArchive::Release::SHA1=false -o APT::FTPArchive::Release::SHA512=false \
-    release dists/stable) > "$travail/dists/stable/Release" \
+    release dists/stable) > "$travail/Release.tmp" \
     || arreter "apt-ftparchive release a échoué"
+mv -- "$travail/Release.tmp" "$travail/dists/stable/Release"
 echo "Packages : ${#ordre[@]} entrée(s)."
 
 # --- 6. Signature ---

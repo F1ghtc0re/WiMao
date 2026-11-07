@@ -197,6 +197,10 @@ controler_release() {
 }
 controler_release main/binary-amd64/Packages
 controler_release main/binary-amd64/Packages.gz
+# Arbre strict : aucune autre ligne dans la section SHA256 (par exemple Release qui se décrit lui-même, avec
+# une empreinte forcément fausse).
+autres="$(awk '/^[^ ]/ { section = ($0 == "SHA256:") } section && /^ / && $3 != "main/binary-amd64/Packages" && $3 != "main/binary-amd64/Packages.gz" { print $3 }' "$dists/Release")"
+[ -z "$autres" ] || arreter "Release liste d'autres fichiers que Packages et Packages.gz : $autres"
 # Packages.gz doit contenir exactement Packages (apt peut lire l'un ou l'autre).
 gzip -dc -- "$paquets_gz" | cmp -s - "$paquets" || arreter "Packages.gz ne contient pas exactement Packages"
 echo "Packages et Packages.gz conformes à Release."
@@ -296,6 +300,8 @@ cat > "$construit/index.html" << HTML
 ajouté, <code>apt</code> installe WiMao et le met à jour avec le reste du système. L'index est signé avec la clé
 OpenPGP du propriétaire ; <code>apt</code> refuse le dépôt si un octet de l'index ou d'un paquet est modifié.</p>
 <h2>Installation (Ubuntu 24.04, Debian 13)</h2>
+<p>Si <code>curl</code> n'est pas installé : <code>sudo apt install curl</code>. Sans <code>curl</code>, la clé
+serait vide et <code>apt update</code> échouerait avec une erreur de signature.</p>
 <pre><code>sudo install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | sudo tee /etc/apt/keyrings/wimao.asc &gt; /dev/null
 echo "deb [signed-by=/etc/apt/keyrings/wimao.asc] https://f1ghtc0re.github.io/WiMao stable main" \\

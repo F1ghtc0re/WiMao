@@ -11,7 +11,8 @@ déjà signés.
 
 Critères de réussite :
 
-1. Sur Ubuntu 24.04 et Debian 13 neufs, ces commandes installent WiMao 0.4.0 et ses deux dépendances depuis
+1. (Si `curl` manque : `sudo apt install curl` ; sans lui la clé serait vide et `apt update` échouerait sur la signature.)
+   Sur Ubuntu 24.04 et Debian 13 neufs, ces commandes installent WiMao 0.4.0 et ses deux dépendances depuis
    `https://f1ghtc0re.github.io/WiMao` :
    ```sh
    sudo install -d -m 0755 /etc/apt/keyrings

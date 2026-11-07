@@ -154,6 +154,7 @@ page="$site/index.html"
 grep -q '<title>Dépôt APT de WiMao</title>' "$page" || echec "index.html : titre"
 grep -qF 'https://f1ghtc0re.github.io/WiMao' "$page" || echec "index.html : adresse du dépôt"
 grep -qF 'curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | sudo tee /etc/apt/keyrings/wimao.asc &gt; /dev/null' "$page" || echec "index.html : commande curl"
+grep -qF 'Si <code>curl</code> n'"'"'est pas installé : <code>sudo apt install curl</code>' "$page" || echec "index.html : note curl"
 grep -qF 'sudo install -d -m 0755 /etc/apt/keyrings' "$page" || echec "index.html : commande install"
 grep -qF 'sudo tee /etc/apt/sources.list.d/wimao.list' "$page" || echec "index.html : commande tee de la source"
 grep -qF 'sudo apt update &amp;&amp; sudo apt install wimao' "$page" || echec "index.html : commande apt"
@@ -344,5 +345,14 @@ attendre_code 2 "--cle sans --racine"
 code=0
 "$assembler" "$temporaire/s-usage" --racine "$base" > /dev/null 2>&1 || code=$?
 attendre_code 2 "--racine sans --cle"
+
+# --- Release qui liste un autre fichier (ici elle-même), re-signé ---
+r="$(nouvelle_racine r-release-soi)"
+echo " $(printf '0%.0s' {1..64}) 0 Release" >> "$r/depot-apt/dists/stable/Release"
+resigner "$r"
+lancer "$r" "$temporaire/s-release-soi" "$source_ok"
+attendre_code 1 "Release qui se décrit elle-même"
+attendre_message "d'autres fichiers que Packages et Packages.gz" "Release qui se décrit elle-même"
+attendre_vide "$temporaire/s-release-soi" "Release qui se décrit elle-même"
 
 echo "Tous les cas de assembler-site-apt.sh se comportent comme prévu."

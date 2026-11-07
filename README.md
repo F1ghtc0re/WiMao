@@ -52,7 +52,9 @@ plus récent**, en **64 bits Intel/AMD (amd64)** seulement.
 ### Méthode 1 (recommandée) : le dépôt `apt`
 
 Avec cette méthode, WiMao se met à jour avec le reste du système (« Mises à jour de logiciels » ou
-`sudo apt upgrade`). Copiez ces quatre commandes dans un terminal, l'une après l'autre :
+`sudo apt upgrade`). Si `curl` n'est pas installé (c'est possible sur un système neuf, Debian 13 notamment) :
+`sudo apt install curl`. Sans `curl`, la clé téléchargée serait vide et `apt update` échouerait avec une erreur
+de signature. Copiez ensuite ces quatre commandes dans un terminal, l'une après l'autre :
 
 ```sh
 sudo install -d -m 0755 /etc/apt/keyrings

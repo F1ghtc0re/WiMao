@@ -312,8 +312,12 @@ Ensuite :
    depuis les Releases et contrôle sa taille et son SHA256. Le job `installation` installe vraiment `wimao`
    depuis le site assemblé, sur Ubuntu 24.04 et Debian 13, puis essaie un `.deb` altéré d'un octet, qui doit
    être refusé.
-2. Fusionnez la PR. Sur `main`, le job `deployer` (seul à disposer de `pages: write` et `id-token: write`)
-   met le site en ligne. Rien n'est publié depuis une autre branche.
+2. Fusionnez la PR, mais seulement si le workflow « Dépôt APT » (jobs `assembler` et `installation`) est vert.
+   Il n'est pas parmi les vérifications obligatoires de `main`, car il ne tourne que sur certains chemins.
+   Sur `main`, le job `deployer` (seul à disposer de `pages: write` et `id-token: write`) met le site en ligne. Rien n'est publié depuis une autre branche.
+   Attention à la taille : chaque version ajoute environ 89 Mo dans `pool/` (mesuré sur la v0.4.0) et GitHub
+   limite un site Pages publié à 1 Go ; vers la 11e ou 12e version le déploiement échouera (voir
+   `docs/ameliorations-reportees.md`).
 3. Vérifiez comme un utilisateur : les quatre commandes du `README.md` (« Installation », méthode 1), puis
    `apt policy wimao`, qui doit montrer `https://f1ghtc0re.github.io/WiMao stable/main`.
 
@@ -325,8 +329,8 @@ appel à `gh` ni à `git`), utilisée par `scripts/tests/tester-publier-depot-ap
 3 = dépôt APT encore vide).
 
 **Prolongez la sous-clé AVANT son expiration (le 2027-11-01).** Les vérifications de signature
-(`signer-version.sh`, `publier-depot-apt.sh` et la CI du dépôt APT, par `scripts/lib/publication.sh`) refusent
-une clé expirée : passé cette date, la CI du dépôt APT échoue et vous ne pouvez plus rien publier. Prolonger
+(`signer-version.sh`, par son propre contrôle GOODSIG sur `git verify-tag` ; `publier-depot-apt.sh` et la CI du
+dépôt APT, par `scripts/lib/publication.sh`) refusent une clé expirée : passé cette date, la CI du dépôt APT échoue et vous ne pouvez plus rien publier. Prolonger
 ne change pas l'empreinte : `gpg --quick-set-expire <EMPREINTE> 1y '*'` sur la machine de signature (la clé
 principale doit y être, voir « Révocation »), puis exportez de nouveau `docs/cle-publique.asc` (PR), car la
 CI lit la date d'expiration dans ce fichier. Le site du dépôt APT reprend cette clé (`wimao.asc`)

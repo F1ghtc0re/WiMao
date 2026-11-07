@@ -140,6 +140,11 @@ for fichier in main/binary-amd64/Packages main/binary-amd64/Packages.gz; do
     grep -qE "^ $empreinte_fichier +$taille_fichier $fichier$" "$release" || echec "Release : empreinte ou taille fausse pour $fichier"
 done
 
+# La section SHA256 ne doit lister que Packages et Packages.gz : un fichier Release qui se décrit lui-même
+# (ligne « Release » ou « InRelease ») aurait une empreinte fausse.
+autres="$(awk '/^[^ ]/ { section = ($0 == "SHA256:") } section && /^ / && $3 != "main/binary-amd64/Packages" && $3 != "main/binary-amd64/Packages.gz"' "$release")"
+[ -z "$autres" ] || echec "Release liste d'autres fichiers que Packages et Packages.gz : $autres"
+
 # gpgv (trousseau construit depuis la clé publique de A, jamais le trousseau personnel) accepte les deux signatures.
 gpg --export a@example.invalid > "$temporaire/trousseau.gpg"
 gpgv --keyring "$temporaire/trousseau.gpg" "$depot/dists/stable/InRelease" > /dev/null 2>&1 || echec "gpgv refuse InRelease"

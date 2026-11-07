@@ -31,6 +31,8 @@ on:
       - "docs/cle-publique.asc"
       - ".github/workflows/depot-apt.yml"
       - "scripts/assembler-site-apt.sh"
+      - "scripts/lib/publication.sh"
+      - "SECURITY.md"
   push:
     branches: [main]
     paths:
@@ -38,6 +40,8 @@ on:
       - "docs/cle-publique.asc"
       - ".github/workflows/depot-apt.yml"
       - "scripts/assembler-site-apt.sh"
+      - "scripts/lib/publication.sh"
+      - "SECURITY.md"
   workflow_dispatch:
 
 # Droits minimaux du jeton GITHUB_TOKEN : lecture du dépôt seulement. Les droits de publication sont
