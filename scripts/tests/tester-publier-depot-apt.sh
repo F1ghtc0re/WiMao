@@ -9,7 +9,7 @@
 # Packages et Packages.gz, sans Valid-Until) ; même version relancée (Packages et Packages.gz identiques
 # octet pour octet, aucun doublon) ; v9.9.10 ajoutée (six entrées triées par nom puis version) ;
 # SHA256SUMS.asc d'une autre clé -> 1 ; .deb modifié -> 1 ; .deb en trop -> 1 ; un refus laisse --sortie
-# intacte ; aucun appel à gh ni à git ; option inconnue -> 2 ; étiquette v1.2 -> 2 ; --a-blanc sans
+# intacte ; Packages identique sous une autre locale ; SHA256SUMS en mode binaire (*) accepté ; aucun appel à gh ni à git ; option inconnue -> 2 ; étiquette v1.2 -> 2 ; --a-blanc sans
 # --dossier, --sortie ou --cle -> 2 ; --racine hors --a-blanc -> 2.
 #
 # Usage     : scripts/tests/tester-publier-depot-apt.sh
@@ -154,6 +154,19 @@ cmp -s "$paquets_idx" "$temporaire/Packages.avant" || echec "Packages a changé 
 cmp -s "$depot/dists/stable/main/binary-amd64/Packages.gz" "$temporaire/Packages.gz.avant" || echec "Packages.gz a changé en relançant la même version"
 gpgv --keyring "$temporaire/trousseau.gpg" "$depot/dists/stable/InRelease" > /dev/null 2>&1 || echec "gpgv refuse InRelease après relance"
 
+# --- Langue : une génération sous une autre locale donne le même Packages (ordre indépendant de la langue) ---
+locale_autre=C.UTF-8
+locales="$(locale -a 2> /dev/null || true)"
+if grep -qix 'fr_FR.utf-\?8' <<< "$locales"; then locale_autre=fr_FR.UTF-8; fi
+depot_loc="$temporaire/depot-locale"
+mkdir "$depot_loc"
+art_loc="$(artefacts 9.9.9 a@example.invalid)"
+# Les .deb sont refabriqués, donc leurs sommes diffèrent : on compare à une génération sous C avec LES MÊMES .deb.
+"$publier" v9.9.9 --a-blanc --racine "$fausse_racine" --cle "$empreinte_a" --sortie "$depot_loc/c" --dossier "$art_loc" > /dev/null 2>&1 || echec "génération sous C"
+LC_ALL="$locale_autre" LANG="$locale_autre" "$publier" v9.9.9 --a-blanc --racine "$fausse_racine" --cle "$empreinte_a" --sortie "$depot_loc/l" --dossier "$art_loc" > /dev/null 2>&1 || echec "génération sous $locale_autre"
+cmp -s "$depot_loc/c/dists/stable/main/binary-amd64/Packages" "$depot_loc/l/dists/stable/main/binary-amd64/Packages" \
+    || echec "Packages diffère selon la locale ($locale_autre)"
+
 # --- Seconde version v9.9.10 : six entrées, triées par nom puis version ---
 art_2="$(artefacts 9.9.10 a@example.invalid)"
 lancer v9.9.10 "${a_blanc[@]}" --dossier "$art_2"
@@ -199,6 +212,13 @@ lancer v9.9.14 "${a_blanc[@]}" --dossier "$art_s"
 attendre_code 1 "SHA256SUMS modifié"
 
 [ "$(empreinte_depot)" = "$avant" ] || echec "un refus a modifié le dépôt de sortie"
+
+# SHA256SUMS écrit en mode binaire (« *nom ») : accepté
+art_e="$(artefacts 9.9.15 a@example.invalid)"
+sed -i 's/  / */' "$art_e/SHA256SUMS"
+gpg --batch --yes --armor --detach-sign --local-user a@example.invalid --output "$art_e/SHA256SUMS.asc" "$art_e/SHA256SUMS" 2> /dev/null
+lancer v9.9.15 --a-blanc --racine "$fausse_racine" --cle "$empreinte_a" --sortie "$temporaire/depot-etoile" --dossier "$art_e"
+attendre_code 0 "SHA256SUMS en mode binaire"
 
 # --- Usage ---
 lancer v9.9.9 "${a_blanc[@]}" --dossier "$art_1" --inconnue

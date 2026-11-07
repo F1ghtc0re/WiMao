@@ -34,7 +34,7 @@
 #      de passe est demandée par GnuPG/pinentry : ce script ne la lit ni ne la reçoit jamais ;
 #   7. contrôle local : gpgv accepte InRelease et Release.gpg, et les empreintes de Release correspondent
 #      aux fichiers Packages* ;
-#   8. (réel) branche depot-apt-vX.Y.Z, commit des SEULS fichiers de depot-apt/, envoi, `gh pr create`.
+#   8. (réel) branche depot-apt-vX.Y.Z (refusée si elle existe déjà, ici ou sur origin), commit des SEULS fichiers de depot-apt/, envoi, `gh pr create`.
 #   Tout est construit dans un dossier temporaire : un contrôle qui échoue laisse depot-apt/ intact.
 #
 # Variables : GNUPGHOME, GPG_TTY  lus par GnuPG (trousseau personnel de la signature, terminal de la phrase
@@ -45,6 +45,10 @@
 #             impossible ; 2 = usage.
 # Dépend de : gpg, gpgv, apt-ftparchive (paquet apt-utils), dpkg, gzip, sha256sum ; en mode réel git et gh.
 set -euo pipefail
+# Langue neutre : les comparaisons de chaînes de bash (`[[ a < b ]]`), `sort` et awk dépendent sinon de la
+# locale de la machine. Fixer LC_ALL=C rend l'ordre de Packages (donc ses octets, donc son empreinte) identique
+# sur toute machine, quelle que soit la langue du système. Les messages de ce script sont écrits en dur.
+export LC_ALL=C
 
 RACINE_DEPOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Dépôt GitHub qui porte les Releases.
@@ -130,7 +134,26 @@ fi
 
 # --- Dossier temporaire et nettoyage ---
 temporaire="$(mktemp -d)"
-trap 'rm -rf "$temporaire"' EXIT
+branche=""            # branche de la PR (mode réel), posée dès sa création
+pr_ouverte=0          # passe à 1 quand la PR est ouverte : plus rien à défaire
+# Sortie : supprime le temporaire ; si une étape a échoué APRÈS la création de la branche, AFFICHE la marche
+# à suivre pour revenir à l'état de départ. Elle ne l'exécute jamais : rien n'est détruit sans que vous le voyiez.
+nettoyer() {
+    local code=$?
+    rm -rf "$temporaire"
+    if [ "$code" -ne 0 ] && [ -n "$branche" ] && [ "$pr_ouverte" -eq 0 ]; then
+        {
+            echo
+            echo "La publication a échoué après la création de la branche $branche. Pour revenir à l'état de départ :"
+            echo "  git switch main"
+            echo "  git restore --source=HEAD --staged --worktree -- depot-apt"
+            echo "  git clean -fd -- depot-apt"
+            echo "  git branch -D $branche"
+            echo "  git push origin --delete $branche   # seulement si l'envoi avait réussi"
+        } >&2
+    fi
+}
+trap nettoyer EXIT
 
 # --- 1. Préconditions ---
 echo "== 1. Préconditions"
@@ -149,6 +172,14 @@ if [ "$a_blanc" -eq 0 ]; then
     [ "$(git -C "$RACINE_DEPOT" rev-parse HEAD)" = "$(git -C "$RACINE_DEPOT" rev-parse origin/main)" ] \
         || arreter "main n'est pas à jour avec origin/main (git pull --ff-only)"
     # Le dépôt APT ne publie que des Releases PUBLIÉES : un brouillon n'est pas téléchargeable par la CI du site.
+    # La branche de la PR ne doit exister ni ici ni sur origin : sinon une publication précédente a été laissée en route.
+    nom_branche="depot-apt-$version"
+    if git -C "$RACINE_DEPOT" rev-parse --verify --quiet "refs/heads/$nom_branche" > /dev/null; then
+        arreter "la branche locale $nom_branche existe déjà. Si elle est périmée : git branch -D $nom_branche"
+    fi
+    if git -C "$RACINE_DEPOT" ls-remote --exit-code --heads origin "$nom_branche" > /dev/null 2>&1; then
+        arreter "la branche $nom_branche existe déjà sur origin. Si elle est périmée : git push origin --delete $nom_branche"
+    fi
     brouillon="$(gh release view "$version" --repo "$DEPOT_GITHUB" --json isDraft --jq .isDraft)" \
         || arreter "la Release $version est introuvable sur $DEPOT_GITHUB"
     [ "$brouillon" = "false" ] \
@@ -192,9 +223,10 @@ done
 echo "== 4. Signature et sommes SHA-256"
 verifier_signature "$trousseau" "$empreinte" "$dossier/SHA256SUMS.asc" "$dossier/SHA256SUMS" \
     || arreter "SHA256SUMS n'est pas signé par la clé publiée ($empreinte)"
-(cd "$dossier" && sha256sum -c SHA256SUMS) || arreter "un .deb ne correspond pas à SHA256SUMS (voir ci-dessus)"
+(cd "$dossier" && sha256sum -c --strict SHA256SUMS) || arreter "un .deb ne correspond pas à SHA256SUMS (voir ci-dessus)"
 # sha256sum -c ne regarde que les fichiers LISTÉS : un .deb de plus dans le dossier passerait inaperçu.
-listes="$(awk '{print $2}' "$dossier/SHA256SUMS" | LC_ALL=C sort)"
+# Un « * » devant le nom est la marque du mode binaire de sha256sum : on le retire.
+listes="$(awk '{ n = $2; sub(/^\*/, "", n); print n }' "$dossier/SHA256SUMS" | LC_ALL=C sort)"
 presents="$(find "$dossier" -maxdepth 1 -name '*.deb' -printf '%f\n' | LC_ALL=C sort)"
 [ "$listes" = "$presents" ] || arreter "les .deb du dossier ne sont pas exactement ceux de SHA256SUMS
   listés   : $(echo "$listes" | tr '\n' ' ')
@@ -257,7 +289,11 @@ avant() {
     if [ "${noms[i]}" != "${noms[j]}" ]; then
         [[ "${noms[i]}" < "${noms[j]}" ]]
     elif [ "${versions[i]}" != "${versions[j]}" ]; then
-        dpkg --compare-versions "${versions[i]}" lt "${versions[j]}"
+        # Code 0 = « inférieur », 1 = non ; tout autre code = version invalide : on s'arrête plutôt que de trier au hasard.
+        local statut=0
+        dpkg --compare-versions "${versions[i]}" lt "${versions[j]}" 2> /dev/null || statut=$?
+        [ "$statut" -le 1 ] || arreter "version invalide dans Packages : « ${versions[i]} » ou « ${versions[j]} »"
+        return "$statut"
     else
         [[ "${chemins[i]}" < "${chemins[j]}" ]]
     fi
@@ -299,7 +335,8 @@ echo "Packages : ${#ordre[@]} entrée(s)."
 
 # --- 6. Signature ---
 echo "== 6. Signature de Release"
-echo "La fenêtre de la phrase de passe va s'ouvrir ; elle attend environ une minute."
+echo "Une ou deux fenêtres de phrase de passe vont s'ouvrir (une par signature si l'agent GnuPG ne la garde pas en mémoire) ;"
+echo "chacune attend environ une minute."
 gpg --yes --local-user "$empreinte" --clearsign --output "$travail/dists/stable/InRelease" "$travail/dists/stable/Release" \
     || arreter "la signature de InRelease a échoué (phrase de passe refusée ou annulée ?)"
 gpg --yes --local-user "$empreinte" --armor --detach-sign --output "$travail/dists/stable/Release.gpg" "$travail/dists/stable/Release" \
@@ -321,19 +358,22 @@ for fichier in main/binary-amd64/Packages main/binary-amd64/Packages.gz; do
 done
 echo "Signatures et empreintes concordent."
 
-# Tout est bon : on installe le résultat dans le dépôt APT (jamais avant).
+# Tout est bon : on installe le résultat dans le dépôt APT (jamais avant). En mode réel, la branche de la PR
+# est créée AVANT d'écrire dans depot-apt/ : main n'est jamais modifié, et en cas d'échec le nettoyage affiche
+# comment revenir en arrière.
+if [ "$a_blanc" -eq 0 ]; then
+    echo "== 8. Branche et demande de fusion (PR)"
+    git -C "$RACINE_DEPOT" switch -c "$nom_branche"
+    branche="$nom_branche"
+fi
 mkdir -p "$depot_apt/dists/stable/main/binary-amd64"
 cp "$travail/dists/stable/Release" "$travail/dists/stable/InRelease" "$travail/dists/stable/Release.gpg" "$depot_apt/dists/stable/"
 cp "$travail/$indices/Packages" "$travail/$indices/Packages.gz" "$depot_apt/$indices/"
 
-# --- 8. Demande de fusion ---
 if [ "$a_blanc" -eq 1 ]; then
     echo "== 8. À blanc : ni branche, ni commit, ni PR. Terminé."
     exit 0
 fi
-echo "== 8. Demande de fusion (PR)"
-branche="depot-apt-$version"
-git -C "$RACINE_DEPOT" switch -c "$branche"
 git -C "$RACINE_DEPOT" add -- depot-apt
 git -C "$RACINE_DEPOT" commit -m "Dépôt APT : version $version"
 git -C "$RACINE_DEPOT" push -u origin "$branche"
@@ -350,4 +390,6 @@ corps="$temporaire/corps.md"
 } > "$corps"
 gh pr create --repo "$DEPOT_GITHUB" --base main --head "$branche" \
     --title "Dépôt APT : version $version" --body-file "$corps"
+pr_ouverte=1
 echo "PR ouverte. Relisez-la, attendez la CI, puis fusionnez-la vous-même."
+echo "Vous êtes sur la branche $branche ; « git switch main » pour revenir."
