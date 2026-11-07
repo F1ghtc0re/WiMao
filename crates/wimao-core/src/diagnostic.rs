@@ -161,6 +161,24 @@ pub fn message_probleme(p: &Probleme) -> String {
     }
 }
 
+/// La commande seule qui remédie à [`Probleme::LienYabridge`], déjà citée pour le shell : c'est
+/// ce que l'interface place dans le presse-papiers, et ce que contient le message. WiMao ne
+/// l'exécute jamais.
+///
+/// - lien vers un autre yabridge ou cassé : `ln -sfn` remplace le lien ;
+/// - vrai dossier : `ln -s`, à lancer une fois le dossier déplacé (voir [`message_lien_yabridge`]).
+pub fn commande_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -> String {
+    let (lien_sh, attendu_sh) = (pour_shell(lien), pour_shell(attendu));
+    match etat {
+        EtatLienYabridge::Ailleurs(_) | EtatLienYabridge::Casse(_) => {
+            format!("ln -sfn {attendu_sh} {lien_sh}")
+        }
+        EtatLienYabridge::Dossier | EtatLienYabridge::Absent | EtatLienYabridge::Bon => {
+            format!("ln -s {attendu_sh} {lien_sh}")
+        }
+    }
+}
+
 /// Texte de [`Probleme::LienYabridge`] : ce qui se passe, puis la commande qui y remédie. Sans
 /// alarme (c'est un avertissement, parfois voulu), sans rien faire à la place de la personne.
 ///
@@ -168,37 +186,34 @@ pub fn message_probleme(p: &Probleme) -> String {
 ///   le dossier visé, `-f` : en écrasant l'ancien lien) ;
 /// - vrai dossier : `ln -sfn` créerait le lien *dans* ce dossier ; il faut d'abord le déplacer.
 fn message_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -> String {
-    let (lien_sh, attendu_sh) = (pour_shell(lien), pour_shell(attendu));
+    let commande = commande_lien_yabridge(lien, attendu, etat);
     let (lien_txt, attendu_txt) = (lien.display().to_string(), attendu.display().to_string());
     match etat {
         EtatLienYabridge::Ailleurs(cible) => trf(
-            "The plugins in your music software use another yabridge than WiMao's: {link} leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn {expected_sh} {link_sh}",
+            "The plugins in your music software use another yabridge than WiMao's: {link} leads to {current}, not to {expected}. To use WiMao's, run: {command}",
             &[
                 ("link", &lien_txt),
                 ("current", &cible.display().to_string()),
                 ("expected", &attendu_txt),
-                ("expected_sh", &attendu_sh),
-                ("link_sh", &lien_sh),
+                ("command", &commande),
             ],
         ),
         EtatLienYabridge::Casse(cible) => trf(
-            "The plugins in your music software cannot find yabridge: {link} leads to {current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn {expected_sh} {link_sh}",
+            "The plugins in your music software cannot find yabridge: {link} leads to {current}, which no longer exists. To use WiMao's ({expected}), run: {command}",
             &[
                 ("link", &lien_txt),
                 ("current", &cible.display().to_string()),
                 ("expected", &attendu_txt),
-                ("expected_sh", &attendu_sh),
-                ("link_sh", &lien_sh),
+                ("command", &commande),
             ],
         ),
         // `Absent` et `Bon` ne sont pas des problèmes : texte neutre, jamais montré en pratique.
         EtatLienYabridge::Dossier | EtatLienYabridge::Absent | EtatLienYabridge::Bon => trf(
-            "The plugins in your music software use the yabridge in the folder {link}, not WiMao's ({expected}). To use WiMao's, move that folder away, then run: ln -s {expected_sh} {link_sh}",
+            "The plugins in your music software use the yabridge in the folder {link}, not WiMao's ({expected}). To use WiMao's, move that folder away, then run: {command}",
             &[
                 ("link", &lien_txt),
                 ("expected", &attendu_txt),
-                ("expected_sh", &attendu_sh),
-                ("link_sh", &lien_sh),
+                ("command", &commande),
             ],
         ),
     }
@@ -808,6 +823,64 @@ mod tests {
         assert!(message.contains("move that folder away"), "{message}");
         assert!(!message.contains("ln -sfn"), "{message}");
         assert!(lien.is_dir() && !lien.is_symlink(), "dossier intact");
+    }
+
+    // --- Commande du lien : celle que l'interface met dans le presse-papiers ---
+
+    #[test]
+    fn commande_du_lien_vers_autre_yabridge() {
+        let (lien, attendu) = (Path::new("/h/.local/share/yabridge"), Path::new("/w/yb"));
+        let etat = EtatLienYabridge::Ailleurs(PathBuf::from("/autre"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn /w/yb /h/.local/share/yabridge"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_casse() {
+        let (lien, attendu) = (Path::new("/h/yabridge"), Path::new("/w/yb"));
+        let etat = EtatLienYabridge::Casse(PathBuf::from("/disparu"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn /w/yb /h/yabridge"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_vrai_dossier() {
+        // Vrai dossier : `ln -s` (sans `-f`) une fois le dossier déplacé.
+        let (lien, attendu) = (Path::new("/h/yabridge"), Path::new("/w/yb"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &EtatLienYabridge::Dossier),
+            "ln -s /w/yb /h/yabridge"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_cite_espace_et_apostrophe() {
+        let (lien, attendu) = (Path::new("/h/it's me/yabridge"), Path::new("/w/mon yb"));
+        let etat = EtatLienYabridge::Casse(PathBuf::from("/x"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn '/w/mon yb' '/h/it'\\''s me/yabridge'"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn le_message_contient_la_commande() {
+        crate::i18n::init_langue(Some("en"));
+        let (lien, attendu) = (Path::new("/h/mon lien"), Path::new("/w/yb"));
+        for etat in [
+            EtatLienYabridge::Ailleurs(PathBuf::from("/autre")),
+            EtatLienYabridge::Casse(PathBuf::from("/disparu")),
+            EtatLienYabridge::Dossier,
+        ] {
+            let commande = commande_lien_yabridge(lien, attendu, &etat);
+            let message = message_lien_yabridge(lien, attendu, &etat);
+            assert!(message.contains(&commande), "{message} / {commande}");
+        }
     }
 
     #[test]

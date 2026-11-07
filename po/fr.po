@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:31+0100\n"
+"POT-Creation-Date: 2026-11-07 23:36+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -552,32 +552,31 @@ msgstr ""
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use another yabridge than WiMao's: {link} "
-"leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn "
-"{expected_sh} {link_sh}"
+"leads to {current}, not to {expected}. To use WiMao's, run: {command}"
 msgstr ""
 "Les plugins de votre logiciel de musique utilisent un autre yabridge que "
 "celui de WiMao : {link} mène à {current} et non à {expected}. Pour utiliser "
-"celui de WiMao, lancez : ln -sfn {expected_sh} {link_sh}"
+"celui de WiMao, lancez : {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software cannot find yabridge: {link} leads to "
-"{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
-"{expected_sh} {link_sh}"
+"{current}, which no longer exists. To use WiMao's ({expected}), run: "
+"{command}"
 msgstr ""
 "Les plugins de votre logiciel de musique ne trouvent pas yabridge : {link} "
 "mène à {current}, qui n'existe plus. Pour utiliser celui de WiMao "
-"({expected}), lancez : ln -sfn {expected_sh} {link_sh}"
+"({expected}), lancez : {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use the yabridge in the folder {link}, "
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
-"ln -s {expected_sh} {link_sh}"
+"{command}"
 msgstr ""
 "Les plugins de votre logiciel de musique utilisent le yabridge du dossier "
 "{link}, et non celui de WiMao ({expected}). Pour utiliser celui de WiMao, "
-"déplacez ce dossier ailleurs, puis lancez : ln -s {expected_sh} {link_sh}"
+"déplacez ce dossier ailleurs, puis lancez : {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 #: crates/wimao-recettes/src/gestionnaire.rs
@@ -1869,6 +1868,14 @@ msgstr "Choisir la sauvegarde à restaurer"
 msgid "Windows audio plugins on Linux"
 msgstr "Plugins audio Windows sous Linux"
 
+#: crates/wimao/src/dialogues.rs
+msgid "Information"
+msgstr "Information"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Copy the command"
+msgstr "Copier la commande"
+
 #: crates/wimao/src/fenetre/entete.rs
 msgid "Main menu"
 msgstr "Menu principal"
@@ -2167,6 +2174,10 @@ msgstr "Recherche des problèmes…"
 #: crates/wimao/src/reparation.rs
 msgid "Repairing…"
 msgstr "Réparation en cours…"
+
+#: crates/wimao/src/reparation.rs
+msgid "Command copied"
+msgstr "Commande copiée"
 
 #: crates/wimao/src/reparation.rs
 msgid "{n} plugin is not bridged yet"

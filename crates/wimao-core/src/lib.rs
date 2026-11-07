@@ -57,8 +57,9 @@ pub mod wine;
 
 pub use chemins::Chemins;
 pub use diagnostic::{
-    diagnostiquer, installation_en_cours, message_probleme, poser_verrou_installation,
-    programmes_a_nommer_avant_reparer, reparer, Probleme, VerrouInstallation,
+    commande_lien_yabridge, diagnostiquer, installation_en_cours, message_probleme,
+    poser_verrou_installation, programmes_a_nommer_avant_reparer, reparer, Probleme,
+    VerrouInstallation,
 };
 pub use environnement::{creer_environnement, mettre_a_jour};
 pub use erreur::{Erreur, Resultat};

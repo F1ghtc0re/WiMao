@@ -30,6 +30,8 @@ const SITE_WEB: &str = "https://github.com/F1ghtc0re/WiMao";
 pub const ID_APPLICATION: &str = "fr.wimao.WiMao";
 
 /// Identifiant de la réponse « fermer ».
+/// Réponse « Copy the command » du dialogue du lien yabridge.
+const REPONSE_COPIER: &str = "copier";
 const REPONSE_FERMER: &str = "fermer";
 /// Identifiant de la réponse « ouvrir le chapitre des problèmes fréquents ».
 const REPONSE_PROBLEMES: &str = "problemes";
@@ -417,6 +419,27 @@ pub fn a_propos(parent: &adw::ApplicationWindow) {
         .comments(tr("Windows audio plugins on Linux"))
         .build();
     dialogue.present(Some(parent));
+}
+
+/// Information sur le lien `~/.local/share/yabridge` (avertissement, jamais réparé par WiMao) :
+/// `message` explique la situation, « Copy the command » appelle `copie` (qui place `commande`
+/// dans le presse-papiers) et « Close » ferme. WiMao ne lance jamais la commande.
+pub fn informer_lien_yabridge(
+    parent: &adw::ApplicationWindow,
+    message: &str,
+    copie: impl FnOnce() + 'static,
+) {
+    let dialogue = adw::AlertDialog::new(Some(&tr("Information")), Some(message));
+    dialogue.add_response(REPONSE_FERMER, &tr("Close"));
+    dialogue.add_response(REPONSE_COPIER, &tr("Copy the command"));
+    dialogue.set_response_appearance(REPONSE_COPIER, adw::ResponseAppearance::Suggested);
+    dialogue.set_default_response(Some(REPONSE_COPIER));
+    dialogue.set_close_response(REPONSE_FERMER);
+    dialogue.choose(Some(parent), None::<&gio::Cancellable>, move |reponse| {
+        if reponse == REPONSE_COPIER {
+            copie();
+        }
+    });
 }
 
 /// Place `texte` dans le presse-papiers de l'écran de `fenetre`.

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:34+0100\n"
+"POT-Creation-Date: 2026-11-07 23:36+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -524,22 +524,21 @@ msgstr ""
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use another yabridge than WiMao's: {link} "
-"leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn "
-"{expected_sh} {link_sh}"
+"leads to {current}, not to {expected}. To use WiMao's, run: {command}"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software cannot find yabridge: {link} leads to "
-"{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
-"{expected_sh} {link_sh}"
+"{current}, which no longer exists. To use WiMao's ({expected}), run: "
+"{command}"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use the yabridge in the folder {link}, "
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
-"ln -s {expected_sh} {link_sh}"
+"{command}"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
@@ -1719,6 +1718,14 @@ msgstr ""
 msgid "Windows audio plugins on Linux"
 msgstr ""
 
+#: crates/wimao/src/dialogues.rs
+msgid "Information"
+msgstr ""
+
+#: crates/wimao/src/dialogues.rs
+msgid "Copy the command"
+msgstr ""
+
 #: crates/wimao/src/fenetre/entete.rs
 msgid "Main menu"
 msgstr ""
@@ -2009,6 +2016,10 @@ msgstr ""
 
 #: crates/wimao/src/reparation.rs
 msgid "Repairing…"
+msgstr ""
+
+#: crates/wimao/src/reparation.rs
+msgid "Command copied"
 msgstr ""
 
 #: crates/wimao/src/reparation.rs
