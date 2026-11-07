@@ -300,6 +300,7 @@ echo '{"total_count":1,"branch_policies":[{"id":7,"name":"main","type":"tag"}]}'
     > "$REPONSES/GET_repos_${depot//\//_}_environments_github-pages_deployment-branch-policies.json"
 lancer --verifier --depot "$depot"
 attendre_code 1 "politique « main » de type tag"
+grep -Fq "❌ Branches autorisées" <<< "$sortie" || echec "pas de ❌ pour la politique de type tag : $sortie"
 
 neuf politique-vide
 tout_conforme
@@ -332,6 +333,16 @@ ordre="$(grep -E '^(POST|PUT) [^ ]*/pages ' "$JOURNAL" | cut -d' ' -f1 | tr '\n'
 grep -Fq "POST repos/$depot/pages {\"build_type\":\"workflow\"}" "$JOURNAL" || echec "corps du POST pages : $(cat "$JOURNAL")"
 grep -Fq "POST repos/$depot/environments/github-pages/deployment-branch-policies {\"name\":\"main\",\"type\":\"branch\"}" "$JOURNAL" \
     || echec "pas de POST de la politique main : $(cat "$JOURNAL")"
+
+# Erreur autre que 404 sur GET pages (HTTP 500) : ❌ « lecture impossible », ni POST ni PUT sur /pages.
+neuf pages-500
+tout_conforme
+echo "gh: Server Error (HTTP 500)" > "$REPONSES/GET_repos_${depot//\//_}_pages.err"
+rm "$REPONSES/GET_repos_${depot//\//_}_pages.json"
+lancer --appliquer --depot "$depot"
+attendre_code 1 "GET pages en erreur 500"
+grep -Fq "❌ GitHub Pages : lecture impossible" <<< "$sortie" || echec "pas de ❌ lecture impossible : $sortie"
+! grep -Eq '^(POST|PUT) [^ ]*/pages ' "$JOURNAL" || echec "écriture sur /pages malgré l'erreur : $(cat "$JOURNAL")"
 
 # Refus de GitHub (HTTP 500) sur l'écriture de l'environnement → ❌ et code 1.
 neuf env-refus

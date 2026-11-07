@@ -447,6 +447,10 @@ regler_pages() {
             return 0
         fi
         lire "repos/$depot/pages" || code=$?
+        # Seul un VRAI « HTTP 404 » signifie « Pages pas encore activé » (appeler classe aussi le 422 en code 3).
+        if [[ "$code" -eq 3 && "$reponse" != *"HTTP 404"* ]]; then
+            code=1
+        fi
         case "$code" in
             0) ;;  # déjà activé : seul le réglage est à poser
             3)
@@ -460,7 +464,13 @@ regler_pages() {
                 return 0
                 ;;
         esac
+        # Juste après la création de Pages, GitHub peut refuser `https_enforced` tant que le certificat HTTPS
+        # n'est pas prêt (quelques minutes) : le PUT échoue alors, et il suffit de relancer --appliquer plus tard.
         poser strict "GitHub Pages (source workflow, HTTPS imposé)" PUT "repos/$depot/pages" "$corps_reglage"
+        if [[ "$etat_pose" -ne 0 ]]; then
+            echo "   Si Pages vient d'être activé, GitHub refuse parfois HTTPS tant que le certificat n'est pas prêt :" \
+                "relancez --appliquer dans quelques minutes."
+        fi
         return 0
     fi
     # Vérification : deux lignes, une pour la source, une pour HTTPS.
