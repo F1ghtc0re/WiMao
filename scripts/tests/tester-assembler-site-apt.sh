@@ -142,8 +142,9 @@ resigner() {
 site="$temporaire/site-ok"
 lancer "$base" "$site" "$source_ok"
 attendre_code 0 "site complet"
-[ -f "$site/dists/stable/InRelease" ] && [ -f "$site/dists/stable/Release.gpg" ] && [ -f "$site/dists/stable/Release" ] \
-    || echec "dists/stable incomplet"
+for f in InRelease Release.gpg Release; do
+    [ -f "$site/dists/stable/$f" ] || echec "dists/stable incomplet : $f manquant"
+done
 cmp -s "$base/depot-apt/dists/stable/main/binary-amd64/Packages" "$site/dists/stable/main/binary-amd64/Packages" || echec "Packages différent"
 cmp -s "$base/depot-apt/dists/stable/main/binary-amd64/Packages.gz" "$site/dists/stable/main/binary-amd64/Packages.gz" || echec "Packages.gz différent"
 for deb in "$art"/*.deb; do

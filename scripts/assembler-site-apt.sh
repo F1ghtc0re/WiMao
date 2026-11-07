@@ -97,7 +97,9 @@ done
 [ -n "$site" ] || erreur_usage "dossier du site manquant"
 # --cle et --racine vont ensemble : l'une sans l'autre ferait lire SECURITY.md d'un faux dépôt ou l'inverse.
 if [ -n "$cle$racine_essai" ]; then
-    [ -n "$cle" ] && [ -n "$racine_essai" ] || erreur_usage "--cle et --racine vont ensemble (réservés aux essais)"
+    if [ -z "$cle" ] || [ -z "$racine_essai" ]; then
+        erreur_usage "--cle et --racine vont ensemble (réservés aux essais)"
+    fi
     racine="$racine_essai"
     empreinte_essai="$(tr -d ' ' <<< "$cle" | tr 'a-f' 'A-F')"
     [[ "$empreinte_essai" =~ ^[0-9A-F]{40}$ ]] || erreur_usage "--cle : empreinte invalide (40 chiffres hexadécimaux attendus) : $cle"
@@ -190,8 +192,10 @@ controler_release() {
         /^[^ ]/ { section = ($0 == "SHA256:") }
         section && $3 == chemin { print $1 " " $2 }
     ' "$dists/Release")"
-    [ "$(wc -l <<< "$trouve")" -eq 1 ] && [ -n "$trouve" ] \
-        || arreter "Release ne donne pas exactement une empreinte SHA256 pour $rel"
+    # Exactement une ligne non vide (wc -l compte 1 aussi pour une chaîne vide, d'où le second test).
+    if [ -z "$trouve" ] || [ "$(wc -l <<< "$trouve")" -ne 1 ]; then
+        arreter "Release ne donne pas exactement une empreinte SHA256 pour $rel"
+    fi
     attendu="$(sha256sum -- "$fichier" | cut -d' ' -f1) $(stat -c %s -- "$fichier")"
     [ "$trouve" = "$attendu" ] || arreter "Release : empreinte ou taille fausse pour $rel (Release : $trouve ; fichier : $attendu)"
 }
