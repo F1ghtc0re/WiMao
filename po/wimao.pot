@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 19:36+0100\n"
+"POT-Creation-Date: 2026-11-07 23:09+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1078,6 +1078,10 @@ msgstr ""
 msgid "The plugin opens"
 msgstr ""
 
+#: crates/wimao-core/src/tableau.rs
+msgid "Loads correctly; open it in your music software to check its interface"
+msgstr ""
+
 #. / Détail d'un VST2 écarté au profit du VST3.
 #: crates/wimao-core/src/tableau.rs
 msgid "VST2 skipped: the same plugin is available as VST3"
@@ -1118,7 +1122,7 @@ msgid "The virtual screen does not respond: {error}"
 msgstr ""
 
 #: crates/wimao-core/src/test_plugin.rs
-msgid "Loaded, but the interface could not be checked"
+msgid "The plugin did not finish loading within 5 minutes"
 msgstr ""
 
 #: crates/wimao-core/src/test_plugin.rs

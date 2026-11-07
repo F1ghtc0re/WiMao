@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 19:35+0100\n"
+"POT-Creation-Date: 2026-11-07 23:09+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: Spanish\n"
@@ -563,9 +563,9 @@ msgid ""
 "{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
 "{expected_sh} {link_sh}"
 msgstr ""
-"Los plugins de su software de música no encuentran yabridge: {link} lleva "
-"a {current}, que ya no existe. Para usar el de WiMao ({expected}), "
-"ejecute: ln -sfn {expected_sh} {link_sh}"
+"Los plugins de su software de música no encuentran yabridge: {link} lleva a "
+"{current}, que ya no existe. Para usar el de WiMao ({expected}), ejecute: ln "
+"-sfn {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
@@ -573,9 +573,9 @@ msgid ""
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
 "ln -s {expected_sh} {link_sh}"
 msgstr ""
-"Los plugins de su software de música usan el yabridge de la carpeta "
-"{link}, y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa "
-"carpeta a otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
+"Los plugins de su software de música usan el yabridge de la carpeta {link}, "
+"y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa carpeta a "
+"otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 #: crates/wimao-recettes/src/gestionnaire.rs
@@ -1177,6 +1177,10 @@ msgstr ""
 msgid "The plugin opens"
 msgstr "El plugin se abre"
 
+#: crates/wimao-core/src/tableau.rs
+msgid "Loads correctly; open it in your music software to check its interface"
+msgstr "Se carga correctamente; ábralo en su programa de música para comprobar su interfaz"
+
 #. / Détail d'un VST2 écarté au profit du VST3.
 #: crates/wimao-core/src/tableau.rs
 msgid "VST2 skipped: the same plugin is available as VST3"
@@ -1217,8 +1221,8 @@ msgid "The virtual screen does not respond: {error}"
 msgstr "La pantalla virtual no responde: {error}"
 
 #: crates/wimao-core/src/test_plugin.rs
-msgid "Loaded, but the interface could not be checked"
-msgstr "Cargado, pero no se pudo comprobar la interfaz"
+msgid "The plugin did not finish loading within 5 minutes"
+msgstr "El plugin no terminó de cargarse en 5 minutos"
 
 #: crates/wimao-core/src/test_plugin.rs
 msgid ""
@@ -2206,6 +2210,9 @@ msgstr "{name} cerrado: {summary}"
 #: crates/wimao/src/session_fenetre.rs
 msgid "{name} closed: no new or updated plugin"
 msgstr "{name} cerrado: ningún plugin nuevo o actualizado"
+
+#~ msgid "Loaded, but the interface could not be checked"
+#~ msgstr "Cargado, pero no se pudo comprobar la interfaz"
 
 #~ msgid "this restore point predates the restored backup"
 #~ msgstr ""
