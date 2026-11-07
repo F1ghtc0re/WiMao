@@ -6,6 +6,10 @@
 //! (par exemple `es_ES.UTF-8`) n'est pas générée, ou en locale `C` ; un utilisateur qui
 //! choisit l'espagnol resterait en anglais. Ici la langue ne dépend que du fichier `.mo`.
 //!
+//! Dossier lu : `WIMAO_LOCALEDIR` s'il est défini ; sinon, en développement, les `.mo` compilés
+//! par `build.rs` (jamais `/usr/share/locale` : avec un ancien paquet installé, le binaire de
+//! développement et ses tests liraient des traductions périmées) ; en paquet, `/usr/share/locale`.
+//!
 //! Utilisé par toutes les crates : toute chaîne visible par l'utilisateur passe par
 //! [`tr`] ou [`trf`], avec un `msgid` en anglais. Pour ajouter une langue ou une
 //! chaîne, voir `CONTRIBUTING.md`.
@@ -21,20 +25,20 @@ const DOMAINE: &str = "wimao";
 const VARIABLE_LOCALEDIR: &str = "WIMAO_LOCALEDIR";
 /// Dossier système habituel des traductions installées.
 const LOCALEDIR_SYSTEME: &str = "/usr/share/locale";
-/// Dossier compilé par `build.rs` : dernier recours, permet `cargo run` sans installation.
+/// Dossier compilé par `build.rs` : celui d'un build de développement, qui ne lit jamais le
+/// système (un ancien paquet installé donnerait des traductions périmées) ; permet `cargo run`
+/// et `cargo test` sans installation.
 ///
 /// Absent des builds de paquet (cfg `wimao_paquet`) : `OUT_DIR` est un chemin de la machine de
 /// fabrication et ne doit pas se retrouver dans le binaire. Les tests, eux, en ont toujours
 /// besoin pour retrouver les `.mo` compilés.
 #[cfg(any(test, not(wimao_paquet)))]
 const LOCALEDIR_COMPILE: &str = concat!(env!("OUT_DIR"), "/locale");
-/// Dernier recours effectivement utilisé : le dossier compilé en développement, aucun en paquet.
+/// Dossier de traductions d'un build : le dossier compilé en développement, aucun en paquet.
 #[cfg(not(wimao_paquet))]
 const REPLI_DEVELOPPEMENT: Option<&str> = Some(LOCALEDIR_COMPILE);
 #[cfg(wimao_paquet)]
 const REPLI_DEVELOPPEMENT: Option<&str> = None;
-/// Langue de référence connue pour tester si les traductions sont installées sur le système.
-const LANGUE_SONDE: &str = "fr";
 /// Langues pour lesquelles WiMao fournit un texte (l'anglais est le `msgid` lui-même).
 const LANGUES_PRISES_EN_CHARGE: [&str; 3] = ["fr", "en", "es"];
 
@@ -54,25 +58,26 @@ fn chemin_mo(dossier: &std::path::Path, langue: &str) -> PathBuf {
         .join(format!("{DOMAINE}.mo"))
 }
 
-/// Choisit le dossier des traductions : `WIMAO_LOCALEDIR`, sinon le système si WiMao
-/// y est installé, sinon le dossier de repli de développement (`repli`), sinon le système
-/// quand il n'y a pas de repli (paquet : `init_langue_verifiee` signale alors l'absence
-/// des `.mo`, au lieu d'aller chercher un chemin de la machine de fabrication).
+/// Choisit le dossier des traductions : `WIMAO_LOCALEDIR` s'il est défini, sinon le dossier
+/// compilé de développement (`repli`) quand il existe, sinon le système.
 ///
-/// Fonction pure : l'environnement, la présence des traductions système et le repli sont
-/// fournis par l'appelant, ce qui permet de tester les deux comportements (développement
-/// et paquet) dans un build ordinaire.
+/// Un build de développement ne regarde donc **jamais** `/usr/share/locale` : un ancien paquet
+/// WiMao installé y laisserait des traductions périmées, que le binaire de développement et ses
+/// tests liraient à la place des `.mo` qu'ils viennent de compiler. Seul un build de paquet
+/// (pas de repli) lit le système.
+///
+/// Fonction pure : l'environnement et le repli sont fournis par l'appelant, ce qui permet de
+/// tester les deux comportements (développement et paquet) dans un build ordinaire.
 fn choisir_dossier(
     variable: Option<std::ffi::OsString>,
-    systeme_installe: bool,
     repli: Option<&std::path::Path>,
 ) -> PathBuf {
     if let Some(dossier) = variable {
         return PathBuf::from(dossier);
     }
     match repli {
-        Some(repli) if !systeme_installe => repli.to_path_buf(),
-        _ => PathBuf::from(LOCALEDIR_SYSTEME),
+        Some(repli) => repli.to_path_buf(),
+        None => PathBuf::from(LOCALEDIR_SYSTEME),
     }
 }
 
@@ -80,7 +85,6 @@ fn choisir_dossier(
 fn dossier_traductions() -> PathBuf {
     choisir_dossier(
         std::env::var_os(VARIABLE_LOCALEDIR),
-        chemin_mo(std::path::Path::new(LOCALEDIR_SYSTEME), LANGUE_SONDE).exists(),
         REPLI_DEVELOPPEMENT.map(std::path::Path::new),
     )
 }
@@ -508,23 +512,20 @@ mod tests {
         let repli = Some(Path::new("/repli"));
         // La variable d'environnement l'emporte toujours.
         assert_eq!(
-            choisir_dossier(Some("/env".into()), true, repli),
+            choisir_dossier(Some("/env".into()), repli),
             PathBuf::from("/env")
         );
-        // Développement : système absent, on prend le repli.
-        assert_eq!(choisir_dossier(None, false, repli), PathBuf::from("/repli"));
-        // Traductions installées : le système, même s'il y a un repli.
         assert_eq!(
-            choisir_dossier(None, true, repli),
+            choisir_dossier(Some("/env".into()), None),
+            PathBuf::from("/env")
+        );
+        // Développement : toujours le repli compilé, même si un paquet est installé.
+        assert_eq!(choisir_dossier(None, repli), PathBuf::from("/repli"));
+        // Paquet (pas de repli) : le système, jamais un chemin de fabrication.
+        assert_eq!(
+            choisir_dossier(None, None),
             PathBuf::from(LOCALEDIR_SYSTEME)
         );
-        // Paquet (pas de repli) : toujours le système, jamais un chemin de fabrication.
-        for installe in [true, false] {
-            assert_eq!(
-                choisir_dossier(None, installe, None),
-                PathBuf::from(LOCALEDIR_SYSTEME)
-            );
-        }
     }
 
     #[test]

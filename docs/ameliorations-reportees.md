@@ -42,8 +42,6 @@ atomique des DLL, deux files de points de restauration). Les défauts relevés d
 - `scripts/verifier-traductions.sh` : le motif `crates/*/tests/*` est trop large, et le script ne
   détecte pas un `.po` périmé.
 - `build.rs` : un `.mo` périmé peut rester dans `OUT_DIR`.
-- `dossier_traductions` choisit `/usr/share/locale` dès que `fr` y est présent. Il faudrait aussi
-  vérifier `es`.
 - Codes de langue limités à deux lettres.
 
 ## 4. Moteur (crate `wimao-core`)
