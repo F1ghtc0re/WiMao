@@ -58,8 +58,10 @@ pub fn creer_environnement(c: &Chemins, p: &dyn Progression) -> Resultat<()> {
         annoncer_deja_fait(p, &tr("Wine environment"));
         // Reprise d'un essai interrompu entre `wineboot` (qui écrit `system.reg` en dernier)
         // et le remplacement des dossiers personnels : le préfixe paraît complet, mais ses
-        // liens vers `~/Documents`… seraient restés pour toujours. Sans effet (0 lien)
-        // sur un environnement déjà propre ; aucun programme Windows ne tourne ici.
+        // liens vers `~/Documents`… seraient restés pour toujours. Sans effet (0 lien) sur un
+        // environnement déjà propre. Peut aussi être appelé sur un environnement complet
+        // (`wimao-cli init`) : sans risque, car seuls les liens sont remplacés par des
+        // dossiers vides, jamais leur cible (les fichiers de la personne restent intacts).
         remplacer_dossiers_relies(c)?;
     } else {
         p.etape(&tr("Creating the Wine environment…"));
@@ -373,12 +375,14 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let mut c = Chemins::pour_test(d.path());
         let appels = installer_faux_wine(&mut c, d.path());
+        std::fs::create_dir_all(c.drive_c()).unwrap();
         for nom in ["system.reg", "user.reg", "userdef.reg"] {
-            std::fs::create_dir_all(c.drive_c()).unwrap();
             std::fs::write(c.prefixe.join(nom), nom).unwrap();
         }
         let cible = d.path().join("vrai-home/Documents");
         std::fs::create_dir_all(&cible).unwrap();
+        // Fichier de la personne, dans la cible du lien : il doit survivre au remplacement.
+        std::fs::write(cible.join("garde.txt"), "à garder").unwrap();
         let lien = c.drive_c().join("users/jeanne/Documents");
         std::fs::create_dir_all(lien.parent().unwrap()).unwrap();
         symlink(&cible, &lien).unwrap();
@@ -393,6 +397,14 @@ mod tests {
         assert!(
             dossiers_relies(&c).unwrap().is_empty(),
             "liens non remplacés"
+        );
+        // Le lien est devenu un vrai dossier vide ; la cible et son fichier sont intacts.
+        let m = std::fs::symlink_metadata(&lien).unwrap();
+        assert!(m.is_dir() && !m.file_type().is_symlink());
+        assert_eq!(std::fs::read_dir(&lien).unwrap().count(), 0);
+        assert_eq!(
+            std::fs::read_to_string(cible.join("garde.txt")).unwrap(),
+            "à garder"
         );
         let liste = crate::restauration::lister(&c).unwrap();
         assert!(liste.perimes.is_empty(), "{liste:?}");
