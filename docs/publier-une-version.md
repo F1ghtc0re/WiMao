@@ -14,6 +14,12 @@ de `docs/superpowers/specs/2026-11-01-wimao-sous-projet-4-design.md`.
                                                           │
                                                           v
                                            vous relisez le brouillon et le publiez
+                                                          │
+                                                          v
+              vous : scripts/publier-depot-apt.sh vX.Y.Z ─> signe l'index APT, ouvre une PR
+                                                          │
+                                                          v
+                                  vous fusionnez la PR ─> CI : vérifie, installe, déploie le site
 ```
 
 - La **CI** fabrique les trois `.deb` et GitHub *atteste* d'où ils viennent (provenance : tel
@@ -22,6 +28,9 @@ de `docs/superpowers/specs/2026-11-01-wimao-sous-projet-4-design.md`.
   sont identiques octet pour octet à ceux de la CI, c'est que la CI n'a rien ajouté. Alors seulement
   vous *signez* la liste d'empreintes `SHA256SUMS`.
 - Personne d'autre que vous ne publie : la CI ne crée qu'un brouillon.
+- Le **dépôt APT** (étape 5) suit la même règle : l'index est signé **chez vous**, avec la même sous-clé ;
+  la CI n'a aucune clé, elle ne fait que vérifier cette signature, contrôler chaque `.deb` et servir les
+  fichiers sur GitHub Pages.
 
 ## Avant la toute première version (une seule fois)
 
@@ -169,6 +178,8 @@ principale ; l'identité de la clé reste.
 ## Ce qu'il faut sur votre machine
 
 - `git`, `gpg`, `sha256sum` ;
+- pour le dépôt APT (étape 5) : `gpgv`, `gzip` et `apt-ftparchive`, qui vient du paquet `apt-utils`
+  (`sudo apt install apt-utils`) ;
 - `podman` **sans racine** (rootless) : la refabrication se fait dans un conteneur, car votre machine
   n'est pas l'Ubuntu 24.04 de la CI ;
 - **GitHub CLI à jour** (`gh`), connecté (`gh auth login`), avec la commande `gh attestation`. Le `gh`
@@ -260,7 +271,65 @@ Pour **s'entraîner** sans rien envoyer : `scripts/signer-version.sh --aide` dé
 
 Sur GitHub, ouvrez le brouillon (*Releases*), relisez le titre, les notes (modifiables) et les
 fichiers (trois `.deb`, `SHA256SUMS`, `SHA256SUMS.asc`, `cle-publique.asc`, le `.intoto.jsonl`), puis **publiez vous-même**.
-Testez ensuite la vérification comme un utilisateur (voir le `README.md`, « Installation »).
+Testez ensuite la vérification comme un utilisateur (voir le `README.md`, « Installation », méthode 2).
+
+### 5. Publier dans le dépôt APT
+
+Cette étape se fait **après** la publication de la Release (le script refuse un brouillon) : le dépôt
+`apt` ne contient pas les `.deb`, il pointe vers ceux de la Release. Ce qui est publié sur
+`https://f1ghtc0re.github.io/WiMao` est décrit au § 3 de la spec du sous-projet 6
+(`docs/superpowers/specs/2026-11-07-wimao-sous-projet-6-design.md`).
+
+**Une fois : réglages GitHub.** `scripts/regler-depot-github.sh --appliquer` active GitHub Pages (source
+« GitHub Actions », HTTPS imposé) et limite l'environnement `github-pages` à la seule branche `main` ;
+`--verifier` le contrôle à tout moment.
+
+**À chaque version**, sur `main` à jour et propre :
+
+```sh
+git switch main && git pull
+scripts/publier-depot-apt.sh vX.Y.Z
+```
+
+Le script, dans l'ordre :
+
+1. vérifie les outils, que le dépôt est propre et à jour, et que la Release `vX.Y.Z` existe et n'est pas
+   un brouillon ;
+2. télécharge les `.deb`, `SHA256SUMS` et `SHA256SUMS.asc`, et vérifie la signature de `SHA256SUMS.asc`
+   (par la clé publiée, avec un trousseau jetable tiré de `docs/cle-publique.asc`) puis chaque empreinte ;
+3. construit l'index (`Packages`, `Packages.gz`, `Release`) en gardant les versions déjà publiées ; relancer
+   la même version remplace ses entrées au lieu de les dupliquer ;
+4. **signe** `Release` (`InRelease` et `Release.gpg`) avec la sous-clé. **Une ou deux fenêtres de phrase de
+   passe GNOME s'ouvrent, et chacune attend environ une minute** : le script vous prévient avant. Il ne voit
+   jamais la phrase de passe ;
+5. contrôle ce qu'il vient de signer, crée la branche `depot-apt-vX.Y.Z` (seulement les fichiers de
+   `depot-apt/`, quelques Ko), envoie le commit et ouvre la PR, puis indique la marche à suivre. Il ne
+   fusionne jamais.
+
+Ensuite :
+
+1. Attendez la CI de la PR (`Dépôt APT`). Le job `assembler` vérifie la signature, télécharge chaque `.deb`
+   depuis les Releases et contrôle sa taille et son SHA256. Le job `installation` installe vraiment `wimao`
+   depuis le site assemblé, sur Ubuntu 24.04 et Debian 13, puis essaie un `.deb` altéré d'un octet, qui doit
+   être refusé.
+2. Fusionnez la PR. Sur `main`, le job `deployer` (seul à disposer de `pages: write` et `id-token: write`)
+   met le site en ligne. Rien n'est publié depuis une autre branche.
+3. Vérifiez comme un utilisateur : les quatre commandes du `README.md` (« Installation », méthode 1), puis
+   `apt policy wimao`, qui doit montrer `https://f1ghtc0re.github.io/WiMao stable/main`.
+
+Si le script s'arrête (code 1), rien n'a été modifié : lisez le message, corrigez, relancez. Si la branche
+`depot-apt-vX.Y.Z` existe déjà (essai précédent), il la refuse : supprimez-la d'abord. Pour s'entraîner
+sans rien envoyer : `scripts/publier-depot-apt.sh --aide` décrit l'option `--a-blanc` (clé jetable, aucun
+appel à `gh` ni à `git`), utilisée par `scripts/tests/tester-publier-depot-apt.sh`. Le script
+`scripts/assembler-site-apt.sh` est celui de la CI (codes 0 = site complet, 1 = contrôle échoué, 2 = usage,
+3 = dépôt APT encore vide).
+
+**Prolongez la sous-clé AVANT son expiration (le 2027-11-01).** Les vérifications de signature
+(`signer-version.sh`, `publier-depot-apt.sh` et la CI du dépôt APT, par `scripts/lib/publication.sh`) refusent
+une clé expirée : passé cette date, la CI du dépôt APT échoue et vous ne pouvez plus rien publier. Prolonger
+ne change pas l'empreinte : `gpg --quick-set-expire <EMPREINTE> 1y '*'` sur la machine de signature (la clé
+principale doit y être, voir « Révocation »), puis exportez de nouveau `docs/cle-publique.asc` (PR), car la
+CI lit la date d'expiration dans ce fichier. Mettez-vous un rappel pour septembre 2027.
 
 ## Révocation et clé perdue
 

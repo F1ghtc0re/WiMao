@@ -4,6 +4,12 @@ Ce dossier contient tout ce qui fabrique, contrôle et teste les trois paquets `
 Pour *installer* WiMao, lisez plutôt le `README.md` à la racine ; pour *publier* une version,
 `docs/publier-une-version.md`.
 
+Ces `.deb` sont aussi servis par un **dépôt `apt` signé** (`https://f1ghtc0re.github.io/WiMao`) : il ne
+fabrique rien, il publie les `.deb` des Releases. Ce qui le construit est ailleurs : l'index se prépare et
+se signe chez le propriétaire (`scripts/publier-depot-apt.sh`, dossier `depot-apt/`), le site s'assemble en
+CI (`scripts/assembler-site-apt.sh`, `.github/workflows/depot-apt.yml`). Voir `docs/publier-une-version.md`,
+étape 5, et `SECURITY.md`, « Le dépôt APT ».
+
 ## Les trois paquets
 
 | Paquet | Version | Installe | Script | Dossier des fichiers de contrôle |

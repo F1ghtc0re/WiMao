@@ -319,7 +319,8 @@ Ordre prévu, du plus simple au plus lourd (conseil retenu pendant la conception
 2. **AUR** (Arch Linux) : un `PKGBUILD` qui s'appuie sur les mêmes sources et les mêmes empreintes ;
 3. **Flatpak / Flathub** : difficile, car l'interface a besoin de lancer Wine et yabridge et d'écrire dans
    `~/.vst3`, ce que le bac à sable limite ; demande une étude ;
-4. **Dépôt APT signé** (publier les `.deb` dans un dépôt que `apt` met à jour tout seul) ;
+4. **Dépôt APT signé** (fait, sous-projet 6 : `.deb` publiés dans un dépôt que `apt` met à jour tout seul,
+   sur GitHub Pages ; voir `docs/publier-une-version.md`, étape 5) ;
 5. **PPA** (Launchpad : paquets sources, fabrication chez Canonical) ;
 6. **Snap** : déconseillé (confinement incompatible avec Wine et les plugins).
 
