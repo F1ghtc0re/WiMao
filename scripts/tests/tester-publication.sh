@@ -6,7 +6,8 @@
 # ligne absente ou mal formée -> 1 ; trousseau_cle_publiee accepte l'empreinte de la clé A et refuse
 # celle de la clé B ; verifier_signature accepte une signature détachée faite par la SOUS-clé de A et une
 # signature en clair (clearsign) de A ; refuse une signature valide faite par une autre clé (B, pourtant
-# présente dans le trousseau) ; refuse un fichier modifié après signature.
+# présente dans le trousseau) ; refuse un fichier modifié après signature et une signature d'une clé expirée ;
+# trousseau_cle_publiee refuse un cle-publique.asc contenant deux clés.
 #
 # Usage     : scripts/tests/tester-publication.sh
 # Variables : aucune (GNUPGHOME est réglé par le script, pour lui seul).
@@ -46,8 +47,8 @@ PARAMS
 sed -e 's/essai A/essai B/' -e 's/a@example/b@example/' -e '/^Subkey-/d' "$temporaire/a.params" > "$temporaire/b.params"
 gpg --batch --quiet --gen-key "$temporaire/a.params" 2> /dev/null
 gpg --batch --quiet --gen-key "$temporaire/b.params" 2> /dev/null
-empreinte_a="$(gpg --with-colons --list-keys a@example.invalid | awk -F: '$1 == "fpr" { print $10; exit }')"
-empreinte_b="$(gpg --with-colons --list-keys b@example.invalid | awk -F: '$1 == "fpr" { print $10; exit }')"
+empreinte_a="$(gpg --with-colons --list-keys a@example.invalid 2> /dev/null | awk -F: '$1 == "fpr" { print $10; exit }')"
+empreinte_b="$(gpg --with-colons --list-keys b@example.invalid 2> /dev/null | awk -F: '$1 == "fpr" { print $10; exit }')"
 
 # --- Faux dépôt : SECURITY.md (empreinte de A avec espaces, en minuscules) et la clé publique de A ---
 depot="$temporaire/depot"
@@ -73,6 +74,14 @@ if trousseau_cle_publiee "$depot" "$empreinte_b" "$temporaire/trousseau-x.gpg" 2
     echec "trousseau_cle_publiee accepte l'empreinte de B pour la clé de A"
 fi
 
+# Un cle-publique.asc contenant A puis B : refusé (exactement une clé principale).
+mkdir -p "$temporaire/depot-deux/docs"
+cat "$depot/docs/cle-publique.asc" > "$temporaire/depot-deux/docs/cle-publique.asc"
+gpg --armor --export b@example.invalid >> "$temporaire/depot-deux/docs/cle-publique.asc" 2> /dev/null
+if trousseau_cle_publiee "$temporaire/depot-deux" "$empreinte_a" "$temporaire/trousseau-deux.gpg" 2> /dev/null; then
+    echec "trousseau_cle_publiee accepte un cle-publique.asc contenant deux clés"
+fi
+
 # Trousseau de B, puis trousseau combiné A + B (des trousseaux binaires se concatènent) : B est connue de gpgv.
 gpg --export b@example.invalid > "$temporaire/trousseau-b.gpg"
 cat "$trousseau_a" "$temporaire/trousseau-b.gpg" > "$temporaire/trousseau-ab.gpg"
@@ -80,7 +89,7 @@ cat "$trousseau_a" "$temporaire/trousseau-b.gpg" > "$temporaire/trousseau-ab.gpg
 # --- verifier_signature ---
 echo "contenu à signer" > "$temporaire/fichier"
 # Signature détachée par la sous-clé de A : on désigne la sous-clé par son identifiant suivi de « ! ».
-sous_cle="$(gpg --with-colons --list-keys a@example.invalid | awk -F: '$1 == "sub" { print $5; exit }')"
+sous_cle="$(gpg --with-colons --list-keys a@example.invalid 2> /dev/null | awk -F: '$1 == "sub" { print $5; exit }')"
 gpg --batch --yes --quiet --local-user "${sous_cle}!" --detach-sign -o "$temporaire/fichier.sig-a" "$temporaire/fichier" 2> /dev/null
 verifier_signature "$trousseau_a" "$empreinte_a" "$temporaire/fichier.sig-a" "$temporaire/fichier" \
     || echec "signature détachée de la sous-clé de A refusée"
@@ -99,6 +108,20 @@ verifier_signature "$temporaire/trousseau-ab.gpg" "$empreinte_b" "$temporaire/fi
 echo "modifié" >> "$temporaire/fichier"
 if verifier_signature "$trousseau_a" "$empreinte_a" "$temporaire/fichier.sig-a" "$temporaire/fichier" 2> /dev/null; then
     echec "fichier modifié après signature accepté"
+fi
+
+# Clé C expirée : créée et utilisée pour signer il y a 20 jours (validité d'un jour), donc expirée aujourd'hui.
+# gpgv rend 0 avec EXPKEYSIG + VALIDSIG ; verifier_signature doit refuser.
+passe="$(date -d '20 days ago' +%s)"
+sed -e 's/essai A/essai C/' -e 's/a@example/c@example/' -e '/^Subkey-/d' "$temporaire/a.params" > "$temporaire/c.params"
+gpg --batch --quiet --faked-system-time "$passe" --gen-key "$temporaire/c.params" 2> /dev/null
+empreinte_c="$(gpg --with-colons --list-keys c@example.invalid 2> /dev/null | awk -F: '$1 == "fpr" { print $10; exit }')"
+echo "contenu C" > "$temporaire/fichier-c"
+gpg --batch --yes --quiet --faked-system-time "$passe" --local-user "$empreinte_c" --detach-sign \
+    -o "$temporaire/fichier-c.sig" "$temporaire/fichier-c" 2> /dev/null
+gpg --export c@example.invalid > "$temporaire/trousseau-c.gpg" 2> /dev/null
+if verifier_signature "$temporaire/trousseau-c.gpg" "$empreinte_c" "$temporaire/fichier-c.sig" "$temporaire/fichier-c" 2> /dev/null; then
+    echec "signature d'une clé expirée acceptée"
 fi
 
 echo "OK : scripts/lib/publication.sh se comporte comme prévu."
