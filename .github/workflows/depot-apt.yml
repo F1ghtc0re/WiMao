@@ -49,6 +49,12 @@ on:
 permissions:
   contents: read
 
+# bash pour toutes les étapes `run`, comme dans paquets.yml : dans un conteneur (job `installation`), GitHub
+# utilise sinon `sh -e`, qui ne connaît pas `set -o pipefail` (dash sur Ubuntu et Debian).
+defaults:
+  run:
+    shell: bash
+
 jobs:
   assembler:
     runs-on: ubuntu-24.04
