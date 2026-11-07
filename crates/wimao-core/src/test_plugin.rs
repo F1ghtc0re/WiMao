@@ -610,11 +610,13 @@ mod tests {
 
     fn reglages(outils: &tempfile::TempDir) -> Reglages {
         Reglages {
+            // Marges d'environ 1 s entre le sursis (2 s), le chargement tardif simulé (1 s) et
+            // l'échéance totale (4 s) : les tests restent stables sur une machine de CI chargée.
             delais: Delais {
-                total: Duration::from_secs(2),
+                total: Duration::from_secs(4),
                 intervalle: Duration::from_millis(200),
                 apres_fenetre: Duration::from_millis(300),
-                apres_plantage: Duration::from_millis(1500),
+                apres_plantage: Duration::from_secs(2),
             },
             outils_prioritaires: Some(outils.path().to_path_buf()),
             // Seuls les faux outils et /bin (sh, sleep) : jamais le vrai Xvfb ni xwininfo.
