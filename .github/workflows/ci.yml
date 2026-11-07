@@ -150,6 +150,13 @@ jobs:
       # GnuPG jetables A et B ; prouve qu'une signature valide d'une autre clé que la publiée est refusée.
       - name: Test des fonctions de publication (signatures)
         run: scripts/tests/tester-publication.sh
+      # Script de publication dans le dépôt APT (index, signature, contrôles), à blanc : clé jetable, faux .deb,
+      # faux gh et git qui échouent s'ils sont appelés. Il a besoin de `apt-ftparchive` (paquet apt-utils),
+      # absent de certaines images de runner : installé seulement s'il manque.
+      - name: Test de la publication dans le dépôt APT (à blanc)
+        run: |
+          command -v apt-ftparchive > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y apt-utils; }
+          scripts/tests/tester-publier-depot-apt.sh
       # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
       - name: Données personnelles (test du contrôle)
         run: scripts/tests/tester-verifier-donnees-perso.sh
