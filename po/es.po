@@ -563,9 +563,9 @@ msgid ""
 "{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
 "{expected_sh} {link_sh}"
 msgstr ""
-"Los plugins de su software de música no encuentran yabridge: {link} lleva a "
-"{current}, que ya no existe. Para usar el de WiMao ({expected}), ejecute: ln "
-"-sfn {expected_sh} {link_sh}"
+"Los plugins de su software de música no encuentran yabridge: {link} lleva "
+"a {current}, que ya no existe. Para usar el de WiMao ({expected}), "
+"ejecute: ln -sfn {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
@@ -573,9 +573,9 @@ msgid ""
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
 "ln -s {expected_sh} {link_sh}"
 msgstr ""
-"Los plugins de su software de música usan el yabridge de la carpeta {link}, "
-"y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa carpeta a "
-"otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
+"Los plugins de su software de música usan el yabridge de la carpeta "
+"{link}, y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa "
+"carpeta a otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 #: crates/wimao-recettes/src/gestionnaire.rs
@@ -1179,7 +1179,9 @@ msgstr "El plugin se abre"
 
 #: crates/wimao-core/src/tableau.rs
 msgid "Loads correctly; open it in your music software to check its interface"
-msgstr "Se carga correctamente; ábralo en su programa de música para comprobar su interfaz"
+msgstr ""
+"Se carga correctamente; ábralo en su software de música para comprobar su "
+"interfaz"
 
 #. / Détail d'un VST2 écarté au profit du VST3.
 #: crates/wimao-core/src/tableau.rs

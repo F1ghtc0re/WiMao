@@ -45,6 +45,10 @@ const INTERVALLE: Duration = Duration::from_secs(3);
 /// Attente après l'apparition de la fenêtre : un plugin qui plante juste après
 /// s'être affiché ne doit pas être déclaré prêt trop vite.
 const ATTENTE_APRES_FENETRE: Duration = Duration::from_secs(10);
+/// Sursis laissé à Carla après la première ligne de plantage hors Wine alors qu'il est encore
+/// vivant : yabridge peut écrire `Finished initializing` juste après, et seul cet état le
+/// plus récent doit décider du verdict (chargé ou non).
+const SURSIS_APRES_PLANTAGE: Duration = Duration::from_secs(10);
 /// Premier numéro d'écran essayé : loin des écrans réels (:0, :1…).
 const PREMIER_ECRAN: u32 = 90;
 /// Dernier numéro d'écran essayé (au-delà, on renonce à Xvfb).
@@ -113,6 +117,8 @@ pub(crate) struct Delais {
     pub intervalle: Duration,
     /// Attente entre l'apparition de la fenêtre et le verdict.
     pub apres_fenetre: Duration,
+    /// Sursis après un plantage hors Wine vu alors que Carla vit encore.
+    pub apres_plantage: Duration,
 }
 
 impl Delais {
@@ -122,6 +128,7 @@ impl Delais {
             total: DELAI_TOTAL,
             intervalle: INTERVALLE,
             apres_fenetre: ATTENTE_APRES_FENETRE,
+            apres_plantage: SURSIS_APRES_PLANTAGE,
         }
     }
 }
@@ -250,13 +257,13 @@ struct AnalyseJournal {
 fn analyser_journal(texte: &str) -> AnalyseJournal {
     let mut a = AnalyseJournal::default();
     for ligne in texte.lines() {
-        if ligne.contains(MARQUE_CHARGE) {
-            a.charge = true;
-        }
         if ligne.contains(MOTIF_SANS_AUDIO) {
             a.sans_audio = true;
         }
-        if MOTIFS_PLANTAGE.iter().any(|m| ligne.contains(m)) {
+        if ligne.contains(MARQUE_CHARGE) {
+            // Le nom du plugin peut contenir un motif de plantage : cette ligne n'en est pas un.
+            a.charge = true;
+        } else if MOTIFS_PLANTAGE.iter().any(|m| ligne.contains(m)) {
             // On ne garde que la première ligne de chaque famille : c'est la cause probable.
             let cible = if ligne.contains(MARQUE_WINE) {
                 &mut a.plantage_wine
@@ -277,6 +284,10 @@ fn lire_journal(journal: &Path) -> AnalyseJournal {
 
 /// Boucle de surveillance : fenêtre, plantage dans le journal, ou arrêt de l'hôte.
 /// L'ordre de décision est celui de la spec du sous-projet 7 (§ 3.2).
+///
+/// Un plantage hors Wine alors que Carla vit encore ne tranche pas tout de suite : la ligne de
+/// chargement peut arriver juste après. On laisse `delais.apres_plantage` (compté depuis la
+/// première de ces lignes), puis on décide avec l'état le plus récent du journal.
 fn surveiller(
     groupe: &mut Groupe,
     path: &OsString,
@@ -286,6 +297,8 @@ fn surveiller(
 ) -> ResultatTest {
     let echeance = Instant::now() + delais.total;
     let mut echecs = 0;
+    // Instant où la première ligne de plantage hors Wine a été vue (Carla encore vivant).
+    let mut debut_plantage: Option<Instant> = None;
     loop {
         let mut derniere_erreur = String::new();
         match observer_ecran(path, ecran) {
@@ -299,14 +312,25 @@ fn surveiller(
                 derniere_erreur = e;
             }
         }
+        // L'état de Carla est lu AVANT le journal : une ligne écrite juste avant sa sortie
+        // est alors forcément visible dans la lecture qui suit.
+        let termine = groupe.est_termine();
         let analyse = lire_journal(journal);
         // 1. Plantage dans Wine : c'est le plugin.
         if let Some(ligne) = analyse.plantage_wine {
+            journal::noter("test du plugin", &format!("plantage dans Wine : {ligne}"));
             return ResultatTest::Probleme(ligne);
         }
-        // 4. Carla arrêté, ou plantage de Carla : le verdict dépend du chargement du plugin.
-        if groupe.est_termine() || analyse.plantage_hors_wine.is_some() {
+        // 4. Carla arrêté : le verdict dépend du chargement du plugin.
+        if termine {
             return verdict_hote_arrete(&analyse);
+        }
+        // 4 bis. Plantage de Carla alors qu'il vit encore : sursis borné avant de décider.
+        if analyse.plantage_hors_wine.is_some() {
+            let debut = *debut_plantage.get_or_insert_with(Instant::now);
+            if debut.elapsed() >= delais.apres_plantage {
+                return verdict_hote_arrete(&analyse);
+            }
         }
         if echecs >= ECHECS_XWININFO_MAX {
             return ResultatTest::Remarque(trf(
@@ -320,6 +344,7 @@ fn surveiller(
                 journal::noter_info("test du plugin", "délai écoulé sans fenêtre, plugin chargé");
                 ResultatTest::Charge
             } else {
+                journal::noter("test du plugin", "délai écoulé, plugin non chargé");
                 ResultatTest::Remarque(tr("The plugin did not finish loading within 5 minutes"))
             };
         }
@@ -331,11 +356,14 @@ fn surveiller(
 /// de Carla pendant ce temps est un problème, sinon le plugin est prêt (un plantage de
 /// Carla seul, Carla restant vivant avec sa fenêtre, n'empêche pas l'interface de s'ouvrir).
 fn verdict_apres_fenetre(groupe: &mut Groupe, journal: &Path) -> ResultatTest {
+    // État de Carla lu avant le journal (voir `surveiller`).
+    let termine = groupe.est_termine();
     let analyse = lire_journal(journal);
     if let Some(ligne) = analyse.plantage_wine {
+        journal::noter("test du plugin", &format!("plantage dans Wine : {ligne}"));
         return ResultatTest::Probleme(ligne);
     }
-    if groupe.est_termine() {
+    if termine {
         return verdict_hote_arrete(&analyse);
     }
     ResultatTest::Pret
@@ -586,6 +614,7 @@ mod tests {
                 total: Duration::from_secs(2),
                 intervalle: Duration::from_millis(200),
                 apres_fenetre: Duration::from_millis(300),
+                apres_plantage: Duration::from_millis(1500),
             },
             outils_prioritaires: Some(outils.path().to_path_buf()),
             // Seuls les faux outils et /bin (sh, sleep) : jamais le vrai Xvfb ni xwininfo.
@@ -711,7 +740,8 @@ mod tests {
         assert_eq!(tester(&o), ResultatTest::Charge);
     }
 
-    /// Ordre inverse : le plantage de Carla précède la ligne de chargement.
+    /// Ordre inverse : le plantage de Carla précède la ligne de chargement. Déterministe :
+    /// Carla s'arrête après avoir tout écrit, et l'état de Carla est lu avant le journal.
     #[test]
     #[serial_test::serial(faux_carla)]
     fn plantage_hors_wine_avant_chargement_donne_charge() {
@@ -720,6 +750,57 @@ mod tests {
             SANS_FENETRE,
         );
         assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    /// Carla vivant : le plantage est écrit, la ligne de chargement n'arrive qu'une seconde
+    /// plus tard (dans le sursis) ; le verdict suit l'état le plus récent.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn chargement_tardif_apres_plantage_hors_wine_donne_charge() {
+        let o = dossier_outils(
+            &format!(
+                "echo \"{LIGNE_JUCE}\"; echo \"{LIGNE_SEGFAULT}\"; /bin/sleep 1; \
+                 echo \"{LIGNE_CHARGE}\"; {VIVANT}"
+            ),
+            SANS_FENETRE,
+        );
+        assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    /// Plantage de Carla, jamais de chargement, Carla vivant : à la fin du sursis, `Probleme`
+    /// avec la ligne de plantage elle-même.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn plantage_hors_wine_sans_chargement_donne_probleme_avec_la_ligne() {
+        let o = dossier_outils(&carla_qui_ecrit(&[LIGNE_SEGFAULT], VIVANT), SANS_FENETRE);
+        assert_eq!(
+            tester(&o),
+            ResultatTest::Probleme(LIGNE_SEGFAULT.to_string())
+        );
+    }
+
+    /// Sans audio est prioritaire, même si la ligne de chargement est présente.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn sans_audio_et_charge_donne_remarque() {
+        let o = dossier_outils(
+            &carla_qui_ecrit(&[LIGNE_CHARGE, "[carla] Failed to init engine"], "exit 1"),
+            SANS_FENETRE,
+        );
+        assert_eq!(
+            tester(&o),
+            ResultatTest::Remarque(tr(
+                "The audio server (PipeWire or JACK) could not be reached: the plugin was not tested"
+            ))
+        );
+    }
+
+    #[test]
+    fn la_ligne_de_chargement_n_est_pas_un_plantage() {
+        let a = analyser_journal("[P] [Wine STDERR] Finished initializing '/x/aborting.vst3'\n");
+        assert!(a.charge);
+        assert_eq!(a.plantage_wine, None);
+        assert_eq!(a.plantage_hors_wine, None);
     }
 
     #[test]
