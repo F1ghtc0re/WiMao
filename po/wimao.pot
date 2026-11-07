@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:22+0100\n"
+"POT-Creation-Date: 2026-11-07 23:27+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -737,6 +737,13 @@ msgstr ""
 #: crates/wimao-core/src/i18n.rs
 msgid "invalid translation file {path}: {error}"
 msgstr ""
+
+#. En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
+#: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
+msgid "{n} plugin"
+msgid_plural "{n} plugins"
+msgstr[0] ""
+msgstr[1] ""
 
 #: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
 msgid "Ready"
@@ -1914,12 +1921,6 @@ msgstr ""
 #: crates/wimao/src/historique_vue.rs
 msgid "Going back…"
 msgstr ""
-
-#: crates/wimao/src/liste.rs
-msgid "{n} plugin"
-msgid_plural "{n} plugins"
-msgstr[0] ""
-msgstr[1] ""
 
 #: crates/wimao/src/liste.rs
 msgid "{n} ready"

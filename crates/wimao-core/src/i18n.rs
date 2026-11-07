@@ -354,6 +354,18 @@ mod tests {
         assert_eq!(trc(&String::from("history"), &msgid), msgid);
     }
 
+    #[test]
+    #[serial]
+    fn pluriels_selon_la_langue() {
+        init_langue(Some("en"));
+        assert_eq!(trn("{n} plugin", "{n} plugins", 1, &[]), "1 plugin");
+        assert_eq!(trn("{n} plugin", "{n} plugins", 2, &[]), "2 plugins");
+        init_langue(Some("fr"));
+        // En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
+        assert_eq!(trn("{n} plugin", "{n} plugins", 0, &[]), "0 plugin");
+        assert_eq!(trn("{n} plugin", "{n} plugins", 2, &[]), "2 plugins");
+    }
+
     // `serial` : init_langue modifie l'état global (catalogue) et parfois l'environnement.
     #[test]
     #[serial]

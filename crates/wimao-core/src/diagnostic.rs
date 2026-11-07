@@ -560,6 +560,7 @@ fn reparer_un(c: &Chemins, probleme: &Probleme, p: &dyn Progression) -> Resultat
 mod tests {
     use super::*;
     use crate::progression::ProgressionMuette;
+    use serial_test::serial;
     use std::collections::BTreeMap;
     use std::process::{Child, Command};
     use std::time::{Duration, Instant};
@@ -727,7 +728,11 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn lien_yabridge_vers_un_autre_yabridge_est_signale() {
+        // Le message est comparé en anglais : langue imposée, et test sérialisé pour que les
+        // tests qui changent la langue globale ne le perturbent pas.
+        crate::i18n::init_langue(Some("en"));
         let banc = Banc::nouveau();
         let autre = banc._racine.path().join("autre-yabridge");
         std::fs::create_dir_all(&autre).unwrap();
@@ -756,7 +761,11 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn lien_yabridge_casse_est_signale() {
+        // Le message est comparé en anglais : langue imposée, et test sérialisé pour que les
+        // tests qui changent la langue globale ne le perturbent pas.
+        crate::i18n::init_langue(Some("en"));
         let banc = Banc::nouveau();
         let disparu = banc._racine.path().join("disparu");
         let lien = lien_du_banc(&banc);
@@ -773,7 +782,11 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn lien_yabridge_vrai_dossier_est_signale_sans_ln_sfn() {
+        // Le message est comparé en anglais : langue imposée, et test sérialisé pour que les
+        // tests qui changent la langue globale ne le perturbent pas.
+        crate::i18n::init_langue(Some("en"));
         let banc = Banc::nouveau();
         let lien = lien_du_banc(&banc);
         std::fs::create_dir_all(&lien).unwrap();

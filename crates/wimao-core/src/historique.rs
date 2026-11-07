@@ -272,6 +272,8 @@ mod tests {
                 assert_eq!(libelle_action(action), texte, "{langue} {action:?}");
             }
         }
+        // Remet la langue par défaut : l'état est global et partagé avec les autres tests.
+        init_langue(Some("en"));
     }
 
     /// Chemins de test dans un dossier temporaire (à garder en vie pendant le test).
