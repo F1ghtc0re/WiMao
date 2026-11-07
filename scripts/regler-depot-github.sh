@@ -12,7 +12,9 @@
 #                                         supprimée, sauf par l'administrateur ;
 #   - signalement privé des failles, alertes et correctifs Dependabot, détection des secrets ;
 #   - jeton des workflows en lecture seule, actions limitées à une liste, CI des PR extérieures validée à
-#     la main, releases immuables.
+#     la main, releases immuables ;
+#   - GitHub Pages (sous-projet 6, dépôt APT) : source = workflow, HTTPS imposé ; environnement `github-pages`
+#     limité à une politique de branche personnalisée, qui est exactement `main`.
 #
 # Pourquoi 0 approbation sur « main protégée » : le propriétaire est seul ; GitHub interdit d'approuver
 # sa propre PR, donc une approbation exigée bloquerait toute fusion. La protection vient de la PR
@@ -425,6 +427,94 @@ regler_releases_immuables() {
     esac
 }
 
+# --- GitHub Pages, environnement de déploiement et branche autorisée (sous-projet 6) -------------------
+# Le dépôt APT est publié par le workflow depot-apt.yml (job `deployer`, environnement `github-pages`). Trois
+# réglages le rendent sûr : Pages est servi par un WORKFLOW (et non depuis une branche), HTTPS est imposé,
+# et l'environnement n'accepte les déploiements que depuis `main` (une branche quelconque ne peut pas publier).
+environnement="github-pages"
+
+# GitHub Pages. À la pose : si Pages n'est pas encore activé (GET → 404), on l'active d'abord (POST), puis on
+# règle dans tous les cas (PUT) : le POST ne sait pas imposer HTTPS. En --a-blanc, on ignore si Pages existe :
+# les deux requêtes sont imprimées.
+regler_pages() {
+    local corps_creation corps_reglage code=0
+    corps_creation="$(jq -n -c '{build_type: "workflow"}')"
+    corps_reglage="$(jq -n -c '{build_type: "workflow", https_enforced: true}')"
+    if [[ "$1" == "poser" ]]; then
+        if [[ "$mode" == "a-blanc" ]]; then
+            appeler POST "repos/$depot/pages" "$corps_creation"
+            appeler PUT "repos/$depot/pages" "$corps_reglage"
+            return 0
+        fi
+        lire "repos/$depot/pages" || code=$?
+        case "$code" in
+            0) ;;  # déjà activé : seul le réglage est à poser
+            3)
+                poser strict "GitHub Pages (activation)" POST "repos/$depot/pages" "$corps_creation"
+                if [[ "$etat_pose" -ne 0 ]]; then
+                    return 0  # activation refusée (déjà signalée en ❌) : inutile de régler un Pages absent
+                fi
+                ;;
+            *)
+                ko "GitHub Pages : lecture impossible (${reponse:0:200})"
+                return 0
+                ;;
+        esac
+        poser strict "GitHub Pages (source workflow, HTTPS imposé)" PUT "repos/$depot/pages" "$corps_reglage"
+        return 0
+    fi
+    # Vérification : deux lignes, une pour la source, une pour HTTPS.
+    lire "repos/$depot/pages" || code=$?
+    case "$code" in
+        0)
+            controler "GitHub Pages : source = workflow" '.build_type == "workflow"'
+            controler "GitHub Pages : HTTPS imposé" '.https_enforced == true'
+            ;;
+        3) ko "GitHub Pages : non activé (HTTP 404)" ;;
+        *) ko "GitHub Pages : lecture impossible (${reponse:0:200})" ;;
+    esac
+}
+
+# Environnement `github-pages` : seules les branches listées par une politique personnalisée peuvent déployer
+# (ni « toutes les branches », ni « branches protégées »). Les politiques elles-mêmes sont dans la fonction suivante.
+regler_environnement_pages() {
+    if [[ "$1" == "poser" ]]; then
+        poser strict "Environnement $environnement (branches personnalisées)" PUT "repos/$depot/environments/$environnement" \
+            "$(jq -n -c '{deployment_branch_policy: {protected_branches: false, custom_branch_policies: true}}')"
+    else
+        verifier_lecture "Environnement $environnement (branches personnalisées)" "repos/$depot/environments/$environnement" \
+            '.deployment_branch_policy == {protected_branches: false, custom_branch_policies: true}'
+    fi
+}
+
+# Politique de branche de l'environnement : exactement `main`, de type `branch` (pas un motif, pas une étiquette).
+# À la pose, on ne crée la politique que si elle manque (sinon GitHub répond 422 « déjà existante ») ; on ne
+# SUPPRIME jamais une autre politique : la vérification la signale en ❌ et le propriétaire tranche.
+regler_branche_autorisee() {
+    local libelle="Branches autorisées pour $environnement : seule main"
+    local chemin="repos/$depot/environments/$environnement/deployment-branch-policies" code=0 corps
+    corps="$(jq -n -c '{name: "main", type: "branch"}')"
+    if [[ "$1" == "poser" ]]; then
+        if [[ "$mode" == "a-blanc" ]]; then
+            appeler POST "$chemin" "$corps"
+            return 0
+        fi
+        lire "$chemin" || code=$?
+        if [[ "$code" -ne 0 ]]; then
+            ko "$libelle : lecture impossible (${reponse:0:200})"
+        elif jq -e '[.branch_policies[]? | select(.name == "main" and .type == "branch")] | length > 0' \
+            > /dev/null 2>&1 <<< "$reponse"; then
+            : # déjà présente : rien à écrire (idempotent)
+        else
+            poser strict "$libelle" POST "$chemin" "$corps"
+        fi
+        return 0
+    fi
+    # Vérification : une et une seule politique, `main` de type `branch`.
+    verifier_lecture "$libelle" "$chemin" \
+        '[.branch_policies[]? | {name, type}] == [{name: "main", type: "branch"}]'
+}
+
 # Tous les réglages, dans l'ordre d'affichage.
 reglages=(
     regler_ruleset_main
@@ -437,6 +527,9 @@ reglages=(
     regler_actions_autorisees
     regler_ci_prs_exterieures
     regler_releases_immuables
+    regler_pages
+    regler_environnement_pages
+    regler_branche_autorisee
 )
 
 # Ligne ✅ / ❌ sur la visibilité : les rulesets exigent un dépôt public (compte gratuit).
