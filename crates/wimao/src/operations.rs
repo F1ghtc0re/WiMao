@@ -384,7 +384,8 @@ pub fn bilan_session(bilan: &BilanSession) -> Option<String> {
 /// Morceaux communs aux bilans : plugins nouveaux, mis à jour, à vérifier, avec un problème.
 ///
 /// Les verdicts suivent le tableau ([`brut_depuis_installation`]) : un plugin ⚠️ est « à
-/// vérifier », un plugin ❌ est « avec un problème » ; un ✅ n'ajoute rien. Chaque morceau est traduit avec son pluriel
+/// vérifier », un plugin ❌ est « avec un problème » ; un ✅ n'ajoute rien. Chaque morceau est
+/// traduit avec son pluriel
 /// (`trn`) ; l'appelant les joint par une virgule.
 fn morceaux_du_bilan(plugins: &PluginsTraites, mis_a_jour: &BTreeSet<PathBuf>) -> Vec<String> {
     let maj = plugins
@@ -568,6 +569,12 @@ mod tests {
             bilan_installation(&les_deux).unwrap(),
             "2 plugins installés, 1 à vérifier, 1 avec un problème"
         );
+        wimao_core::i18n::init_langue(Some("es"));
+        assert_eq!(
+            bilan_installation(&les_deux).unwrap(),
+            "2 plugins instalados, 1 por revisar, 1 con un problema"
+        );
+        wimao_core::i18n::init_langue(Some("fr"));
         // Un ⚠️ seul : aucun « avec un problème ».
         let seul = rapport(vec![doublon], &[]);
         assert_eq!(

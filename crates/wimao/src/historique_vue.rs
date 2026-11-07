@@ -422,7 +422,8 @@ impl Fenetre {
 
 #[cfg(test)]
 mod tests {
-    use super::doit_ouvrir_historique;
+    use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn double_ctrl_h_ne_pousse_pas_de_seconde_page() {
@@ -430,9 +431,6 @@ mod tests {
         assert!(doit_ouvrir_historique(Some("principale")));
         assert!(!doit_ouvrir_historique(Some("historique")));
     }
-
-    use super::*;
-    use std::path::PathBuf;
 
     fn entree(date: &str, point: Option<&str>) -> Entree {
         Entree {

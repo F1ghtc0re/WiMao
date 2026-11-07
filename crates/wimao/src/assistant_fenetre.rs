@@ -66,10 +66,11 @@ const CHAPITRE_AIDE: &str = "premiers-pas";
 /// thème changent d'un thème à l'autre et certaines manquent à taille de page d'état.
 const ICONE_PRET: &str = "wimao-pret-symbolic";
 const ICONE_ERREUR: &str = "wimao-erreur-symbolic";
-/// Classes de style d'Adwaita qui colorent l'icône (symbolique) : vert « succès » et rouge
-/// « erreur » suivent le thème clair ou sombre, au lieu d'une couleur fixée dans le code.
-const CLASSE_SUCCES: &str = "success";
-const CLASSE_ERREUR: &str = "error";
+/// Classes WiMao (voir `style.css`) qui colorent **seulement l'icône** d'une page d'état : vert
+/// « succès » et rouge « erreur » d'Adwaita, qui suivent le thème clair ou sombre. Les classes
+/// `success` / `error` posées sur la page colorent aussi son titre et sa description.
+const CLASSE_SUCCES: &str = "wimao-pret";
+const CLASSE_ERREUR: &str = "wimao-erreur";
 /// Classe libadwaita d'une `adw::StatusPage` resserrée (icône et marges réduites) : les pages
 /// qui portent une liste doivent tenir dans 560 px de haut.
 const CLASSE_COMPACTE: &str = "compact";
