@@ -569,6 +569,7 @@ impl Drop for Groupe {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::init_langue;
 
     /// Dossier d'outils factices ; le nom contient `faux-carla` pour que `pgrep -f`
     /// retrouve tout processus lancé depuis ce dossier. Le faux Xvfb crée le socket de
@@ -784,7 +785,10 @@ mod tests {
     /// Sans audio est prioritaire, même si la ligne de chargement est présente.
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif aussi des tests de langue (clé par défaut) : `tr` lit la langue globale.
+    #[serial_test::serial]
     fn sans_audio_et_charge_donne_remarque() {
+        init_langue(Some("en"));
         let o = dossier_outils(
             &carla_qui_ecrit(&[LIGNE_CHARGE, "[carla] Failed to init engine"], "exit 1"),
             SANS_FENETRE,
@@ -843,7 +847,10 @@ mod tests {
     /// Carla plante sans que le plugin se soit chargé : la faute peut être au plugin.
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif aussi des tests de langue (clé par défaut) : `tr` lit la langue globale.
+    #[serial_test::serial]
     fn arret_sans_chargement_donne_probleme() {
+        init_langue(Some("en"));
         let o = dossier_outils(&carla_qui_ecrit(&[LIGNE_JUCE], "exit 0"), SANS_FENETRE);
         assert_eq!(
             tester(&o),
@@ -860,7 +867,10 @@ mod tests {
 
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif aussi des tests de langue (clé par défaut) : `tr` lit la langue globale.
+    #[serial_test::serial]
     fn delai_sans_fenetre_non_charge_donne_remarque() {
+        init_langue(Some("en"));
         let o = dossier_outils("/bin/sleep 31338 & /bin/sleep 31338", SANS_FENETRE);
         assert_eq!(
             tester(&o),

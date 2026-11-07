@@ -10,6 +10,7 @@ use crate::chemins::Chemins;
 use crate::correctifs::correctifs;
 use crate::erreur::{Erreur, Resultat};
 use crate::i18n::{tr, trf};
+use crate::journal;
 use crate::progression::Progression;
 use crate::restauration;
 use crate::wine::{Wine, SURCHARGES_SANS_FENETRES};
@@ -62,7 +63,13 @@ pub fn creer_environnement(c: &Chemins, p: &dyn Progression) -> Resultat<()> {
         // environnement déjà propre. Peut aussi être appelé sur un environnement complet
         // (`wimao-cli init`) : sans risque, car seuls les liens sont remplacés par des
         // dossiers vides, jamais leur cible (les fichiers de la personne restent intacts).
-        remplacer_dossiers_relies(c)?;
+        let remplaces = remplacer_dossiers_relies(c)?;
+        if remplaces > 0 {
+            journal::noter_info(
+                "reprise de la création de l'environnement",
+                &format!("{remplaces} lien(s) vers les dossiers personnels remplacé(s)"),
+            );
+        }
     } else {
         p.etape(&tr("Creating the Wine environment…"));
         // Un préfixe neuf n'est pas celui que décrivent les points de restauration existants

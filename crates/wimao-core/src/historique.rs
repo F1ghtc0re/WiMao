@@ -675,7 +675,10 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn valeur_contenant_un_placeholder_n_est_pas_resubstituee() {
+        // Le texte attendu est l'anglais : la langue globale est fixée, `serial` l'y protège.
+        init_langue(Some("en"));
         // `{file}` reçoit une valeur qui ressemble à un placeholder : elle reste telle quelle.
         let t = TexteNeutre::nouveau(CLE_AVANT_INSTALLATION, &[("file", "{name}")]);
         assert_eq!(t.traduit().as_deref(), Some("before installing {name}"));

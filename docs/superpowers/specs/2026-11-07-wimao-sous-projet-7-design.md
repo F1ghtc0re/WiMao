@@ -79,9 +79,11 @@ dit clairement ce qui n'a pas été vérifié.
 - `wimao-cli verifier` : code de sortie inchangé dans son principe (❌ ⇒ code d'échec) ; un `Charge`
   compte comme réussi.
 - `paquets/tester-installation.sh` (CI des paquets, plugin factice WiMaoTest) : accepte aujourd'hui
-  ❌ « The plugin host stopped » ou ⚠️ « Loaded, but… » (codes 2 ou 0). Il doit accepter à la place
-  ❌ « The plugin host stopped » (non chargé) ou ✅ avec le nouveau détail (code 0), et refuser tout
-  le reste.
+  ❌ « The plugin host stopped » ou ⚠️ « Loaded, but… » (codes 2 ou 0). WiMaoTest a une fabrique VST3
+  vide (`GetPluginFactory` renvoie 0) : yabridge n'écrit jamais « Finished initializing » pour lui, il
+  n'est donc jamais « chargé ». Il doit accepter ❌ « The plugin host stopped » (code 2) ou
+  ⚠️ « The plugin did not finish loading within 5 minutes » (code 0, Carla vivant sans fenêtre), et
+  **refuser** ✅ « Loads correctly… » (pour ce plugin, ce serait un faux « chargé »).
 - Tests unitaires de `test_plugin.rs` (faux `carla-single`) : un cas par ligne du § 3.2.
 
 ## 4. Avertissement « lien yabridge » dans l'interface (`crates/wimao/src/reparation.rs`)

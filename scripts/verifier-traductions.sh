@@ -6,7 +6,7 @@
 # 3. échoue (code 1) en listant les chaînes non traduites ou approximatives (fuzzy).
 # Utilisé par la CI et à lancer avant chaque commit qui touche une chaîne visible.
 # Voir CONTRIBUTING.md (« Ajouter une langue », « Ajouter une chaîne traduisible »).
-# Prérequis : paquet gettext (xgettext, msgmerge, msgfmt, msgattrib) et git.
+# Prérequis : paquet gettext (xgettext, msgmerge, msgfmt, msgattrib), git et python3.
 set -euo pipefail
 
 # Langues vérifiées : ajouter ici le code d'une nouvelle langue (et créer po/<code>.po).

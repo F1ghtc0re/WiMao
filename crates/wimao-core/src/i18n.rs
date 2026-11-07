@@ -340,6 +340,8 @@ mod tests {
         // Même msgid que le bouton « Réparer », mais le nom de l'historique est « Réparation ».
         assert_eq!(trc(&contexte, &msgid), "Réparation");
         assert_eq!(tr(&msgid), "Réparer");
+        // Remet la langue par défaut : les autres tests ne doivent pas hériter du français.
+        init_langue(Some("en"));
     }
 
     #[test]
@@ -372,6 +374,7 @@ mod tests {
     fn francais() {
         init_langue(Some("fr"));
         assert_eq!(tr("Ready"), "Prêt");
+        init_langue(Some("en"));
     }
 
     #[test]
@@ -379,6 +382,7 @@ mod tests {
     fn espagnol() {
         init_langue(Some("es"));
         assert_eq!(tr("Ready"), "Listo");
+        init_langue(Some("en"));
     }
 
     #[test]
@@ -393,6 +397,7 @@ mod tests {
     fn remplacement_des_variables() {
         init_langue(Some("fr"));
         assert_eq!(trf("{n} plugins found", &[("n", "3")]), "3 plugins trouvés");
+        init_langue(Some("en"));
     }
 
     fn env_simule<'a>(paires: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<String> + 'a {
