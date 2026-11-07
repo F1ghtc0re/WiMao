@@ -868,6 +868,17 @@ mod tests {
     }
 
     #[test]
+    fn commande_du_lien_cite_le_dollar() {
+        // `$` serait développé par le shell : le chemin doit être entre apostrophes.
+        let (lien, attendu) = (Path::new("/h/$HOME/yabridge"), Path::new("/w/yb"));
+        let etat = EtatLienYabridge::Casse(PathBuf::from("/x"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn /w/yb '/h/$HOME/yabridge'"
+        );
+    }
+
+    #[test]
     #[serial]
     fn le_message_contient_la_commande() {
         crate::i18n::init_langue(Some("en"));

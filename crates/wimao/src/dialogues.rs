@@ -29,9 +29,9 @@ const SITE_WEB: &str = "https://github.com/F1ghtc0re/WiMao";
 /// Identifiant d'application, aussi nom de l'icône.
 pub const ID_APPLICATION: &str = "fr.wimao.WiMao";
 
-/// Identifiant de la réponse « fermer ».
-/// Réponse « Copy the command » du dialogue du lien yabridge.
+/// Identifiant de la réponse « Copy the command » du dialogue du lien yabridge.
 const REPONSE_COPIER: &str = "copier";
+/// Identifiant de la réponse « fermer ».
 const REPONSE_FERMER: &str = "fermer";
 /// Identifiant de la réponse « ouvrir le chapitre des problèmes fréquents ».
 const REPONSE_PROBLEMES: &str = "problemes";

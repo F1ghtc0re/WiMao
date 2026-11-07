@@ -40,6 +40,58 @@ msgids_sans_entete() {
          }'
 }
 
+# Lit un fichier .po sur l'entrée standard et signale (sur la sortie d'erreur) chaque entrée
+# traduite dont les marqueurs {nom} diffèrent de ceux du msgid : un marqueur oublié, ajouté
+# ou renommé afficherait « {nom} » tel quel (ou perdrait une valeur). Règles :
+# - singulier : msgstr comparé à msgid ; pluriels : chaque msgstr[i] comparé à l'union
+#   msgid / msgid_plural (le singulier peut omettre {n}, par exemple « un plugin ») ;
+# - entrées obsolètes (#~) et msgstr vides (non traduits, déjà signalés) ignorés.
+# Code de sortie 1 s'il y a au moins un écart.
+placeholders_coherents() {
+    python3 -c '
+import re, sys
+nom = sys.argv[1]
+MARQUEUR = re.compile(r"\{[A-Za-z_0-9]+\}")
+ecarts = 0
+
+def texte(lignes):
+    """Recolle les chaînes entre guillemets (un msgid peut tenir sur plusieurs lignes)."""
+    return "".join(l.strip()[1:-1] for l in lignes)
+
+for bloc in sys.stdin.read().split("\n\n"):
+    champs, courant = {}, None
+    for ligne in bloc.splitlines():
+        if ligne.startswith("#"):
+            continue  # commentaires, dont les entrées obsolètes (#~)
+        m = re.match(r"(msgid_plural|msgid|msgstr(?:\[\d+\])?) (.*)", ligne)
+        if m:
+            courant = m.group(1)
+            champs[courant] = [m.group(2)]
+        elif courant and ligne.startswith("\""):
+            champs[courant].append(ligne)
+    if "msgid" not in champs:
+        continue
+    msgid = texte(champs["msgid"])
+    if msgid == "":
+        continue  # en-tête du fichier
+    attendu = set(MARQUEUR.findall(msgid))
+    if "msgid_plural" in champs:
+        attendu |= set(MARQUEUR.findall(texte(champs["msgid_plural"])))
+    for cle, lignes in champs.items():
+        if not cle.startswith("msgstr"):
+            continue
+        traduit = texte(lignes)
+        if traduit == "":
+            continue  # non traduit : signalé ailleurs
+        trouve = set(MARQUEUR.findall(traduit))
+        if trouve != attendu:
+            ecarts += 1
+            print(f"[{nom}] marqueurs différents dans {cle} de : {msgid}", file=sys.stderr)
+            print(f"    attendus {sorted(attendu)}, trouvés {sorted(trouve)}", file=sys.stderr)
+sys.exit(1 if ecarts else 0)
+' "$1"
+}
+
 erreurs=0
 for langue in "${LANGUES[@]}"; do
     fichier="po/${langue}.po"
@@ -55,6 +107,10 @@ for langue in "${LANGUES[@]}"; do
     if [[ -n "$approx" ]]; then
         echo "[$langue] chaînes approximatives (fuzzy) à relire :" >&2
         echo "$approx" >&2
+        erreurs=1
+    fi
+    # Marqueurs {nom} identiques entre msgid et msgstr.
+    if ! msgattrib --no-wrap --translated --no-obsolete "$fichier" | placeholders_coherents "$langue"; then
         erreurs=1
     fi
     # Contrôle de syntaxe final du fichier ; affiche le bilan.

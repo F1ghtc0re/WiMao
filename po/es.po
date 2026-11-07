@@ -563,8 +563,8 @@ msgid ""
 "{command}"
 msgstr ""
 "Los plugins de su software de música no encuentran yabridge: {link} lleva a "
-"{current}, que ya no existe. Para usar el de WiMao ({expected}), ejecute: ln "
-"-sfn {expected_sh} {link_sh}"
+"{current}, que ya no existe. Para usar el de WiMao ({expected}), ejecute: "
+"{command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
