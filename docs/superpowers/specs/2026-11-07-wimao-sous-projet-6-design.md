@@ -127,7 +127,9 @@ Jobs :
      `pool/<étiquette>/`, format `vX.Y.Z` exigé), contrôle **taille et SHA256** annoncées, range le fichier
      dans `site/pool/<étiquette>/` ;
    - copie `depot-apt/dists`, `docs/cle-publique.asc` → `site/wimao.asc`, écrit `site/index.html` ;
-   puis `actions/upload-pages-artifact` (artefact `github-pages`).
+   puis `actions/upload-pages-artifact` (artefact `github-pages`). Si `depot-apt/` n'existe pas encore
+   (avant la première publication), le script le dit et rend le code 3 : le job réussit avec la sortie
+   `vide=true`, et `installation` et `deployer` sont sautés.
 2. **`installation`** (matrice : `ubuntu:24.04@sha256:…` et `debian:13@sha256:…`, mêmes empreintes
    d'images que `paquets.yml`) : récupère l'artefact (archive `github-pages`, décompressée dans `/site`),
    pose la clé comme au § 1 et la source `deb [signed-by=/etc/apt/keyrings/wimao.asc] file:/site stable
