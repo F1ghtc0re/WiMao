@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:13+0100\n"
+"POT-Creation-Date: 2026-11-07 23:16+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -265,7 +265,7 @@ msgid ""
 "link is removed."
 msgstr ""
 
-#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/historique.rs
+#: crates/wimao-cli/src/commandes/import.rs
 msgid "Import cancelled"
 msgstr ""
 
@@ -548,9 +548,9 @@ msgstr ""
 msgid "Creating a restore point…"
 msgstr ""
 
-#: crates/wimao-core/src/diagnostic.rs crates/wimao-core/src/historique.rs
-#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
-#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
+#: crates/wimao-core/src/diagnostic.rs crates/wimao/src/aide.rs
+#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
 msgid "Repair"
 msgstr ""
 
@@ -679,27 +679,43 @@ msgid ""
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Installation"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Manager session"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Repair"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Undo"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Backup"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Restore"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Import"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Import cancelled"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
@@ -721,13 +737,6 @@ msgstr ""
 #: crates/wimao-core/src/i18n.rs
 msgid "invalid translation file {path}: {error}"
 msgstr ""
-
-#. En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
-#: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
-msgid "{n} plugin"
-msgid_plural "{n} plugins"
-msgstr[0] ""
-msgstr[1] ""
 
 #: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
 msgid "Ready"
@@ -1905,6 +1914,12 @@ msgstr ""
 #: crates/wimao/src/historique_vue.rs
 msgid "Going back…"
 msgstr ""
+
+#: crates/wimao/src/liste.rs
+msgid "{n} plugin"
+msgid_plural "{n} plugins"
+msgstr[0] ""
+msgstr[1] ""
 
 #: crates/wimao/src/liste.rs
 msgid "{n} ready"

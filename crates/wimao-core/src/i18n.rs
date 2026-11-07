@@ -237,6 +237,28 @@ pub fn tr(msgid: &str) -> String {
     }
 }
 
+/// Comme [`tr`], mais dans un **contexte** (`pgettext`) : permet à un même mot anglais d'avoir
+/// plusieurs traductions selon son rôle. Exemple : `Repair` est un verbe sur un bouton
+/// (« Réparer », sans contexte) et un nom dans l'historique (`trc("history", "Repair")` donne
+/// « Réparation »).
+///
+/// Le `.mo` stocke la clé `contexte\u{4}msgid` ; la crate `gettext` s'en charge. Renvoie `msgid`
+/// si le contexte ou la traduction n'existe pas. `xgettext` extrait les deux arguments grâce à
+/// `--keyword=trc:1c,2` (voir `scripts/verifier-traductions.sh`).
+///
+/// ```
+/// # use wimao_core::i18n::{init_langue, trc};
+/// init_langue(Some("fr"));
+/// assert_eq!(trc("history", "Repair"), "Réparation");
+/// ```
+pub fn trc(contexte: &str, msgid: &str) -> String {
+    let garde = CATALOGUE.read().unwrap_or_else(|e| e.into_inner());
+    match garde.as_ref() {
+        Some(catalogue) => catalogue.pgettext(contexte, msgid).to_owned(),
+        None => msgid.to_owned(),
+    }
+}
+
 /// Marque `msgid` comme chaîne à traduire **sans la traduire sur place**, et le rend tel quel.
 ///
 /// Sert quand le texte est stocké dans une constante ou un tableau (ici les messages des
@@ -306,14 +328,26 @@ mod tests {
 
     #[test]
     #[serial]
-    fn pluriels_selon_la_langue() {
-        init_langue(Some("en"));
-        assert_eq!(trn("{n} plugin", "{n} plugins", 1, &[]), "1 plugin");
-        assert_eq!(trn("{n} plugin", "{n} plugins", 2, &[]), "2 plugins");
+    fn trc_traduit_dans_son_contexte() {
         init_langue(Some("fr"));
-        // En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
-        assert_eq!(trn("{n} plugin", "{n} plugins", 0, &[]), "0 plugin");
-        assert_eq!(trn("{n} plugin", "{n} plugins", 2, &[]), "2 plugins");
+        // Textes construits à l'exécution : xgettext n'extrait que les littéraux, donc ces
+        // essais n'ajoutent aucune entrée (ni emplacement) à `po/wimao.pot`.
+        let (contexte, msgid) = (String::from("history"), String::from("Repair"));
+        // Même msgid que le bouton « Réparer », mais le nom de l'historique est « Réparation ».
+        assert_eq!(trc(&contexte, &msgid), "Réparation");
+        assert_eq!(tr(&msgid), "Réparer");
+    }
+
+    #[test]
+    #[serial]
+    fn trc_repli_sur_msgid_si_absent() {
+        init_langue(Some("fr"));
+        let msgid = String::from("Repair");
+        // Contexte inconnu : le msgid revient tel quel, comme pour `tr`.
+        assert_eq!(trc(&String::from("inconnu"), &msgid), msgid);
+        // Sans catalogue (anglais), le msgid est rendu tel quel.
+        init_langue(Some("en"));
+        assert_eq!(trc(&String::from("history"), &msgid), msgid);
     }
 
     // `serial` : init_langue modifie l'état global (catalogue) et parfois l'environnement.

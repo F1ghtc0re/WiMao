@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:09+0100\n"
+"POT-Creation-Date: 2026-11-07 23:16+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -273,7 +273,7 @@ msgstr ""
 "L'import va être annulé : l'environnement retourne dans {path} et le lien "
 "est retiré."
 
-#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/historique.rs
+#: crates/wimao-cli/src/commandes/import.rs
 msgid "Import cancelled"
 msgstr "Import annulé"
 
@@ -556,8 +556,8 @@ msgid ""
 "{expected_sh} {link_sh}"
 msgstr ""
 "Les plugins de votre logiciel de musique utilisent un autre yabridge que "
-"celui de WiMao : {link} mène à {current} et non à {expected}. Pour "
-"utiliser celui de WiMao, lancez : ln -sfn {expected_sh} {link_sh}"
+"celui de WiMao : {link} mène à {current} et non à {expected}. Pour utiliser "
+"celui de WiMao, lancez : ln -sfn {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
@@ -565,8 +565,8 @@ msgid ""
 "{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
 "{expected_sh} {link_sh}"
 msgstr ""
-"Les plugins de votre logiciel de musique ne trouvent pas yabridge : "
-"{link} mène à {current}, qui n'existe plus. Pour utiliser celui de WiMao "
+"Les plugins de votre logiciel de musique ne trouvent pas yabridge : {link} "
+"mène à {current}, qui n'existe plus. Pour utiliser celui de WiMao "
 "({expected}), lancez : ln -sfn {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
@@ -585,9 +585,9 @@ msgstr ""
 msgid "Creating a restore point…"
 msgstr "Création d'un point de restauration…"
 
-#: crates/wimao-core/src/diagnostic.rs crates/wimao-core/src/historique.rs
-#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
-#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
+#: crates/wimao-core/src/diagnostic.rs crates/wimao/src/aide.rs
+#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
 msgid "Repair"
 msgstr "Réparer"
 
@@ -743,28 +743,44 @@ msgstr ""
 "terminé sans risque : rien n'a été modifié. Vérifiez {old} et {new} vous-même"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Installation"
 msgstr "Installation"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Manager session"
 msgstr "Session de gestionnaire"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Repair"
+msgstr "Réparation"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Undo"
 msgstr "Retour en arrière"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Backup"
 msgstr "Sauvegarde"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Restore"
 msgstr "Restauration"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Import"
 msgstr "Import"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Import cancelled"
+msgstr "Import annulé"
 
 #: crates/wimao-core/src/historique.rs
 msgid "Succeeded"
@@ -786,13 +802,6 @@ msgstr ""
 #: crates/wimao-core/src/i18n.rs
 msgid "invalid translation file {path}: {error}"
 msgstr "fichier de traduction invalide {path} : {error}"
-
-#. En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
-#: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
-msgid "{n} plugin"
-msgid_plural "{n} plugins"
-msgstr[0] "{n} plugin"
-msgstr[1] "{n} plugins"
 
 #: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
 msgid "Ready"
@@ -2058,6 +2067,12 @@ msgstr "Revenir en arrière"
 #: crates/wimao/src/historique_vue.rs
 msgid "Going back…"
 msgstr "Retour en arrière…"
+
+#: crates/wimao/src/liste.rs
+msgid "{n} plugin"
+msgid_plural "{n} plugins"
+msgstr[0] "{n} plugin"
+msgstr[1] "{n} plugins"
 
 #: crates/wimao/src/liste.rs
 msgid "{n} ready"

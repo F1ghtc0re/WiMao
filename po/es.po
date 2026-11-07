@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:09+0100\n"
+"POT-Creation-Date: 2026-11-07 23:16+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: Spanish\n"
@@ -270,7 +270,7 @@ msgid ""
 msgstr ""
 "Se cancelará la importación: el entorno vuelve a {path} y se quita el enlace."
 
-#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/historique.rs
+#: crates/wimao-cli/src/commandes/import.rs
 msgid "Import cancelled"
 msgstr "Importación cancelada"
 
@@ -563,9 +563,9 @@ msgid ""
 "{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
 "{expected_sh} {link_sh}"
 msgstr ""
-"Los plugins de su software de música no encuentran yabridge: {link} lleva "
-"a {current}, que ya no existe. Para usar el de WiMao ({expected}), "
-"ejecute: ln -sfn {expected_sh} {link_sh}"
+"Los plugins de su software de música no encuentran yabridge: {link} lleva a "
+"{current}, que ya no existe. Para usar el de WiMao ({expected}), ejecute: ln "
+"-sfn {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
@@ -573,9 +573,9 @@ msgid ""
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
 "ln -s {expected_sh} {link_sh}"
 msgstr ""
-"Los plugins de su software de música usan el yabridge de la carpeta "
-"{link}, y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa "
-"carpeta a otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
+"Los plugins de su software de música usan el yabridge de la carpeta {link}, "
+"y no el de WiMao ({expected}). Para usar el de WiMao, mueva esa carpeta a "
+"otro sitio y ejecute: ln -s {expected_sh} {link_sh}"
 
 #: crates/wimao-core/src/diagnostic.rs
 #: crates/wimao-recettes/src/gestionnaire.rs
@@ -583,9 +583,9 @@ msgstr ""
 msgid "Creating a restore point…"
 msgstr "Creando un punto de restauración…"
 
-#: crates/wimao-core/src/diagnostic.rs crates/wimao-core/src/historique.rs
-#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
-#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
+#: crates/wimao-core/src/diagnostic.rs crates/wimao/src/aide.rs
+#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
 msgid "Repair"
 msgstr "Reparar"
 
@@ -737,28 +737,44 @@ msgstr ""
 "riesgo: no se ha modificado nada. Compruebe {old} y {new} usted mismo"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Installation"
 msgstr "Instalación"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Manager session"
-msgstr "Sesión de gestor"
+msgstr "Sesión del gestor"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Repair"
+msgstr "Reparación"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Undo"
-msgstr "Deshacer"
+msgstr "Vuelta atrás"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Backup"
 msgstr "Copia de seguridad"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Restore"
 msgstr "Restauración"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Import"
 msgstr "Importación"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Import cancelled"
+msgstr "Importación cancelada"
 
 #: crates/wimao-core/src/historique.rs
 msgid "Succeeded"
@@ -780,13 +796,6 @@ msgstr ""
 #: crates/wimao-core/src/i18n.rs
 msgid "invalid translation file {path}: {error}"
 msgstr "archivo de traducción no válido {path}: {error}"
-
-#. En français 0 et 1 sont au singulier (n > 1 pour le pluriel).
-#: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
-msgid "{n} plugin"
-msgid_plural "{n} plugins"
-msgstr[0] "{n} plugin"
-msgstr[1] "{n} plugins"
 
 #: crates/wimao-core/src/i18n.rs crates/wimao/src/liste.rs
 msgid "Ready"
@@ -2046,6 +2055,12 @@ msgstr "Volver atrás"
 #: crates/wimao/src/historique_vue.rs
 msgid "Going back…"
 msgstr "Volviendo atrás…"
+
+#: crates/wimao/src/liste.rs
+msgid "{n} plugin"
+msgid_plural "{n} plugins"
+msgstr[0] "{n} plugin"
+msgstr[1] "{n} plugins"
 
 #: crates/wimao/src/liste.rs
 msgid "{n} ready"

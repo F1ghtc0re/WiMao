@@ -18,8 +18,8 @@ cd "$(dirname "$0")/.."
 # LC_ALL=C pour un ordre de tri identique sur toutes les machines.
 git ls-files --cached --others --exclude-standard 'crates/*.rs' ':!crates/*/tests/*' | LC_ALL=C sort > po/POTFILES
 
-# trn:1,2 : pluriels (singulier et pluriel sont les arguments 1 et 2) ; tr_noop : marque une chaîne à extraire sans la traduire sur place (messages de regles.toml).
-xgettext --language=C --keyword=tr --keyword=trf --keyword=tr_noop --keyword=trn:1,2 \
+# trn:1,2 : pluriels (singulier et pluriel sont les arguments 1 et 2) ; trc:1c,2 : texte avec contexte (argument 1 = contexte, 2 = msgid) ; tr_noop : marque une chaîne à extraire sans la traduire sur place (messages de regles.toml).
+xgettext --language=C --keyword=tr --keyword=trf --keyword=tr_noop --keyword=trn:1,2 --keyword=trc:1c,2 \
     --from-code=UTF-8 --add-comments --add-location=file \
     --package-name=wimao -f po/POTFILES -o po/wimao.pot
 

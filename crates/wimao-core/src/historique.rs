@@ -20,7 +20,7 @@
 
 use crate::chemins::Chemins;
 use crate::erreur::Resultat;
-use crate::i18n::tr;
+use crate::i18n::{tr, trc};
 use crate::journal;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
@@ -86,16 +86,21 @@ pub struct Entree {
 ///
 /// Dans le moteur plutôt que dans l'interface : la ligne de commande (`historique`) et la
 /// page Historique de l'application affichent ainsi les mêmes mots.
+///
+/// Ce sont des **noms** (« Réparation », « Retour en arrière »), pas des verbes d'action comme
+/// sur les boutons : d'où le contexte `"history"`, qui garde les msgids `Repair`, `Undo`… des
+/// boutons intacts. Le contexte est un littéral : `xgettext` (`--keyword=trc:1c,2`) ne
+/// l'extrait pas d'une constante.
 pub fn libelle_action(a: Action) -> String {
     match a {
-        Action::Installation => tr("Installation"),
-        Action::Gestionnaire => tr("Manager session"),
-        Action::Reparation => tr("Repair"),
-        Action::Retour => tr("Undo"),
-        Action::Sauvegarde => tr("Backup"),
-        Action::Restauration => tr("Restore"),
-        Action::Import => tr("Import"),
-        Action::AnnulationImport => tr("Import cancelled"),
+        Action::Installation => trc("history", "Installation"),
+        Action::Gestionnaire => trc("history", "Manager session"),
+        Action::Reparation => trc("history", "Repair"),
+        Action::Retour => trc("history", "Undo"),
+        Action::Sauvegarde => trc("history", "Backup"),
+        Action::Restauration => trc("history", "Restore"),
+        Action::Import => trc("history", "Import"),
+        Action::AnnulationImport => trc("history", "Import cancelled"),
     }
 }
 
@@ -225,7 +230,49 @@ pub fn lire(c: &Chemins) -> Resultat<Vec<Entree>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::init_langue;
     use regex::Regex;
+    use serial_test::serial;
+
+    #[test]
+    #[serial]
+    fn libelles_d_action_sont_des_noms() {
+        use Action::*;
+        let attendu = [
+            (
+                "fr",
+                [
+                    (Reparation, "Réparation"),
+                    (Retour, "Retour en arrière"),
+                    (Sauvegarde, "Sauvegarde"),
+                    (Restauration, "Restauration"),
+                    (Installation, "Installation"),
+                    (Gestionnaire, "Session de gestionnaire"),
+                    (Import, "Import"),
+                    (AnnulationImport, "Import annulé"),
+                ],
+            ),
+            (
+                "es",
+                [
+                    (Reparation, "Reparación"),
+                    (Retour, "Vuelta atrás"),
+                    (Sauvegarde, "Copia de seguridad"),
+                    (Restauration, "Restauración"),
+                    (Installation, "Instalación"),
+                    (Gestionnaire, "Sesión del gestor"),
+                    (Import, "Importación"),
+                    (AnnulationImport, "Importación cancelada"),
+                ],
+            ),
+        ];
+        for (langue, paires) in attendu {
+            init_langue(Some(langue));
+            for (action, texte) in paires {
+                assert_eq!(libelle_action(action), texte, "{langue} {action:?}");
+            }
+        }
+    }
 
     /// Chemins de test dans un dossier temporaire (à garder en vie pendant le test).
     fn chemins_de_test() -> (tempfile::TempDir, Chemins) {
