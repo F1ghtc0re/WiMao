@@ -15,6 +15,9 @@
 #                  SEUL job qui dispose de `pages: write` et `id-token: write` (paquets/verifier-workflows.sh,
 #                  règle 5, le contrôle dans les deux sens).
 #
+# `workflow_dispatch` lancé sur une autre branche que main exécute `assembler` et `installation`, mais saute
+# `deployer` : seul main publie.
+#
 # Choix communs :
 #   - actions figées par empreinte de commit (commentaire = étiquette), contrôlé par paquets/verifier-workflows.sh ;
 #   - WIMAO_SOURCE_RELEASES n'est JAMAIS définie ici : le script la refuse hors mode essai, il télécharge donc
@@ -147,18 +150,23 @@ jobs:
         run: |
           set -euo pipefail
           cp -r /site /site-altere
-          # Un motif de shell rangé dans un tableau (plutôt que l'analyse de ls) désigne le .deb de wimao.
-          sain=(/site/pool/*/wimao_*.deb)
-          altere=(/site-altere/pool/*/wimao_*.deb)
-          [ "${#sain[@]}" -ge 1 ] || { echo "::error::aucun .deb de wimao dans le site"; exit 1; }
-          deb="${altere[0]}"
-          # Lit l'octet n° 100 et l'écrit modifié (XOR 0xFF), sans changer la taille du fichier.
-          octet="$(od -An -tu1 -j100 -N1 "${deb}" | tr -d ' ')"
-          nouveau="$(printf '\\%03o' $(( octet ^ 255 )))"
-          printf '%b' "${nouveau}" | dd of="${deb}" bs=1 seek=100 conv=notrunc status=none
-          if cmp -s "${deb}" "${sain[0]}"; then
-            echo "::error::le .deb n'a pas été modifié"; exit 1
-          fi
+          # Un motif de shell rangé dans un tableau (plutôt que l'analyse de ls) désigne les .deb de wimao.
+          # On altère TOUS ceux de la copie, pas un seul : apt réinstalle la version la plus haute, et deviner
+          # laquelle (ordre des noms, epoch, « ~ ») serait fragile dès que le pool contient plusieurs versions.
+          sains=(/site/pool/*/wimao_*.deb)
+          alteres=(/site-altere/pool/*/wimao_*.deb)
+          [ "${#sains[@]}" -ge 1 ] || { echo "::error::aucun .deb de wimao dans le site"; exit 1; }
+          [ "${#sains[@]}" -eq "${#alteres[@]}" ] || { echo "::error::copie incomplète"; exit 1; }
+          for i in "${!alteres[@]}"; do
+            deb="${alteres[i]}"
+            # Lit l'octet n° 100 et l'écrit modifié (XOR 0xFF), sans changer la taille du fichier.
+            octet="$(od -An -tu1 -j100 -N1 "${deb}" | tr -d ' ')"
+            nouveau="$(printf '\\%03o' $(( octet ^ 255 )))"
+            printf '%b' "${nouveau}" | dd of="${deb}" bs=1 seek=100 conv=notrunc status=none
+            if cmp -s "${deb}" "${sains[i]}"; then
+              echo "::error::le .deb n'a pas été modifié : ${deb}"; exit 1
+            fi
+          done
           echo "deb [signed-by=/etc/apt/keyrings/wimao.asc] file:/site-altere stable main" > /etc/apt/sources.list.d/wimao.list
           apt-get update
           apt-get clean
@@ -169,7 +177,7 @@ jobs:
           if [ "${code}" -eq 0 ]; then
             echo "::error::apt a accepté un .deb altéré"; exit 1
           fi
-          grep -qiE 'Hash Sum mismatch|checksum|not be authenticated|Size mismatch' reinstallation.log \
+          grep -qiE 'Hash Sum mismatch|Hashes of received file|Size mismatch' reinstallation.log \
             || { echo "::error::échec, mais pas à cause de l'empreinte"; exit 1; }
           echo "ok : apt a refusé le .deb altéré (code ${code})."
 
