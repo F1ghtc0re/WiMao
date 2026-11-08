@@ -1,0 +1,18 @@
+# Dépôt dnf de WiMao (Fedora). À copier dans /etc/yum.repos.d/ :
+#   sudo curl -fsSLo /etc/yum.repos.d/wimao.repo https://f1ghtc0re.github.io/WiMao/wimao.repo
+#
+# Sécurité : c'est l'INDEX du dépôt qui est signé (repo_gpgcheck=1), avec la clé publiée dans SECURITY.md ;
+# il contient l'empreinte SHA-256 de chaque RPM, que dnf contrôle au téléchargement. Les RPM eux-mêmes ne sont
+# pas signés un par un (gpgcheck=0) : dnf affichera donc « skipped OpenPGP checks » à l'installation, c'est
+# normal. Les RPM sont téléchargés depuis les Releases GitHub, pas depuis ce site.
+#
+# metadata_expire=6h : le fichier ne change jamais d'une version à l'autre, c'est l'index qui change. Un cache
+# de six heures au plus laisse `dnf upgrade` trouver la version suivante dans la journée.
+[wimao]
+name=WiMao
+baseurl=https://f1ghtc0re.github.io/WiMao/rpm
+enabled=1
+repo_gpgcheck=1
+gpgcheck=0
+gpgkey=https://f1ghtc0re.github.io/WiMao/wimao.asc
+metadata_expire=6h

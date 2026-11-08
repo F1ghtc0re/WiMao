@@ -11,12 +11,23 @@
 #                  la sortie `vide=true` et les deux jobs suivants sont sautés.
 #   installation : installe `wimao` DEPUIS le site assemblé (source `file:`) dans un système vierge, Ubuntu 24.04
 #                  et Debian 13, puis prouve qu'un .deb altéré d'un seul octet est refusé par apt.
+#   installation-dnf : le pendant Fedora de `installation`, SEULEMENT quand le site contient un dépôt dnf
+#                  (depot-dnf/rpm/repodata/ existe ; sinon la sortie `dnf=false` saute le job, sans rien bloquer).
+#                  Dans un Fedora 44 et un Fedora 45 vierges, scripts/tests/tester-installation-dnf.sh sert le site
+#                  assemblé par `python3 -m http.server`, réécrit le .repo pour pointer vers lui, prouve qu'un
+#                  repomd.xml modifié d'un seul caractère rend `wimao` introuvable (signature refusée), puis
+#                  installe wimao, wimao-bridge et wimao-wine. Les RPM sont téléchargés aux adresses de l'index
+#                  signé, c'est-à-dire sur les Releases GitHub : elles existent forcément à ce stade, puisque
+#                  `assembler` les vient de télécharger et de contrôler. Aucun mode d'essai n'est donc utile ici ;
+#                  l'essai local avec de faux RPM et un second serveur est
+#                  scripts/tests/tester-depot-dnf-bout-en-bout.sh (hors CI : il sert à valider la chaîne avant
+#                  la première publication d'un index dnf).
 #   deployer     : publie le site sur GitHub Pages ; seulement sur `main` (jamais sur demande de fusion).
 #                  SEUL job qui dispose de `pages: write` et `id-token: write` (paquets/verifier-workflows.sh,
 #                  règle 5, le contrôle dans les deux sens).
 #
-# `workflow_dispatch` lancé sur une autre branche que main exécute `assembler` et `installation`, mais saute
-# `deployer` : seul main publie.
+# `workflow_dispatch` lancé sur une autre branche que main exécute `assembler`, `installation` et
+# `installation-dnf`, mais saute `deployer` : seul main publie.
 #
 # Choix communs :
 #   - actions figées par empreinte de commit (commentaire = étiquette), contrôlé par paquets/verifier-workflows.sh ;
@@ -28,19 +39,25 @@ on:
   pull_request:
     paths:
       - "depot-apt/**"
+      - "depot-dnf/**"
       - "docs/cle-publique.asc"
       - ".github/workflows/depot-apt.yml"
       - "scripts/assembler-site-apt.sh"
       - "scripts/lib/publication.sh"
+      - "scripts/lib/lire-index-dnf.py"
+      - "scripts/tests/tester-installation-dnf.sh"
       - "SECURITY.md"
   push:
     branches: [main]
     paths:
       - "depot-apt/**"
+      - "depot-dnf/**"
       - "docs/cle-publique.asc"
       - ".github/workflows/depot-apt.yml"
       - "scripts/assembler-site-apt.sh"
       - "scripts/lib/publication.sh"
+      - "scripts/lib/lire-index-dnf.py"
+      - "scripts/tests/tester-installation-dnf.sh"
       - "SECURITY.md"
   workflow_dispatch:
 
@@ -61,6 +78,8 @@ jobs:
     outputs:
       # « true » si depot-apt/ est encore vide (code 3 du script) : rien à installer ni à publier.
       vide: ${{ steps.assemblage.outputs.vide }}
+      # « true » si le site assemblé contient un dépôt dnf (rpm/repodata/) : le job `installation-dnf` n'a lieu qu'alors.
+      dnf: ${{ steps.assemblage.outputs.dnf }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -74,8 +93,15 @@ jobs:
           code=0
           scripts/assembler-site-apt.sh site || code=$?
           case "${code}" in
-            0) echo "vide=false" >> "${GITHUB_OUTPUT}" ;;
+            0) echo "vide=false" >> "${GITHUB_OUTPUT}"
+               if [ -f site/rpm/repodata/repomd.xml ]; then
+                 echo "dnf=true" >> "${GITHUB_OUTPUT}"
+               else
+                 echo "dnf=false" >> "${GITHUB_OUTPUT}"
+                 echo "::notice::Pas de dépôt dnf (depot-dnf/rpm/repodata/ absent) : installation-dnf est sautée."
+               fi ;;
             3) echo "vide=true" >> "${GITHUB_OUTPUT}"
+               echo "dnf=false" >> "${GITHUB_OUTPUT}"
                echo "::notice::Dépôt APT vide : rien à installer ni à publier." ;;
             *) echo "::error::assembler-site-apt.sh a échoué (code ${code})."
                exit "${code}" ;;
@@ -191,10 +217,53 @@ jobs:
             || { echo "::error::échec, mais pas à cause de l'empreinte"; exit 1; }
           echo "ok : apt a refusé le .deb altéré (code ${code})."
 
+  # Installation depuis le dépôt dnf du site assemblé, dans un Fedora vierge (44 et 45, images figées par
+  # empreinte, les mêmes que paquets.yml). Sautée tant que le site n'a pas de dépôt dnf. fail-fast: false pour
+  # voir les deux résultats.
+  installation-dnf:
+    needs: assembler
+    if: needs.assembler.outputs.vide == 'false' && needs.assembler.outputs.dnf == 'true'
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ matrix.image }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nom: fedora-44
+            image: registry.fedoraproject.org/fedora:44@sha256:4b39e947a92d0ac2df1db9ebbf7672256d828a73e6e0219f8a6e774f84f34d64
+          - nom: fedora-45
+            image: registry.fedoraproject.org/fedora:45@sha256:4a8a63ec2df9f26a96c35ff380237ad578cf42e326b979d9b5801c31c6daf2e8
+    steps:
+      # tar : décompression de l'artefact et requis par les actions. Le script installe lui-même python3 et
+      # diffutils (serveur HTTP et comparaison), APRÈS cette étape : rien d'autre ne masque une dépendance.
+      - name: Paquets de base
+        run: dnf install -y --setopt=install_weak_deps=False tar
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: github-pages
+          path: artefact
+      - name: Site décompressé
+        run: |
+          set -euo pipefail
+          mkdir /site
+          tar -xf artefact/artifact.tar -C /site
+      # Refus d'un index altéré d'un caractère, puis installation des trois paquets (voir l'en-tête du script).
+      - name: Installation depuis le dépôt dnf du site
+        run: scripts/tests/tester-installation-dnf.sh /site
+      - name: Programme installé
+        run: wimao-cli --version
+
   deployer:
-    needs: [assembler, installation]
-    # Jamais sur demande de fusion ; seulement depuis main, et seulement si le dépôt n'est pas vide.
-    if: needs.assembler.outputs.vide == 'false' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [assembler, installation, installation-dnf]
+    # Jamais sur demande de fusion ; seulement depuis main, et seulement si le dépôt n'est pas vide. Les deux
+    # installations doivent avoir réussi ; `installation-dnf` peut en plus être SAUTÉE (pas de dépôt dnf), ce que
+    # la condition par défaut d'un job (tous ses `needs` réussis) refuserait : d'où les tests de résultat explicites.
+    if: ${{ !cancelled() && needs.assembler.result == 'success' && needs.assembler.outputs.vide == 'false' && needs.installation.result == 'success' && (needs.installation-dnf.result == 'success' || needs.installation-dnf.result == 'skipped') && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     # Droits propres à ce job : publier sur Pages et prouver l'origine du déploiement (jeton OIDC).
     permissions:

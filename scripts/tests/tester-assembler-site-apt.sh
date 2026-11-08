@@ -17,6 +17,17 @@
 # WIMAO_SOURCE_RELEASES sans --racine -> 2 ; --cle invalide avec dépôt vide -> 2 ; dossier de site non vide -> 1 ; un refus n'écrit rien dans le site ; depot-apt/ absent -> 3
 # (rien écrit) ; option inconnue, site manquant, --cle sans --racine -> 2.
 #
+# Dépôt dnf (depot-dnf/, produit par le VRAI scripts/publier-depot-dnf.sh à blanc avec de vrais petits RPM ;
+# demande podman et le réseau, comme tester-publier-depot-dnf.sh) : site complet avec rpm/repodata/ et
+# wimao.repo et SANS aucun RPM, aucun appel à curl en mode d'essai ; depot-dnf/ absent, ou réduit à wimao.repo :
+# site IDENTIQUE octet pour octet à celui d'avant (diff -r) ; fichier primary en gzip accepté, en
+# extension inconnue refusé ; signature : repomd.xml altéré, signé par une autre clé, repomd.xml.asc absent
+# -> 1 ; ADRESSE (location) hors de https://github.com/F1ghtc0re/WiMao/releases/download/vX.Y.Z/<nom>.rpm
+# avec un index signé par la BONNE clé (autre site, autre dépôt, http, identifiants, « .. », .deb, /latest/,
+# deux versions mêlées) -> 1 avant tout téléchargement ; fichier de repodata non décrit, lien symbolique,
+# fichier décrit altéré, élément en trop dans depot-dnf/, wimao.repo modifié -> 1 ; RPM de taille ou de
+# SHA-256 différents, RPM absent -> 1 ; un refus n'écrit rien dans le site.
+#
 # Usage     : scripts/tests/tester-assembler-site-apt.sh
 # Variables : aucune (GNUPGHOME, PATH et WIMAO_SOURCE_RELEASES sont réglés par le script, pour lui seul).
 # Écrit     : uniquement dans un dossier temporaire, supprimé à la fin. Jamais dans ~/.gnupg.
@@ -355,5 +366,277 @@ lancer "$r" "$temporaire/s-release-soi" "$source_ok"
 attendre_code 1 "Release qui se décrit elle-même"
 attendre_message "d'autres fichiers que Packages et Packages.gz" "Release qui se décrit elle-même"
 attendre_vide "$temporaire/s-release-soi" "Release qui se décrit elle-même"
+
+# ============================================================================================================
+# Dépôt dnf
+# ============================================================================================================
+command -v podman > /dev/null || echec "podman est nécessaire aux essais du dépôt dnf"
+command -v zstd > /dev/null || echec "zstd est nécessaire aux essais du dépôt dnf"
+
+# Faux RPM, SHA256SUMS ne listant que les .rpm (signé par A), puis dépôt dnf produit par publier-depot-dnf.sh.
+art_rpm="$temporaire/artefacts-rpm"
+"$racine/scripts/tests/fabriquer-faux-rpm.sh" "$art_rpm" 9.9.9 > "$temporaire/fabrication.log" 2>&1 \
+    || { cat "$temporaire/fabrication.log" >&2; echec "fabrication des faux RPM impossible"; }
+(cd "$art_rpm" && sha256sum -- *.rpm > SHA256SUMS)
+gpg --batch --armor --detach-sign --local-user a@example.invalid --output "$art_rpm/SHA256SUMS.asc" "$art_rpm/SHA256SUMS" 2> /dev/null
+base_dnf="$temporaire/base-dnf"
+cp -r "$base" "$base_dnf"
+"$racine/scripts/publier-depot-dnf.sh" v9.9.9 --a-blanc --racine "$base_dnf" --cle "$empreinte_a" \
+    --sortie "$base_dnf/depot-dnf" --dossier "$art_rpm" > "$temporaire/publier-dnf.log" 2>&1 \
+    || { cat "$temporaire/publier-dnf.log" >&2; echec "publier-depot-dnf.sh n'a pas produit le dépôt dnf d'essai"; }
+cp "$racine/depot-dnf/wimao.repo" "$base_dnf/depot-dnf/wimao.repo"
+# Les « Releases » d'essai portent aussi les RPM.
+cp "$art_rpm"/*.rpm "$source_ok/v9.9.9/"
+
+# nouvelle_racine_dnf <nom> : copie du dépôt de référence AVEC dépôt dnf ; rend son chemin.
+nouvelle_racine_dnf() {
+    rm -rf "${temporaire:?}/$1"
+    cp -r "$base_dnf" "$temporaire/$1"
+    printf '%s' "$temporaire/$1"
+}
+
+# resigner_dnf <racine> [<clé>] : refait repomd.xml.asc (clé A par défaut) après une modification de repomd.xml.
+resigner_dnf() {
+    local rd="$1/depot-dnf/rpm/repodata"
+    rm -f "$rd/repomd.xml.asc"
+    gpg --batch --armor --detach-sign --local-user "${2:-a@example.invalid}" --output "$rd/repomd.xml.asc" "$rd/repomd.xml" 2> /dev/null
+}
+
+# refaire_primary <racine> <expression sed> <extension> : remplace le fichier primary par sa version retouchée par
+# sed (décompressé, modifié, recompressé selon <extension> : zst, gz ou lz4 = extension inconnue, contenu en clair),
+# met à jour repomd.xml (nom, sommes, tailles) puis le re-signe avec la clé A. L'index reste donc COHÉRENT et
+# signé par la bonne clé : si l'assemblage le refuse, c'est pour son contenu et pas pour une incohérence.
+refaire_primary() {
+    local rd="$1/depot-dnf/rpm/repodata" ancien nouveau somme_c somme_o
+    ancien="$(find "$rd" -name '*-primary.xml.*')"
+    zstd -dc -q "$ancien" | sed "$2" > "$temporaire/primary.xml"
+    case "$3" in
+        zst) zstd -q -19 -c "$temporaire/primary.xml" > "$temporaire/primary.comp" ;;
+        gz) gzip -9n -c "$temporaire/primary.xml" > "$temporaire/primary.comp" ;;
+        *) cp "$temporaire/primary.xml" "$temporaire/primary.comp" ;;
+    esac
+    somme_c="$(sha256sum "$temporaire/primary.comp" | cut -d' ' -f1)"
+    somme_o="$(sha256sum "$temporaire/primary.xml" | cut -d' ' -f1)"
+    nouveau="$somme_c-primary.xml.$3"
+    rm -f "$ancien"
+    cp "$temporaire/primary.comp" "$rd/$nouveau"
+    python3 -I - "$rd/repomd.xml" "$nouveau" "$somme_c" "$somme_o" "$(stat -c %s "$temporaire/primary.comp")" "$(stat -c %s "$temporaire/primary.xml")" << 'PY'
+import re, sys
+chemin, nouveau, somme_c, somme_o, taille_c, taille_o = sys.argv[1:7]
+texte = open(chemin, encoding="utf-8").read()
+def bloc(m):
+    b = m.group(0)
+    b = re.sub(r"<checksum type=\"sha256\">[0-9a-f]+</checksum>", "<checksum type=\"sha256\">" + somme_c + "</checksum>", b)
+    b = re.sub(r"<open-checksum type=\"sha256\">[0-9a-f]+</open-checksum>", "<open-checksum type=\"sha256\">" + somme_o + "</open-checksum>", b)
+    b = re.sub(r"<location href=\"[^\"]*\"/>", "<location href=\"repodata/" + nouveau + "\"/>", b)
+    b = re.sub(r"<size>[0-9]+</size>", "<size>" + taille_c + "</size>", b)
+    b = re.sub(r"<open-size>[0-9]+</open-size>", "<open-size>" + taille_o + "</open-size>", b)
+    return b
+neuf = re.sub(r"<data type=\"primary\">.*?</data>", bloc, texte, flags=re.S)
+open(chemin, "w", encoding="utf-8").write(neuf)
+PY
+    resigner_dnf "$1"
+}
+
+# controle_index_signe <racine> : l'index retouché est cohérent ET signé par A (sinon l'essai est mal monté).
+controle_index_signe() {
+    local rd="$1/depot-dnf/rpm/repodata"
+    gpg --export a@example.invalid > "$temporaire/trousseau.gpg"
+    gpgv --keyring "$temporaire/trousseau.gpg" "$rd/repomd.xml.asc" "$rd/repomd.xml" > /dev/null 2>&1 || echec "essai mal monté : repomd.xml non signé par A ($1)"
+    python3 -I "$racine/scripts/lib/lire-index-dnf.py" "$rd" > /dev/null || echec "essai mal monté : index incohérent ($1)"
+}
+
+# --- Cas nominal avec dépôt dnf ---
+: > "$journal"
+site_dnf="$temporaire/site-dnf"
+lancer "$base_dnf" "$site_dnf" "$source_ok"
+attendre_code 0 "site complet avec dépôt dnf"
+cmp -s "$base_dnf/depot-dnf/wimao.repo" "$site_dnf/wimao.repo" || echec "wimao.repo absent ou différent"
+for f in "$base_dnf/depot-dnf/rpm/repodata"/*; do
+    cmp -s "$f" "$site_dnf/rpm/repodata/$(basename "$f")" || echec "rpm/repodata/$(basename "$f") absent ou différent"
+done
+[ "$(find "$site_dnf/rpm" -type f | wc -l)" -eq "$(find "$base_dnf/depot-dnf/rpm/repodata" -type f | wc -l)" ] || echec "rpm/ contient d'autres fichiers que l'index"
+[ -z "$(find "$site_dnf" -name '*.rpm')" ] || echec "un RPM a été copié sur le site"
+[ -f "$site_dnf/dists/stable/InRelease" ] || echec "le site dnf a perdu InRelease"
+[ -f "$site_dnf/wimao.asc" ] || echec "le site dnf a perdu wimao.asc"
+attendre_message "3 adresse(s) de RPM conformes (version v9.9.9)" "site complet avec dépôt dnf"
+[ ! -s "$journal" ] || echec "curl appelé en mode d'essai (dnf)"
+
+# --- Sans index dnf, le site est IDENTIQUE à celui d'avant (octet pour octet) ---
+# (a) depot-dnf/ réduit à wimao.repo (l'état du dépôt avant la première publication dnf)
+r="$(nouvelle_racine r-repo-seul)"
+mkdir "$r/depot-dnf"
+cp "$racine/depot-dnf/wimao.repo" "$r/depot-dnf/"
+lancer "$r" "$temporaire/s-repo-seul" "$source_ok"
+attendre_code 0 "depot-dnf/ réduit à wimao.repo"
+diff -r "$site" "$temporaire/s-repo-seul" > /dev/null || echec "depot-dnf/ sans index : le site diffère de celui d'avant"
+# (b) depot-dnf/ avec rpm/ vide mais sans repodata/
+mkdir "$r/depot-dnf/rpm"
+lancer "$r" "$temporaire/s-repo-seul2" "$source_ok"
+attendre_code 0 "depot-dnf/rpm/ vide"
+diff -r "$site" "$temporaire/s-repo-seul2" > /dev/null || echec "depot-dnf/rpm/ vide : le site diffère de celui d'avant"
+# (c) pas de depot-dnf/ : c'est le site du cas nominal APT, déjà comparé plus haut ; on s'assure qu'il est sans rpm/ ni wimao.repo
+[ ! -e "$site/rpm" ] || echec "le site sans dépôt dnf contient rpm/"
+[ ! -e "$site/wimao.repo" ] || echec "le site sans dépôt dnf contient wimao.repo"
+
+# --- Fichier primary en gzip : accepté (l'extension décide de l'outil, on ne suppose pas zstd) ---
+r="$(nouvelle_racine_dnf r-gz)"
+refaire_primary "$r" 's/$//' gz
+controle_index_signe "$r"
+lancer "$r" "$temporaire/s-primary-gz" "$source_ok"
+attendre_code 0 "primary en gzip"
+# ... et une extension inconnue est refusée
+r="$(nouvelle_racine_dnf r-lz4)"
+refaire_primary "$r" 's/$//' lz4
+lancer "$r" "$temporaire/s-primary-lz4" "$source_ok"
+attendre_code 1 "primary d'extension inconnue"
+attendre_message "non gérée" "primary d'extension inconnue"
+attendre_vide "$temporaire/s-primary-lz4" "primary d'extension inconnue"
+
+# --- Signature de repomd.xml ---
+r="$(nouvelle_racine_dnf r-dnf-alteree)"
+sed -i 's#<revision>[0-9]*</revision>#<revision>1</revision>#' "$r/depot-dnf/rpm/repodata/repomd.xml"
+lancer "$r" "$temporaire/s-dnf-alteree" "$source_ok"
+attendre_code 1 "repomd.xml altéré"
+attendre_message "n'est pas signé par la clé publiée" "repomd.xml altéré"
+attendre_vide "$temporaire/s-dnf-alteree" "repomd.xml altéré"
+r="$(nouvelle_racine_dnf r-dnf-autre-cle)"
+resigner_dnf "$r" b@example.invalid
+lancer "$r" "$temporaire/s-dnf-autre-cle" "$source_ok"
+attendre_code 1 "repomd.xml signé par une autre clé"
+attendre_vide "$temporaire/s-dnf-autre-cle" "repomd.xml signé par une autre clé"
+r="$(nouvelle_racine_dnf r-dnf-sans-asc)"
+rm "$r/depot-dnf/rpm/repodata/repomd.xml.asc"
+lancer "$r" "$temporaire/s-dnf-sans-asc" "$source_ok"
+attendre_code 1 "repomd.xml.asc absent"
+attendre_message "repomd.xml.asc est absent" "repomd.xml.asc absent"
+attendre_vide "$temporaire/s-dnf-sans-asc" "repomd.xml.asc absent"
+
+# --- Adresse (location) hors de la Release, index signé par la BONNE clé : refus AVANT tout téléchargement ---
+nom_rpm="wimao-9.9.9-1.x86_64.rpm"
+bonne="https://github.com/F1ghtc0re/WiMao/releases/download/v9.9.9"
+declare -a mauvaises=(
+    "https://evil.example/WiMao/releases/download/v9.9.9/$nom_rpm"
+    "https://github.com/autre/WiMao/releases/download/v9.9.9/$nom_rpm"
+    "https://github.com/F1ghtc0re/WiMao-evil/releases/download/v9.9.9/$nom_rpm"
+    "http://github.com/F1ghtc0re/WiMao/releases/download/v9.9.9/$nom_rpm"
+    "https://github.com@evil.example/F1ghtc0re/WiMao/releases/download/v9.9.9/$nom_rpm"
+    "https://github.com.evil.example/F1ghtc0re/WiMao/releases/download/v9.9.9/$nom_rpm"
+    "$bonne/../../../../evil/$nom_rpm"
+    "$bonne/a/$nom_rpm"
+    "$bonne/wimao_9.9.9-1_amd64.deb"
+    "$bonne/$nom_rpm.sig"
+    "https://github.com/F1ghtc0re/WiMao/releases/latest/download/$nom_rpm"
+    "https://github.com/F1ghtc0re/WiMao/releases/download/9.9.9/$nom_rpm"
+    "$bonne/%2e%2e/$nom_rpm"
+    "$nom_rpm"
+    "/etc/$nom_rpm"
+)
+for mauvaise in "${mauvaises[@]}"; do
+    r="$(nouvelle_racine_dnf r-adresse)"
+    : > "$journal"
+    # Première adresse seulement (le s## remplace tout le href de la 1re ligne <location>).
+    refaire_primary "$r" "0,/<location href=\"[^\"]*\"/s##<location href=\"$mauvaise\"#" zst
+    controle_index_signe "$r"
+    # Sans WIMAO_SOURCE_RELEASES : un téléchargement passerait par le faux curl, qui le consigne.
+    lancer "$r" "$temporaire/s-adresse" ""
+    attendre_code 1 "adresse $mauvaise"
+    grep -q 'adresse de RPM refusée' "$temporaire/sortie.log" || { cat "$temporaire/sortie.log" >&2; echec "adresse $mauvaise : refus pour une autre raison"; }
+    [ ! -s "$journal" ] || echec "adresse $mauvaise : curl a été appelé"
+    attendre_vide "$temporaire/s-adresse" "adresse $mauvaise"
+done
+# Deux versions mêlées dans l'index : refusé aussi
+r="$(nouvelle_racine_dnf r-deux-versions)"
+: > "$journal"
+refaire_primary "$r" "0,/download\/v9.9.9\//s##download/v9.9.8/#" zst
+controle_index_signe "$r"
+lancer "$r" "$temporaire/s-deux-versions" ""
+attendre_code 1 "deux versions mêlées"
+attendre_message "mêle deux versions" "deux versions mêlées"
+[ ! -s "$journal" ] || echec "deux versions : curl a été appelé"
+attendre_vide "$temporaire/s-deux-versions" "deux versions mêlées"
+# Attribut xml:base sur une adresse (détournerait le téléchargement sans changer le href) : refusé par la lecture de l'index
+r="$(nouvelle_racine_dnf r-base)"
+refaire_primary "$r" '0,/<location href=/s##<location xml:base="https://evil.example" href=#' zst
+gpgv --keyring "$temporaire/trousseau.gpg" "$r/depot-dnf/rpm/repodata/repomd.xml.asc" "$r/depot-dnf/rpm/repodata/repomd.xml" > /dev/null 2>&1 || echec "essai mal monté : repomd.xml non signé par A (xml:base)"
+lancer "$r" "$temporaire/s-base" ""
+attendre_code 1 "attribut xml:base"
+attendre_message "d'autres attributs que href" "attribut xml:base"
+attendre_vide "$temporaire/s-base" "attribut xml:base"
+
+# --- Contenu du dossier repodata et de depot-dnf/ ---
+r="$(nouvelle_racine_dnf r-dnf-en-trop)"
+echo x > "$r/depot-dnf/rpm/repodata/en-trop.xml"
+lancer "$r" "$temporaire/s-dnf-en-trop" "$source_ok"
+attendre_code 1 "fichier non décrit dans repodata"
+attendre_message "non décrits par repomd.xml" "fichier non décrit dans repodata"
+attendre_vide "$temporaire/s-dnf-en-trop" "fichier non décrit dans repodata"
+r="$(nouvelle_racine_dnf r-dnf-lien)"
+ln -s repomd.xml "$r/depot-dnf/rpm/repodata/lien"
+lancer "$r" "$temporaire/s-dnf-lien" "$source_ok"
+attendre_code 1 "lien symbolique dans repodata"
+attendre_vide "$temporaire/s-dnf-lien" "lien symbolique dans repodata"
+r="$(nouvelle_racine_dnf r-dnf-fichier-altere)"
+primaire="$(find "$r/depot-dnf/rpm/repodata" -name '*-primary.xml.zst')"
+printf 'x' >> "$primaire"
+lancer "$r" "$temporaire/s-dnf-fichier-altere" "$source_ok"
+attendre_code 1 "fichier de l'index altéré"
+attendre_message "différent de celui de repomd.xml" "fichier de l'index altéré"
+attendre_vide "$temporaire/s-dnf-fichier-altere" "fichier de l'index altéré"
+r="$(nouvelle_racine_dnf r-dnf-intrus)"
+echo x > "$r/depot-dnf/intrus.txt"
+lancer "$r" "$temporaire/s-dnf-intrus" "$source_ok"
+attendre_code 1 "fichier en trop dans depot-dnf/"
+attendre_message "contenu attendu" "fichier en trop dans depot-dnf/"
+attendre_vide "$temporaire/s-dnf-intrus" "fichier en trop dans depot-dnf/"
+r="$(nouvelle_racine_dnf r-dnf-rpm-copie)"
+cp "$art_rpm/wimao-9.9.9-1.x86_64.rpm" "$r/depot-dnf/rpm/"
+lancer "$r" "$temporaire/s-dnf-rpm-copie" "$source_ok"
+attendre_code 1 "RPM copié dans depot-dnf/rpm/"
+attendre_vide "$temporaire/s-dnf-rpm-copie" "RPM copié dans depot-dnf/rpm/"
+
+# --- wimao.repo modifié (adresse de l'index, contrôle de signature désactivé) ---
+for modif in 's#^baseurl=.*#baseurl=https://evil.example/rpm#' 's#^repo_gpgcheck=1#repo_gpgcheck=0#' 's#^gpgkey=.*#gpgkey=https://evil.example/cle.asc#' '/^metadata_expire/d'; do
+    r="$(nouvelle_racine_dnf r-dnf-repo)"
+    sed -i "$modif" "$r/depot-dnf/wimao.repo"
+    lancer "$r" "$temporaire/s-dnf-repo" "$source_ok"
+    attendre_code 1 "wimao.repo modifié ($modif)"
+    attendre_message "wimao.repo n'a pas le contenu attendu" "wimao.repo modifié ($modif)"
+    attendre_vide "$temporaire/s-dnf-repo" "wimao.repo modifié ($modif)"
+done
+r="$(nouvelle_racine_dnf r-dnf-sans-repo)"
+rm "$r/depot-dnf/wimao.repo"
+lancer "$r" "$temporaire/s-dnf-sans-repo" "$source_ok"
+attendre_code 1 "wimao.repo absent"
+attendre_vide "$temporaire/s-dnf-sans-repo" "wimao.repo absent"
+
+# --- RPM téléchargé : taille différente, SHA-256 différent (même taille), absent ---
+taille_rpm="$(stat -c %s "$art_rpm/$nom_rpm")"
+cp -r "$source_ok" "$temporaire/releases-rpm-taille"
+echo "en trop" >> "$temporaire/releases-rpm-taille/v9.9.9/$nom_rpm"
+lancer "$base_dnf" "$temporaire/s-rpm-taille" "$temporaire/releases-rpm-taille"
+attendre_code 1 "RPM de taille différente"
+attendre_message "annoncée" "RPM de taille différente"
+attendre_vide "$temporaire/s-rpm-taille" "RPM de taille différente"
+cp -r "$source_ok" "$temporaire/releases-rpm-somme"
+head -c "$taille_rpm" /dev/zero > "$temporaire/releases-rpm-somme/v9.9.9/$nom_rpm"
+lancer "$base_dnf" "$temporaire/s-rpm-somme" "$temporaire/releases-rpm-somme"
+attendre_code 1 "RPM de SHA-256 différent"
+attendre_message "SHA256 différent de celui de l'index dnf signé" "RPM de SHA-256 différent"
+attendre_vide "$temporaire/s-rpm-somme" "RPM de SHA-256 différent"
+cp -r "$source_ok" "$temporaire/releases-rpm-absent"
+rm "$temporaire/releases-rpm-absent/v9.9.9/$nom_rpm"
+lancer "$base_dnf" "$temporaire/s-rpm-absent" "$temporaire/releases-rpm-absent"
+attendre_code 1 "RPM absent de la source"
+attendre_vide "$temporaire/s-rpm-absent" "RPM absent de la source"
+
+# --- Dépôt APT vide : code 3 même si un index dnf est présent (le dépôt APT reste la condition de tout) ---
+r="$(nouvelle_racine_dnf r-dnf-sans-apt)"
+rm -rf "$r/depot-apt"
+lancer "$r" "$temporaire/s-dnf-sans-apt" "$source_ok"
+attendre_code 3 "dépôt dnf sans dépôt APT"
+[ ! -e "$temporaire/s-dnf-sans-apt" ] || echec "dépôt dnf sans dépôt APT : le site a été créé"
+
+echo "Tous les cas du dépôt dnf de assembler-site-apt.sh se comportent comme prévu."
 
 echo "Tous les cas de assembler-site-apt.sh se comportent comme prévu."
