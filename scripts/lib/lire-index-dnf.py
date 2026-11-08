@@ -19,8 +19,10 @@ Ce qui est contrôlé (le moindre écart arrête avec le code 1 et un message «
     5. le fichier primary est décompressé avec l'outil que son extension annonce (.zst -> zstd, .gz -> gzip,
        .xz -> xz, .bz2 -> bzip2, .xml -> rien) : createrepo_c compresse en zstd ou en gzip selon sa version,
        on ne suppose donc jamais gzip. Une autre extension est refusée. La taille décompressée est bornée ;
-    6. chaque paquet décrit par primary a un emplacement (location href) sans attribut « xml:base » (qui
-       détournerait le téléchargement ailleurs), une taille et une somme SHA-256.
+    6. chaque paquet décrit par primary a EXACTEMENT un emplacement (location href), une taille et une somme
+       SHA-256 (dnf retient le dernier de plusieurs éléments identiques : on refuse les doublons plutôt que de
+       lire autrement que lui) ; même règle pour chaque <data> de repomd.xml ; aucun attribut « base »
+       (xml:base détournerait le téléchargement ailleurs) sur ces éléments.
 
 Sortie standard (code 0)
     Une ligne par paquet : « <href>TAB<taille>TAB<sha256> », triée par href. Le href est tel qu'écrit dans
@@ -66,6 +68,25 @@ def sans_espace_de_noms(element):
         if isinstance(e.tag, str) and "}" in e.tag:
             e.tag = e.tag.split("}", 1)[1]
     return element
+
+
+def un_seul(parent, etiquette, contexte):
+    """Rend l'UNIQUE sous-élément <etiquette> de parent ; refuse zéro ou plusieurs.
+
+    dnf lit le DERNIER de plusieurs éléments identiques, ce lecteur lirait le premier : un index à deux
+    <location> serait vu par nous avec l'adresse GitHub et par dnf avec une autre. Exiger l'unicité supprime
+    toute divergence d'interprétation."""
+    trouves = parent.findall(etiquette)
+    if len(trouves) != 1:
+        refuser("%s : %d élément(s) <%s> au lieu d'un seul" % (contexte, len(trouves), etiquette))
+    return trouves[0]
+
+
+def refuser_base(elements, contexte):
+    """Refuse tout attribut « base » (xml:base ou autre) : il détournerait une adresse sans que le href le montre."""
+    for e in elements:
+        if any(a.split("}")[-1] == "base" for a in e.attrib):
+            refuser("%s : attribut « base » interdit sur <%s>" % (contexte, e.tag))
 
 
 def somme_et_taille(chemin):
@@ -141,13 +162,13 @@ def main():
     primary = None
     for data in racine.findall("data"):
         type_donnees = data.get("type", "")
-        emplacement = data.find("location")
-        somme = data.find("checksum")
-        taille = data.find("size")
-        if emplacement is None or somme is None or taille is None:
-            refuser("repomd.xml : entrée « %s » sans location, checksum ou size" % type_donnees)
-        if emplacement.get("href") is None or any(a.endswith("base") for a in emplacement.attrib):
-            refuser("repomd.xml : entrée « %s » : location sans href, ou avec un attribut « base »" % type_donnees)
+        contexte = "repomd.xml (entrée « %s »)" % type_donnees
+        emplacement = un_seul(data, "location", contexte)
+        somme = un_seul(data, "checksum", contexte)
+        taille = un_seul(data, "size", contexte)
+        refuser_base([data, emplacement, somme, taille], contexte)
+        if emplacement.get("href") is None:
+            refuser("%s : location sans href" % contexte)
         href = emplacement.get("href")
         if not href.startswith("repodata/") or not MOTIF_NOM.match(href[len("repodata/"):]):
             refuser("repomd.xml : emplacement refusé (attendu repodata/<nom>) : %r" % href)
@@ -185,11 +206,11 @@ def main():
         refuser("%s : élément racine « %s » au lieu de « metadata »" % (primary, document.tag))
     lignes = []
     for paquet in document.findall("package"):
-        emplacement = paquet.find("location")
-        taille = paquet.find("size")
-        somme = paquet.find("checksum")
-        if emplacement is None or taille is None or somme is None:
-            refuser("%s : paquet sans location, size ou checksum" % primary)
+        contexte = primary
+        emplacement = un_seul(paquet, "location", contexte)
+        taille = un_seul(paquet, "size", contexte)
+        somme = un_seul(paquet, "checksum", contexte)
+        refuser_base([paquet, emplacement, taille, somme], contexte)
         # Un attribut xml:base ferait télécharger le paquet à une adresse que le href ne montre pas.
         if set(emplacement.attrib) != {"href"}:
             refuser("%s : location avec d'autres attributs que href : %s" % (primary, sorted(emplacement.attrib)))

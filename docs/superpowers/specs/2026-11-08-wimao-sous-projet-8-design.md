@@ -148,3 +148,6 @@ dnf » suit celle du dépôt APT. La procédure dit de déverrouiller la clé **
   la CI sur les versions maintenues détectera une rupture future.
 - **Taille des Releases :** environ 85 Mo de plus par version, sans effet sur le site.
 - **Expiration de la clé :** comme pour apt, la sous-clé expire le 2027-11-01.
+- **Pas d'expiration de l'index :** comme pour apt, rien ne fait expirer l'index dnf. Quelqu'un qui contrôlerait le
+  site, ou une PR fusionnée qui restaurerait un vieil index signé, pourrait maintenir des utilisateurs sur une
+  ancienne version authentique ; jamais leur faire installer un paquet forgé.

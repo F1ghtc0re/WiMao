@@ -105,7 +105,8 @@ dnf install -y wimao > /tmp/refus.log 2>&1 || code=$?
 cat /tmp/refus.log
 [ "$code" -ne 0 ] || arreter "dnf a accepté un index altéré"
 if rpm -q wimao > /dev/null 2>&1; then arreter "wimao s'est installé depuis un index altéré"; fi
-grep -qiE 'No match for argument|signature|GPG' /tmp/refus.log || arreter "l'échec de dnf ne parle ni de signature ni de paquet introuvable : ce n'est peut-être pas la bonne raison"
+grep -qiE 'signature|GPG' /tmp/refus.log || arreter "l'échec de dnf ne parle pas de signature : ce n'est peut-être pas la bonne raison"
+grep -q 'No match for argument' /tmp/refus.log || arreter "dnf n'a pas déclaré wimao introuvable (« No match for argument » attendu)"
 echo "ok : l'index altéré est refusé (code $code), wimao n'est pas installé."
 
 echo "== 3. Installation depuis l'index intact"

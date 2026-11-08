@@ -561,8 +561,49 @@ refaire_primary "$r" '0,/<location href=/s##<location xml:base="https://evil.exa
 gpgv --keyring "$temporaire/trousseau.gpg" "$r/depot-dnf/rpm/repodata/repomd.xml.asc" "$r/depot-dnf/rpm/repodata/repomd.xml" > /dev/null 2>&1 || echec "essai mal monté : repomd.xml non signé par A (xml:base)"
 lancer "$r" "$temporaire/s-base" ""
 attendre_code 1 "attribut xml:base"
-attendre_message "d'autres attributs que href" "attribut xml:base"
+attendre_message "attribut « base » interdit" "attribut xml:base"
 attendre_vide "$temporaire/s-base" "attribut xml:base"
+
+# --- Doublons et xml:base : dnf retient le DERNIER élément, on exige donc l'unicité (index signé par A) ---
+# Deux <location> (la 1re vers GitHub, la 2e ailleurs) : un lecteur qui prend le premier serait trompé.
+r="$(nouvelle_racine_dnf r-deux-location)"
+: > "$journal"
+refaire_primary "$r" '0,/<location href="[^"]*"\/>/s##&<location href="https://evil.example/x.rpm"/>#' zst
+controle_index_signe_hors_lecture() { gpgv --keyring "$temporaire/trousseau.gpg" "$1/depot-dnf/rpm/repodata/repomd.xml.asc" "$1/depot-dnf/rpm/repodata/repomd.xml" > /dev/null 2>&1 || echec "essai mal monté : repomd.xml non signé par A ($1)"; }
+controle_index_signe_hors_lecture "$r"
+lancer "$r" "$temporaire/s-deux-location" ""
+attendre_code 1 "deux <location>"
+attendre_message "2 élément(s) <location> au lieu d'un seul" "deux <location>"
+[ ! -s "$journal" ] || echec "deux <location> : curl a été appelé"
+attendre_vide "$temporaire/s-deux-location" "deux <location>"
+# Deux <checksum> pour un paquet
+r="$(nouvelle_racine_dnf r-deux-checksum)"
+refaire_primary "$r" '0,/<checksum type="sha256" pkgid="YES">[0-9a-f]*<\/checksum>/s##&<checksum type="sha256" pkgid="YES">0000000000000000000000000000000000000000000000000000000000000000</checksum>#' zst
+controle_index_signe_hors_lecture "$r"
+lancer "$r" "$temporaire/s-deux-checksum" ""
+attendre_code 1 "deux <checksum>"
+attendre_message "<checksum> au lieu d'un seul" "deux <checksum>"
+attendre_vide "$temporaire/s-deux-checksum" "deux <checksum>"
+# xml:base sur un second élément (ici <size>, puis <checksum>) : refusé aussi
+for balise in size checksum; do
+    r="$(nouvelle_racine_dnf r-base-$balise)"
+    refaire_primary "$r" "0,/<$balise /s##<$balise xml:base=\"https://evil.example\" #" zst
+    controle_index_signe_hors_lecture "$r"
+    lancer "$r" "$temporaire/s-base-$balise" ""
+    attendre_code 1 "xml:base sur <$balise>"
+    attendre_message "attribut « base » interdit" "xml:base sur <$balise>"
+    attendre_vide "$temporaire/s-base-$balise" "xml:base sur <$balise>"
+done
+# Deux <location> dans une entrée <data> de repomd.xml (index signé par A)
+r="$(nouvelle_racine_dnf r-data-deux-location)"
+rd="$r/depot-dnf/rpm/repodata"
+sed -i '0,/<location href="[^"]*"\/>/s##&<location href="repodata/autre"/>#' "$rd/repomd.xml"
+resigner_dnf "$r"
+controle_index_signe_hors_lecture "$r"
+lancer "$r" "$temporaire/s-data-deux-location" ""
+attendre_code 1 "deux <location> dans repomd.xml"
+attendre_message "2 élément(s) <location> au lieu d'un seul" "deux <location> dans repomd.xml"
+attendre_vide "$temporaire/s-data-deux-location" "deux <location> dans repomd.xml"
 
 # --- Contenu du dossier repodata et de depot-dnf/ ---
 r="$(nouvelle_racine_dnf r-dnf-en-trop)"
