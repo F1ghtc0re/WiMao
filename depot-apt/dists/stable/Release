@@ -1,11 +1,11 @@
 Architectures: amd64
 Codename: stable
 Components: main
-Date: Sat, 07 Nov 2026 20:51:01 +0000
+Date: Sun, 08 Nov 2026 18:49:51 +0000
 Description: WiMao — Wine pour la MAO (paquets signés)
 Label: WiMao
 Origin: WiMao
 Suite: stable
 SHA256:
- 6d755ebd0315b60378597b9dcc8f6ce1a085fb93e67d0c0226e518bddae40fe9             3622 main/binary-amd64/Packages
- 86cd3730ec8e43eebb0554310d5aeb31da5b39147699ed6f181235a4f91a4a65             1534 main/binary-amd64/Packages.gz
+ 2f407029ad209ed7650718714860a3c730c2025388d2856336ab7946fb9a8fd7             7244 main/binary-amd64/Packages
+ f5302fe0b17304c1b3598223cd89675f39f5648a34e690e8d073013b25c7b143             1702 main/binary-amd64/Packages.gz
