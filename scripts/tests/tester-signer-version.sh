@@ -174,6 +174,19 @@ contient "pas exactement ceux de SHA256SUMS" ".rpm en trop"
 [ ! -e "$d/SHA256SUMS.asc" ] || echec ".rpm en trop : signature écrite"
 echo "ok : arrêt si un .rpm n'est pas listé dans SHA256SUMS"
 
+# 3b-bis. Un .rpm remplacé par un lien symbolique vers un fichier de même contenu : sha256sum -c le suit et
+# l'accepte, mais ce n'est pas un fichier ordinaire. Le contrôle (find -type f) doit le refuser, de façon
+# explicite, plutôt que de signer une liste dont un élément n'est qu'un lien.
+d="$(copie rpm-lien)"
+cp "$d/wimao-0.4.0-1.x86_64.rpm" "$d/cible-du-lien"
+rm "$d/wimao-0.4.0-1.x86_64.rpm"
+ln -s cible-du-lien "$d/wimao-0.4.0-1.x86_64.rpm"
+lancer v0.0.0-a-blanc --a-blanc --dossier "$d"
+[ "$code" -ne 0 ] || echec ".rpm en lien symbolique : accepté"
+contient "pas exactement ceux de SHA256SUMS" ".rpm en lien symbolique"
+[ ! -e "$d/SHA256SUMS.asc" ] || echec ".rpm en lien symbolique : signature écrite"
+echo "ok : arrêt si un .rpm est un lien symbolique"
+
 # 3c. RPM absent du brouillon ET de SHA256SUMS (cohérents entre eux, mais incomplets) : refus, rien de signé.
 d="$(copie rpm-absent)"
 rm "$d"/*.rpm

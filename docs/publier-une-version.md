@@ -20,17 +20,25 @@ de `docs/superpowers/specs/2026-11-01-wimao-sous-projet-4-design.md`.
                                                           │
                                                           v
                                   vous fusionnez la PR ─> CI : vérifie, installe, déploie le site
+                                                          │
+                                                          v
+              vous : scripts/publier-depot-dnf.sh vX.Y.Z ─> signe l'index dnf (Fedora), ouvre une PR
+                                                          │
+                                                          v
+                                  vous fusionnez la PR ─> CI : vérifie, installe, déploie le site
 ```
 
-- La **CI** fabrique les trois `.deb` et GitHub *atteste* d'où ils viennent (provenance : tel
+- La **CI** fabrique les trois `.deb`, puis en tire trois `.rpm` pour Fedora (même contenu, réemballé), et GitHub *atteste* d'où ils viennent (provenance : tel
   workflow, telle étiquette).
-- **Vous** refabriquez `wimao` et `wimao-bridge` chez vous, dans les mêmes conditions : si vos fichiers
-  sont identiques octet pour octet à ceux de la CI, c'est que la CI n'a rien ajouté. Alors seulement
-  vous *signez* la liste d'empreintes `SHA256SUMS`.
+- **Vous** refabriquez `wimao` et `wimao-bridge` chez vous, dans les mêmes conditions, puis les trois RPM à
+  partir des `.deb` que vous venez de vérifier : si vos fichiers sont identiques octet pour octet à ceux de la
+  CI, c'est que la CI n'a rien ajouté. Alors seulement vous *signez* la liste d'empreintes `SHA256SUMS`, qui
+  couvre les six paquets (une seule signature, donc une seule phrase de passe).
 - Personne d'autre que vous ne publie : la CI ne crée qu'un brouillon.
 - Le **dépôt APT** (étape 5) suit la même règle : l'index est signé **chez vous**, avec la même sous-clé ;
   la CI n'a aucune clé, elle ne fait que vérifier cette signature, contrôler chaque `.deb` et servir les
   fichiers sur GitHub Pages.
+- Le **dépôt dnf** (étape 6) suit la même règle : l'index (`repomd.xml`) est signé chez vous, la CI vérifie.
 
 ## Avant la toute première version (une seule fois)
 
@@ -180,8 +188,10 @@ principale ; l'identité de la clé reste.
 - `git`, `gpg`, `sha256sum` ;
 - pour le dépôt APT (étape 5) : `gpgv`, `gzip` et `apt-ftparchive`, qui vient du paquet `apt-utils`
   (`sudo apt install apt-utils`) ;
+- pour le dépôt dnf (étape 6) : `gpgv`, `python3`, `zstd` et `podman` (l'index est construit avec
+  `createrepo_c` dans un conteneur Fedora, rien à installer d'autre sur votre machine) ;
 - `podman` **sans racine** (rootless) : la refabrication se fait dans un conteneur, car votre machine
-  n'est pas l'Ubuntu 24.04 de la CI ;
+  n'est pas l'Ubuntu 24.04 de la CI (ni le Fedora 45 des RPM) ;
 - **GitHub CLI à jour** (`gh`), connecté (`gh auth login`), avec la commande `gh attestation`. Le `gh`
   des dépôts d'Ubuntu (2.46) est **trop ancien** : installez-le depuis le dépôt officiel de GitHub
   (<https://github.com/cli/cli/blob/trunk/docs/install_linux.md>). Le script s'arrête avec ce conseil
@@ -223,8 +233,10 @@ commits et l'étiquette ne serait pas vérifiable par `signer-version.sh`.
 
 L'envoi de l'étiquette lance le workflow `paquets.yml`. Il fabrique les trois paquets, contrôle la
 reproductibilité (y compris Wine, compilé deux fois sans cache : c'est long), les teste sur Ubuntu 24.04 et
-Debian 13, écrit `SHA256SUMS`, atteste la provenance des `.deb` et crée un **brouillon** de Release
-contenant les trois `.deb`, `SHA256SUMS` et le fichier d'attestation `wimao-X.Y.Z.intoto.jsonl`.
+Debian 13, fabrique les trois RPM à partir des `.deb` (deux fois, comparés) et les teste sur Fedora 44 et 45,
+écrit `SHA256SUMS` (six paquets), atteste la provenance des `.deb` et des `.rpm` et crée un **brouillon** de
+Release contenant les trois `.deb`, les trois `.rpm`, `SHA256SUMS` et le fichier d'attestation
+`wimao-X.Y.Z.intoto.jsonl`.
 
 Si un job échoue, rien n'est créé : corrigez par une PR, supprimez l'étiquette (`git push --delete
 origin vX.Y.Z` puis `git tag -d vX.Y.Z`) et recommencez avec une nouvelle étiquette.
@@ -242,15 +254,21 @@ Le script, dans l'ordre :
 
 1. vérifie que le dépôt est propre, que `SECURITY.md` publie l'empreinte de la clé de signature, que
    `docs/cle-publique.asc` contient cette clé, et que l'étiquette est locale et signée **par cette clé**
-   (`git verify-tag`, format OpenPGP) : une signature valide d'une autre clé de votre trousseau est refusée ;
-2. télécharge les fichiers du brouillon (`gh release download`) ;
-3. contrôle `sha256sum -c SHA256SUMS` et que ce sont exactement les `.deb` listés ;
-4. vérifie l'attestation de chaque `.deb` (`gh attestation verify` : produite par le workflow de ce
-   dépôt, pour cette étiquette, **sur le commit de l'étiquette que vous avez signée**, hors runner
-   auto-hébergé) ;
+   (`git verify-tag`, format OpenPGP) : une signature valide d'une autre clé de votre trousseau est refusée.
+   Puis il **déverrouille la clé tout de suite** (il signe un texte jetable, sans rien écrire) : **la fenêtre
+   de phrase de passe s'ouvre donc au début**, avant la longue refabrication, et non à la fin. Répondez-y
+   dès qu'elle apparaît ;
+2. télécharge les fichiers du brouillon (`gh release download`) : `.deb`, `.rpm` et `SHA256SUMS` ;
+3. contrôle `sha256sum -c SHA256SUMS` et que ce sont exactement les `.deb` et les `.rpm` listés (trois de
+   chaque) ;
+4. vérifie l'attestation de chaque `.deb` et de chaque `.rpm` (`gh attestation verify` : produite par le
+   workflow de ce dépôt, pour cette étiquette, **sur le commit de l'étiquette que vous avez signée**, hors
+   runner auto-hébergé) ;
 5. **refabrique** `wimao` et `wimao-bridge` dans un conteneur `podman` identique à celui de la CI
    (image, version de Rust et paquets lus dans le dépôt), et compare octet pour octet. **Toute
-   différence arrête le script** : ne signez pas, cherchez d'abord pourquoi ;
+   différence arrête le script** : ne signez pas, cherchez d'abord pourquoi. Puis il **refabrique les trois
+   RPM à partir des `.deb` qu'il vient de vérifier** (conteneur Fedora 45, même image que le job `rpm`) et
+   les compare de la même façon ;
 6. signe `SHA256SUMS` en `SHA256SUMS.asc` avec la clé dont l'empreinte est publiée (jamais « la clé par
    défaut » du trousseau) : GnuPG vous demande la phrase de passe (le script ne la voit jamais) ; le
    script affiche l'empreinte de la clé qui a signé ;
@@ -258,7 +276,16 @@ Le script, dans l'ordre :
 
 La refabrication utilise le réseau (image, paquets Ubuntu, Rust, crates) et prend quelques minutes. Les
 paquets Ubuntu sont ceux d'aujourd'hui : si Ubuntu a publié une mise à jour d'une bibliothèque depuis la
-CI, un écart de dépendances est possible ; signez alors peu après la CI, ou relancez-la.
+CI, un écart de dépendances est possible ; signez alors peu après la CI, ou relancez-la. Il en va de même pour
+les RPM : `rpm-build` et `zstd` sont installés dans l'image Fedora depuis les dépôts vivants de Fedora, et une
+mise à jour de l'un d'eux peut changer les octets d'un RPM.
+
+**Attention à la durée de la phrase de passe.** Par défaut, GnuPG garde la phrase de passe en mémoire
+**10 minutes** (`default-cache-ttl` de `gpg-agent`) après son dernier usage. Si la refabrication (des `.deb`,
+puis des RPM) dure plus longtemps, GnuPG l'a oubliée et **la fenêtre peut se rouvrir à la signature** (étape
+6) : surveillez-la et répondez-y. Rien de grave dans ce cas, mais le script attendra votre réponse.
+Si vous préférez, allongez le délai (`default-cache-ttl` et `max-cache-ttl` dans `~/.gnupg/gpg-agent.conf`,
+puis `gpgconf --reload gpg-agent`).
 
 `wimao-wine` n'est pas refabriqué chez vous (plusieurs heures) : sa reproductibilité est prouvée par la
 CI sur chaque étiquette (job `reproductible-wine`), et il reste couvert par la somme et l'attestation.
@@ -270,7 +297,7 @@ Pour **s'entraîner** sans rien envoyer : `scripts/signer-version.sh --aide` dé
 ### 4. Relire et publier
 
 Sur GitHub, ouvrez le brouillon (*Releases*), relisez le titre, les notes (modifiables) et les
-fichiers (trois `.deb`, `SHA256SUMS`, `SHA256SUMS.asc`, `cle-publique.asc`, le `.intoto.jsonl`), puis **publiez vous-même**.
+fichiers (trois `.deb`, trois `.rpm`, `SHA256SUMS`, `SHA256SUMS.asc`, `cle-publique.asc`, le `.intoto.jsonl`), puis **publiez vous-même**.
 Testez ensuite la vérification comme un utilisateur (voir le `README.md`, « Installation », méthode 2).
 
 ### 5. Publier dans le dépôt APT
@@ -328,12 +355,61 @@ appel à `gh` ni à `git`), utilisée par `scripts/tests/tester-publier-depot-ap
 `scripts/assembler-site-apt.sh` est celui de la CI (codes 0 = site complet, 1 = contrôle échoué, 2 = usage,
 3 = dépôt APT encore vide).
 
+### 6. Publier dans le dépôt dnf (Fedora)
+
+Même principe que l'étape 5, pour Fedora. Cette étape se fait **après** la publication de la Release (le script
+refuse un brouillon) et, de préférence, après la fusion de la PR de l'étape 5 : le dépôt `dnf` ne contient pas
+les RPM, il pointe vers ceux de la Release. L'index ne décrit que **la dernière version** publiée. Ce qui est
+publié est décrit au § 4 de la spec du sous-projet 8
+(`docs/superpowers/specs/2026-11-08-wimao-sous-projet-8-design.md`).
+
+**À chaque version**, sur `main` à jour et propre :
+
+```sh
+git switch main && git pull
+scripts/publier-depot-dnf.sh vX.Y.Z
+```
+
+Le script, dans l'ordre :
+
+1. vérifie les outils, que le dépôt est propre et à jour, et que la Release `vX.Y.Z` existe et n'est pas
+   un brouillon ;
+2. télécharge les `.rpm`, `SHA256SUMS` et `SHA256SUMS.asc`, vérifie la signature de `SHA256SUMS.asc` (par la
+   clé publiée, avec un trousseau jetable tiré de `docs/cle-publique.asc`), puis chaque empreinte ;
+3. construit l'index avec `createrepo_c` dans le conteneur Fedora figé (`depot-dnf/`, quelques Ko) ; les
+   adresses de téléchargement pointent vers la Release. Relancer la même version redonne les mêmes octets ;
+4. **signe** `repomd.xml` avec la sous-clé. **Une seule fenêtre de phrase de passe s'ouvre, et elle attend
+   environ une minute** : le script vous prévient avant. Il ne voit jamais la phrase de passe ;
+5. contrôle ce qu'il vient de signer (signature, cohérence de l'index, adresse, taille et empreinte de chaque
+   RPM), crée la branche `depot-dnf-vX.Y.Z` (seulement les fichiers de `depot-dnf/`), envoie le commit et ouvre
+   la PR. Il ne fusionne jamais.
+
+Ensuite :
+
+1. Attendez la CI de la PR (`Dépôt APT`, qui couvre aussi Fedora). Le job `assembler` vérifie la signature de
+   l'index dnf, télécharge chaque RPM depuis les Releases pour contrôler son adresse, sa taille et son SHA-256
+   (puis le jette), et ajoute `rpm/` et `wimao.repo` au site. Le job `installation-dnf` installe vraiment `wimao`
+   depuis ce site dans Fedora 44 et 45, après avoir prouvé qu'un `repomd.xml` modifié d'un seul caractère est
+   refusé.
+2. Fusionnez la PR, mais seulement si les jobs `assembler`, `installation` et `installation-dnf` sont verts.
+   Sur `main`, le job `deployer` met le site en ligne. Le site ne grossit presque pas (l'index fait quelques
+   Ko, les RPM restent sur GitHub).
+3. Vérifiez comme un utilisateur, dans un Fedora : les deux commandes du `README.md` (« Installation sur
+   Fedora »), puis `sudo dnf install wimao`.
+
+Si le script s'arrête (code 1), rien n'a été modifié : lisez le message, corrigez, relancez. Si la branche
+`depot-dnf-vX.Y.Z` existe déjà, il la refuse : supprimez-la d'abord. Pour s'entraîner sans rien envoyer :
+`scripts/publier-depot-dnf.sh --aide` décrit l'option `--a-blanc` (clé jetable, aucun appel à `gh` ni à `git`).
+
+Tant que `depot-dnf/` ne contient pas d'index, le site reste celui du seul dépôt APT (la page d'accueil ne
+parle pas de Fedora). La première publication d'un index dnf fait apparaître la section Fedora et `wimao.repo`.
+
 **Prolongez la sous-clé AVANT son expiration (le 2027-11-01).** Les vérifications de signature
 (`signer-version.sh`, par son propre contrôle GOODSIG sur `git verify-tag` ; `publier-depot-apt.sh` et la CI du
 dépôt APT, par `scripts/lib/publication.sh`) refusent une clé expirée : passé cette date, la CI du dépôt APT échoue et vous ne pouvez plus rien publier. Prolonger
 ne change pas l'empreinte : `gpg --quick-set-expire <EMPREINTE> 1y '*'` sur la machine de signature (la clé
 principale doit y être, voir « Révocation »), puis exportez de nouveau `docs/cle-publique.asc` (PR), car la
-CI lit la date d'expiration dans ce fichier. Le site du dépôt APT reprend cette clé (`wimao.asc`)
+CI lit la date d'expiration dans ce fichier. Le site (dépôts APT et dnf) reprend cette clé (`wimao.asc`)
 automatiquement : la fusion de cette PR sur main relance le workflow « Dépôt APT », qui la republie.
 Les utilisateurs ont une copie locale de la clé : annoncez la prolongation (notes de version) pour qu'ils
 la retéléchargent (README, « EXPKEYSIG ») avant l'ancienne date. Mettez-vous un rappel pour

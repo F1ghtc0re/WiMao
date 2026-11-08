@@ -1,6 +1,7 @@
-# Les paquets Debian de WiMao
+# Les paquets Debian et RPM de WiMao
 
-Ce dossier contient tout ce qui fabrique, contrôle et teste les trois paquets `.deb` de WiMao.
+Ce dossier contient tout ce qui fabrique, contrôle et teste les trois paquets `.deb` de WiMao, ainsi que les trois
+paquets `.rpm` (Fedora) qui en sont tirés (section « Les paquets RPM (Fedora) » plus bas).
 Pour *installer* WiMao, lisez plutôt le `README.md` à la racine ; pour *publier* une version,
 `docs/publier-une-version.md`.
 
@@ -8,7 +9,8 @@ Ces `.deb` sont aussi servis par un **dépôt `apt` signé** (`https://f1ghtc0re
 fabrique rien, il publie les `.deb` des Releases. Ce qui le construit est ailleurs : l'index se prépare et
 se signe chez le propriétaire (`scripts/publier-depot-apt.sh`, dossier `depot-apt/`), le site s'assemble en
 CI (`scripts/assembler-site-apt.sh`, `.github/workflows/depot-apt.yml`). Voir `docs/publier-une-version.md`,
-étape 5, et `SECURITY.md`, « Le dépôt APT ».
+étape 5, et `SECURITY.md`, « Le dépôt APT ». Fedora a son pendant, le **dépôt `dnf` signé** (`scripts/publier-depot-dnf.sh`,
+dossier `depot-dnf/`) : voir `docs/publier-une-version.md`, étape 6, et `SECURITY.md`, « Le dépôt dnf ».
 
 ## Les trois paquets
 
@@ -31,6 +33,44 @@ Chaque dossier de paquet contient : `control.in` (modèle du fichier `control`, 
 `wimao` et `bridge`, `paquets-compilation.txt` (paquets Ubuntu nécessaires pour compiler : une seule
 liste, lue à la fois par la CI et par `scripts/signer-version.sh`). `wine/dependances.md` explique
 d'où viennent les dépendances de `wimao-wine`.
+
+## Les paquets RPM (Fedora)
+
+Les trois RPM ne sont **pas recompilés** : `fabriquer-rpm.sh` extrait un `.deb` déjà fabriqué et l'emballe avec
+`rpmbuild`. Les fichiers installés sont donc exactement ceux des `.deb`, aux mêmes chemins (`/opt/wimao/…`,
+`/usr/bin/…`). Seules changent les métadonnées : noms de dépendances Fedora, version RPM (celle du `.deb` sans
+son `-1` final, `Release` = `1`) et architecture `x86_64`. Cibles : **Fedora 44 et 45**.
+
+| Fichier | Rôle |
+|---|---|
+| `fabriquer-rpm.sh` | `fabriquer-rpm.sh <paquet.deb> <sortie/>`, **dans un conteneur Fedora 45** (paquets `rpm-build`, `dpkg`, `zstd`). Exige `SOURCE_DATE_EPOCH`. Écrit `<nom>-<version>-1.x86_64.rpm`. Refuse un `.deb` inconnu ou non `amd64`. |
+| `rpm/<paquet>.deps` | Dépendances obligatoires (`Requires`) du RPM, une par ligne, noms Fedora. |
+| `rpm/<paquet>.recommends` | Dépendances facultatives (`Recommends`) : `Carla` et `xwininfo` pour `wimao`, par exemple. |
+| `rpm/<paquet>.resume` | Résumé d'une ligne. |
+| `rpm/wimao.spec.in` | Modèle du `.spec` ; chaque réglage de reproductibilité y est commenté. |
+| `tester-installation-rpm.sh` | Pendant Fedora de `tester-installation.sh`. **À lancer seulement dans un conteneur jetable.** Variable obligatoire `WIMAO_ESSAI_WINE_SYSTEME` (`oui` ou `non`, voir plus bas). |
+
+À savoir :
+
+- La détection automatique des dépendances de `rpmbuild` est désactivée (`AutoReqProv: no`) : elle ajouterait des
+  dépendances internes à Wine qu'aucun paquet ne fournit. Les dépendances sont donc celles des fichiers `.deps`.
+- Aucun script d'installation (pas de `%post`) ; pas de paquet de débogage.
+- **Reproductibilité** : deux fabrications à partir des mêmes `.deb` donnent des RPM identiques octet pour octet
+  (`SOURCE_DATE_EPOCH`, compression `zstd` fixée, nom de machine fixe, pas de `%changelog` daté du jour). L'image
+  Fedora est figée par empreinte, mais `rpm-build` et `zstd` y sont installés depuis les dépôts vivants de Fedora :
+  une mise à jour de ces outils entre la CI et la refabrication locale peut changer les octets. Il faut alors
+  relancer la CI, puis signer peu après.
+- **Jobs de la CI** : `rpm` fabrique les trois RPM deux fois et compare ; `sommes` les ajoute à `SHA256SUMS` (six
+  paquets au total) ; `installation-rpm` les installe pour de vrai dans Fedora 45 avec le `wine` de Fedora déjà
+  présent (vérifie l'absence de conflit), Fedora 45 sans lui et Fedora 44 sans lui (ce dernier mode prouve que
+  `wimao-wine.deps` suffit), ouvre le plugin Dexed avec `wimao-cli verifier`, vérifie `rpm -V`, puis retire les
+  paquets. `brouillon` joint les RPM à la Release.
+- **SELinux** : un conteneur ne l'applique pas. L'installation est prouvée, l'ouverture des plugins sur un bureau
+  Fedora réel ne l'est pas encore (voir `docs/ameliorations-reportees.md`).
+- **Dépôt `dnf`** : `scripts/publier-depot-dnf.sh vX.Y.Z` (chez le propriétaire) construit l'index avec
+  `createrepo_c` dans le conteneur Fedora figé et signe `repomd.xml`. `scripts/lib/lire-index-dnf.py` relit et
+  contrôle cet index (une adresse, une taille et une somme SHA-256 par RPM, aucun `xml:base`) ; il sert aussi à la
+  CI. Le workflow `depot-apt.yml` ajoute le job `installation-dnf` (Fedora 44 et 45, index altéré refusé).
 
 ## Rôle de chaque fichier
 
@@ -137,9 +177,11 @@ Ajouter un écart, c'est l'accepter : la justification est obligatoire.
 | `bridge`, `wimao` | Fabriquent `wimao-bridge` et `wimao`. |
 | `reproductible` | Les refabrique dans un second conteneur et compare les `sha256`. |
 | `reproductible-wine` | Refabrique Wine sans cache (étiquettes `v*` et lancement manuel seulement). |
-| `sommes` | Réunit les trois `.deb` et écrit `SHA256SUMS`. |
+| `rpm` | Réemballe les trois `.deb` en RPM (conteneur Fedora 45 figé), deux fois, et compare octet pour octet. |
+| `sommes` | Réunit les trois `.deb` et les trois RPM, écrit `SHA256SUMS`. |
 | `installation` | Test d'installation décrit ci-dessus (Ubuntu 24.04 et Debian 13). |
-| `signature-a-blanc` | Rejoue `scripts/signer-version.sh --a-blanc` avec une clé jetable. |
+| `installation-rpm` | Installation réelle des RPM et ouverture d'un plugin, sur Fedora 45 (avec et sans le `wine` de Fedora) et Fedora 44. |
+| `signature-a-blanc` | Rejoue `scripts/signer-version.sh --a-blanc` avec une clé jetable (refabrique les `.deb`, puis les RPM). |
 | `brouillon` | Attestation de provenance et Release **brouillon** sur une étiquette `v*` (ou lancement manuel avec `a_blanc` faux). Seul job avec des droits d'écriture. |
 | `brouillon-a-blanc` | Même logique **sans rien créer** et sans droit d'écriture, sur demande de fusion et lancement manuel par défaut. |
 

@@ -12,7 +12,8 @@
 #   installation        : installe les trois .deb dans un système vierge (Ubuntu 24.04 et Debian 13),
 #                         les contrôle et les retire (paquets/tester-installation.sh).
 #   signature-a-blanc   : rejoue scripts/signer-version.sh --a-blanc : refabrique wimao et wimao-bridge avec podman
-#                         (comme le fera le propriétaire chez lui) et exige les mêmes .deb octet pour octet.
+#                         (comme le fera le propriétaire chez lui) et exige les mêmes .deb octet pour octet ;
+#                         puis refabrique les trois RPM à partir de ces .deb et exige les mêmes RPM.
 #   brouillon           : (droits d'écriture) attestation de provenance des .deb et Release BROUILLON (jamais publiée),
 #                         sur une étiquette `v*` ou un lancement manuel avec a_blanc faux.
 #   brouillon-a-blanc   : (aucun droit d'écriture) même logique sans rien créer, sur demande de fusion et lancement
@@ -665,7 +666,8 @@ jobs:
 
   # Essai à blanc de la signature : prouve de bout en bout que la refabrication locale de
   # scripts/signer-version.sh (podman sans racine, image et Rust lus dans ce fichier, paquets de
-  # paquets/*/paquets-compilation.txt) redonne EXACTEMENT les .deb de cette CI. Le runner a podman.
+  # paquets/*/paquets-compilation.txt) redonne EXACTEMENT les .deb de cette CI, puis que la refabrication des
+  # trois RPM à partir de ces .deb (image Fedora du job `rpm`) redonne EXACTEMENT les RPM. Le runner a podman.
   # Pas de conteneur de job : podman tourne sur le runner lui-même. Clé GnuPG jetable, créée ici et
   # détruite avec le runner : la signature obtenue ne sert à rien d'autre que ce contrôle.
   # Aucun appel à gh (--a-blanc) ; le réseau sert à la refabrication (image, apt, rustup, crates).

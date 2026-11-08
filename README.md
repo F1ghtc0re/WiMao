@@ -5,11 +5,12 @@ Wine et yabridge, sans que vous ayez à configurer quoi que ce soit à la main :
 il crée l'environnement Wine, installe vos plugins, les « ponte » vers votre
 station audio (DAW) et vérifie qu'ils fonctionnent.
 
-**État du projet : en développement.** Le noyau (environnement Wine, installation
+**État du projet : bêta.** Le noyau (environnement Wine, installation
 avec recettes, pontage yabridge, test d'ouverture, sauvegarde, diagnostic, historique des
 actions, import d'un environnement existant), la ligne de commande `wimao-cli` et une interface
 graphique (GTK4 + libadwaita) existent, et trois paquets Debian sont publiés (version 0.5.0, avec un
-dépôt `apt` signé : voir « Installation »). Le journal des essais est dans `NOTES.md`, la
+dépôt `apt` signé : voir « Installation »). Une prise en charge de Fedora est préparée (paquets RPM et
+dépôt `dnf` signé) : elle n'est pas encore en ligne, voir « Installation sur Fedora ». Le journal des essais est dans `NOTES.md`, la
 conception dans `docs/superpowers/specs/`.
 
 ## Aperçu
@@ -39,7 +40,10 @@ retour en arrière est proposé pour les actions qui ont un point de restauratio
 
 ## Installation
 
-WiMao s'installe avec trois paquets Debian (`.deb`), publiés dans un dépôt `apt` signé et dans les
+Deux familles de systèmes sont prévues : **Ubuntu et Debian** (paquets `.deb`, ci-dessous) et **Fedora**
+(paquets `.rpm`, plus bas, « Installation sur Fedora »).
+
+WiMao s'installe sur Ubuntu et Debian avec trois paquets Debian (`.deb`), publiés dans un dépôt `apt` signé et dans les
 « Releases » du dépôt GitHub. Ils fonctionnent sur **Ubuntu 24.04 et plus récent** et **Debian 13 et
 plus récent**, en **64 bits Intel/AMD (amd64)** seulement.
 
@@ -126,6 +130,54 @@ pas ; s'il existe déjà (lien ou dossier), il n'y touche pas. Si ce lien mène 
 yabridge, un dossier disparu), « Diagnostiquer » vous le signale avec la commande à lancer pour utiliser
 celui de WiMao : le changement reste votre décision.
 
+### Installation sur Fedora
+
+> **À lire avant d'essayer.** WiMao est en bêta. Sur Fedora, l'installation et l'ouverture d'un plugin
+> (Dexed) ont été essayées **dans des conteneurs** Fedora 44 et 45, jamais sur un bureau Fedora réel : un
+> conteneur n'applique pas SELinux, que Fedora active par défaut. L'ouverture des plugins sur un bureau
+> avec SELinux n'est donc **pas encore prouvée**. Si cela ne marche pas chez vous, c'est un bug à
+> signaler, pas une erreur de votre part.
+>
+> **Les paquets RPM ne sont pas encore publiés.** Les commandes ci-dessous ne fonctionneront qu'à partir de
+> la version qui les publiera (ils arrivent avec la prochaine version, après la 0.5.0). Avant cela, le
+> dépôt `dnf` n'existe pas encore et `dnf install wimao` échouera.
+
+Le principe est le même que pour `apt` : un dépôt signé, qui met WiMao à jour avec le reste du système
+(`sudo dnf upgrade`). Les RPM contiennent exactement les mêmes fichiers que les `.deb` (mêmes
+chemins, `/opt/wimao/…` et `/usr/bin/…`) : ils sont réemballés, pas recompilés. Ils fonctionnent sur
+**Fedora 44 et 45**, en **64 bits Intel/AMD (x86_64)** seulement. Deux commandes :
+
+```sh
+sudo curl -fsSL -o /etc/yum.repos.d/wimao.repo https://f1ghtc0re.github.io/WiMao/wimao.repo
+sudo dnf install wimao
+```
+
+La première déclare le dépôt (c'est un petit fichier de réglages, à lire si vous voulez : il tient en
+quelques lignes), la seconde installe `wimao` et ses deux dépendances (`wimao-bridge`, `wimao-wine`).
+Comme sur Ubuntu, le Wine de votre système n'est pas touché : celui de WiMao vit dans `/opt/wimao/wine`.
+Carla (le test d'ouverture des plugins) est *recommandée* et installée par défaut.
+
+**Pourquoi `dnf` affiche « skipped OpenPGP checks ».** Ce que WiMao signe, c'est l'**index** du dépôt
+(`repomd.xml.asc`), pas chaque RPM un par un. Cet index contient l'empreinte de chaque RPM : `dnf` refuse
+l'index si un octet a changé (`repo_gpgcheck=1`), et refuse un RPM dont l'empreinte ne correspond pas à
+l'index. Le message veut seulement dire que `dnf` n'a pas cherché de signature *sur le RPM lui-même*
+(`gpgcheck=0`) : la chaîne est protégée quand même. Un message normal, donc.
+
+Les RPM sont téléchargés depuis les « Releases » GitHub (le site ne les héberge pas) ; l'index ne décrit
+que la dernière version. Pour revenir en arrière, prenez les fichiers d'une Release précédente.
+
+**Comparez l'empreinte de la clé**, comme pour `apt` : dès la première utilisation, `dnf` propose
+d'importer la clé `https://f1ghtc0re.github.io/WiMao/wimao.asc` et affiche son empreinte. Elle doit être
+exactement celle donnée plus haut (et dans `SECURITY.md`) ; refusez sinon.
+
+**Vérifier un RPM à la main.** Téléchargez les RPM, `SHA256SUMS` et `SHA256SUMS.asc` depuis la page de la
+Release, puis suivez la méthode 2 ci-dessus (`gpg --verify`, `sha256sum -c`) : `SHA256SUMS` couvre les
+trois `.deb` et les trois `.rpm`. Installez ensuite avec `sudo dnf install ./wimao*.rpm`.
+
+**Retirer le dépôt** : `sudo rm /etc/yum.repos.d/wimao.repo`. Pour désinstaller WiMao :
+`sudo dnf remove wimao wimao-bridge wimao-wine` ; comme avec `apt`, votre environnement Wine et vos
+plugins (`~/.local/share/wimao/`) sont conservés.
+
 Fabriquer les paquets soi-même, et comprendre comment on s'assure qu'ils sont reproductibles :
 `paquets/README.md`. Publier une version (pour le propriétaire du dépôt) :
 `docs/publier-une-version.md`.
@@ -189,7 +241,7 @@ Codes de sortie : 0 succès, 1 erreur, 2 au moins un plugin ❌.
 ## Pour aller plus loin
 
 - `ARCHITECTURE.md` : comment le code est organisé, fichier par fichier ;
-- `paquets/README.md` : fabriquer, tester et vérifier les paquets Debian ;
+- `paquets/README.md` : fabriquer, tester et vérifier les paquets Debian et RPM ;
 - `docs/publier-une-version.md` : publier et signer une version (propriétaire du dépôt) ;
 - `SECURITY.md` : signaler une faille, vérifier une version ;
 - `CONTRIBUTING.md` : préparer sa machine, lancer les tests, conventions, ajouter une recette,

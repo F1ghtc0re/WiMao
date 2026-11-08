@@ -242,7 +242,7 @@ echo "== 3. Sommes SHA-256"
 (cd "$dossier" && sha256sum -c SHA256SUMS) || arreter "un paquet ne correspond pas à SHA256SUMS (voir ci-dessus)"
 # sha256sum -c ne regarde que les fichiers LISTÉS : un paquet de plus dans le dossier passerait inaperçu.
 listes="$(awk '{print $2}' "$dossier/SHA256SUMS" | LC_ALL=C sort)"
-presents="$(find "$dossier" -maxdepth 1 \( -name '*.deb' -o -name '*.rpm' \) -printf '%f\n' | LC_ALL=C sort)"
+presents="$(find "$dossier" -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' \) -printf '%f\n' | LC_ALL=C sort)"
 [ "$listes" = "$presents" ] || arreter "les .deb et .rpm du dossier ne sont pas exactement ceux de SHA256SUMS
   listés   : $(echo "$listes" | tr '\n' ' ')
   présents : $(echo "$presents" | tr '\n' ' ')"

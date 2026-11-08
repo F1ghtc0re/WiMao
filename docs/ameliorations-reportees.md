@@ -308,3 +308,30 @@ Ordre prévu, du plus simple au plus lourd (conseil retenu pendant la conception
   version. Ne garder que les N dernières versions (par exemple 5) : retirer les anciennes entrées de
   `Packages` dans `scripts/publier-depot-apt.sh` et laisser `scripts/assembler-site-apt.sh` ignorer (ne plus
   télécharger) ce qui n'y figure plus. À faire avant la 10e version.
+
+## Après le sous-projet 8 (paquets RPM et dépôt dnf, Fedora)
+
+Décisions et limites connues (conception : `docs/superpowers/specs/2026-11-08-wimao-sous-projet-8-design.md`).
+
+- **SELinux.** Les conteneurs de la CI n'appliquent pas SELinux. L'installation des RPM y est prouvée, ainsi que
+  l'ouverture d'un plugin (Dexed) ; l'ouverture des plugins sur un bureau Fedora réel avec SELinux actif ne l'est
+  pas. Le premier essai réel viendra d'une personne qui utilise Fedora ; un éventuel problème sera traité comme un
+  bug et documenté. Le README le dit honnêtement (WiMao est en bêta).
+- **Compatibilité.** Les binaires sont compilés pour Ubuntu 24.04 (glibc 2.39), puis simplement réemballés. Fedora 40
+  et plus récent conviennent ; la CI sur Fedora 44 et 45 détectera une rupture future (changement de glibc, de
+  bibliothèque).
+- **Taille des Releases.** Les trois RPM ajoutent environ 85 Mo par version aux Releases. Le site GitHub Pages ne
+  grossit pas : il ne reçoit que l'index (quelques Ko), pas les RPM.
+- **Expiration de la clé.** Comme pour apt, la sous-clé de signature expire le 2027-11-01 : sa prolongation vaut
+  pour les deux dépôts.
+- **Pas d'expiration de l'index dnf.** Comme pour apt, rien ne fait expirer l'index. Quelqu'un qui contrôlerait le
+  site, ou une PR fusionnée qui restaurerait un vieil index signé, pourrait maintenir des utilisateurs sur une
+  ancienne version authentique ; jamais leur faire installer un paquet forgé.
+- **Une seule version dans l'index dnf.** L'index ne décrit que la dernière version ; revenir en arrière passe par
+  les fichiers des Releases. Suffisant en bêta.
+- **RPM non signés individuellement** (`gpgcheck=0`), pour garder la comparaison octet pour octet, l'attestation et
+  `SHA256SUMS` intacts ; `dnf` affiche « skipped OpenPGP checks ».
+- **Outils de fabrication non figés.** L'image Fedora est figée par empreinte, mais `rpm-build` et `zstd` y sont
+  installés depuis les dépôts vivants : une mise à jour entre la CI et la signature locale peut changer les octets
+  d'un RPM. Il faut alors relancer la CI, puis signer peu après.
+- **Autres distributions RPM** (openSUSE…) : hors périmètre, non essayées. Le README ne promet que Fedora.

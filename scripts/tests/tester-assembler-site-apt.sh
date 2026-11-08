@@ -461,6 +461,14 @@ done
 [ -f "$site_dnf/wimao.asc" ] || echec "le site dnf a perdu wimao.asc"
 attendre_message "3 adresse(s) de RPM conformes (version v9.9.9)" "site complet avec dépôt dnf"
 [ ! -s "$journal" ] || echec "curl appelé en mode d'essai (dnf)"
+# La page d'accueil parle de Fedora avec l'index dnf, et seulement alors (sans index elle n'est pas modifiée :
+# le diff -r plus bas, contre le site du cas nominal, le prouve ; ici on contrôle les deux côtés du texte).
+grep -qF 'sudo curl -fsSL -o /etc/yum.repos.d/wimao.repo https://f1ghtc0re.github.io/WiMao/wimao.repo' "$site_dnf/index.html" || echec "index.html (dnf) : commande curl de Fedora absente"
+grep -qF 'sudo dnf install wimao' "$site_dnf/index.html" || echec "index.html (dnf) : commande dnf absente"
+grep -qF 'skipped OpenPGP checks' "$site_dnf/index.html" || echec "index.html (dnf) : explication de « skipped OpenPGP checks » absente"
+grep -qF 'sudo rm /etc/yum.repos.d/wimao.repo' "$site_dnf/index.html" || echec "index.html (dnf) : retrait du dépôt absent"
+grep -qF 'sudo apt update &amp;&amp; sudo apt install wimao' "$site_dnf/index.html" || echec "index.html (dnf) : la section apt a disparu"
+! grep -qiE 'fedora|dnf' "$site/index.html" || echec "index.html sans index dnf : mentionne Fedora ou dnf"
 
 # --- Sans index dnf, le site est IDENTIQUE à celui d'avant (octet pour octet) ---
 # (a) depot-dnf/ réduit à wimao.repo (l'état du dépôt avant la première publication dnf)

@@ -45,7 +45,8 @@
 #          signature activés).
 #   7. assemblage : InRelease, Release, Release.gpg, Packages et Packages.gz (les seuls fichiers copiés), pool/<étiquette>/*.deb, wimao.asc (copie de
 #      docs/cle-publique.asc) et index.html (page autonome : commandes d'installation et empreinte) ; avec le
-#      dépôt dnf : rpm/repodata/* et wimao.repo.
+#      dépôt dnf : rpm/repodata/* et wimao.repo, et la page d'accueil ajoute alors la section Fedora (sans dépôt
+#      dnf, la page n'est pas modifiée d'un octet).
 #   Tout est construit dans un dossier temporaire puis copié à la fin : un contrôle qui échoue n'écrit rien.
 #   Le dépôt APT reste la condition de tout : s'il est vide (code 3), le dépôt dnf n'est pas regardé.
 #
@@ -391,6 +392,23 @@ if [ "$avec_dnf" -eq 1 ]; then
 fi
 # Empreinte en groupes de 4 (lisible, comparable à l'œil) ; hexadécimal pur, donc rien à échapper en HTML.
 empreinte_groupes="$(sed 's/.\{4\}/& /g; s/ $//' <<< "$empreinte")"
+# Section « Fedora » de la page d'accueil : VIDE sans dépôt dnf, de sorte que la page reste alors exactement
+# (octet pour octet) celle d'avant l'arrivée de Fedora. Avec un dépôt dnf, elle se termine par un retour à la
+# ligne et vient juste avant le titre « Empreinte de la clé de signature ». Le texte est dans un here-document
+# entre apostrophes : rien n'y est interprété par le shell.
+section_fedora=""
+if [ "$avec_dnf" -eq 1 ]; then
+    IFS= read -r -d '' section_fedora << 'FEDORA' || true
+<h2>Installation (Fedora)</h2>
+<p>Le dépôt dnf se déclare avec un seul fichier. <code>dnf</code> vérifie la signature de l'index, qui contient
+l'empreinte de chaque paquet.</p>
+<pre><code>sudo curl -fsSL -o /etc/yum.repos.d/wimao.repo https://f1ghtc0re.github.io/WiMao/wimao.repo
+sudo dnf install wimao</code></pre>
+<p>À l'installation, <code>dnf</code> affiche « skipped OpenPGP checks » : c'est normal. Ce sont l'index du dépôt
+et l'empreinte de chaque paquet qui sont contrôlés, pas une signature par paquet. Pour retirer le dépôt :
+<code>sudo rm /etc/yum.repos.d/wimao.repo</code>.</p>
+FEDORA
+fi
 # Page d'accueil autonome : aucune ressource externe, thème clair ou sombre selon le système.
 cat > "$construit/index.html" << HTML
 <!doctype html>
@@ -425,7 +443,7 @@ curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | sudo tee /etc/apt/keyri
 echo "deb [signed-by=/etc/apt/keyrings/wimao.asc] https://f1ghtc0re.github.io/WiMao stable main" \\
   | sudo tee /etc/apt/sources.list.d/wimao.list
 sudo apt update &amp;&amp; sudo apt install wimao</code></pre>
-<h2>Empreinte de la clé de signature</h2>
+${section_fedora}<h2>Empreinte de la clé de signature</h2>
 <p>Comparez-la avec celle de <code>SECURITY.md</code> dans le dépôt :</p>
 <pre><code>$empreinte_groupes</code></pre>
 <p>Clé publique : <a href="wimao.asc">wimao.asc</a>. Code source et documentation :
