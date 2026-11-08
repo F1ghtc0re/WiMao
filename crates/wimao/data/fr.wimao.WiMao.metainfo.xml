@@ -61,6 +61,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.6.0" date="2026-11-08">
+      <description>
+        <p>RPM packages and a signed dnf repository for Fedora, new logo.</p>
+        <p xml:lang="fr">Paquets RPM et dépôt dnf signé pour Fedora, nouveau logo.</p>
+        <p xml:lang="es">Paquetes RPM y repositorio dnf firmado para Fedora, nuevo logotipo.</p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-11-08">
       <description>
         <p>More reliable plugin test, visible yabridge link warning, history in the chosen language.</p>
