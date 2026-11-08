@@ -1,3 +1,10 @@
+wimao (0.6.0-1) unstable; urgency=medium
+
+  * Nouveaux paquets RPM pour Fedora, avec un dépôt dnf signé.
+  * Nouveau logo.
+
+ -- F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>  Sun, 08 Nov 2026 23:36:00 +0100
+
 wimao (0.5.0-1) unstable; urgency=medium
 
   * Test d'ouverture : le verdict s'appuie sur le journal de yabridge.

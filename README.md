@@ -8,9 +8,8 @@ station audio (DAW) et vérifie qu'ils fonctionnent.
 **État du projet : bêta.** Le noyau (environnement Wine, installation
 avec recettes, pontage yabridge, test d'ouverture, sauvegarde, diagnostic, historique des
 actions, import d'un environnement existant), la ligne de commande `wimao-cli` et une interface
-graphique (GTK4 + libadwaita) existent, et trois paquets Debian sont publiés (version 0.5.0, avec un
-dépôt `apt` signé : voir « Installation »). Une prise en charge de Fedora est préparée (paquets RPM et
-dépôt `dnf` signé) : elle n'est pas encore en ligne, voir « Installation sur Fedora ». Le journal des essais est dans `NOTES.md`, la
+graphique (GTK4 + libadwaita) existent, et des paquets Debian et RPM sont publiés (version 0.6.0, avec des
+dépôts `apt` et `dnf` signés : voir « Installation » et « Installation sur Fedora »). WiMao est en bêta. Le journal des essais est dans `NOTES.md`, la
 conception dans `docs/superpowers/specs/`.
 
 ## Aperçu
@@ -140,10 +139,6 @@ celui de WiMao : le changement reste votre décision.
 > conteneur n'applique pas SELinux, que Fedora active par défaut. L'ouverture des plugins sur un bureau
 > avec SELinux n'est donc **pas encore prouvée**. Si cela ne marche pas chez vous, c'est un bug à
 > signaler, pas une erreur de votre part.
->
-> **Les paquets RPM ne sont pas encore publiés.** Les commandes ci-dessous ne fonctionneront qu'à partir de
-> la version qui les publiera (ils arrivent avec la prochaine version, après la 0.5.0). Avant cela, le
-> dépôt `dnf` n'existe pas encore et `dnf install wimao` échouera.
 
 Le principe est le même que pour `apt` : un dépôt signé, qui met WiMao à jour avec le reste du système
 (`sudo dnf upgrade`). Les RPM contiennent exactement les mêmes fichiers que les `.deb` (mêmes
