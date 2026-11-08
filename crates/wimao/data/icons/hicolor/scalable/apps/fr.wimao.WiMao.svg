@@ -1,19 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Icône de WiMao : une onde sonore dans un carré arrondi (fiche jack stylisée). -->
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!--
+    Icône de WiMao : une onde sonore sur un carré arrondi violet, coupée en deux par une fente
+    horizontale à mi-hauteur. Les deux barres extérieures sont noires, les trois du centre blanches.
+    Pour changer la largeur de la fente, ajuster ensemble les deux rectangles de découpe
+    (« moitie-haute » s'arrête à y=60, « moitie-basse » commence à y=68).
+  -->
+  <!-- Ce commentaire reste APRÈS la balise svg : GdkPixbuf ne reconnaît le format que sur les premiers octets. -->
   <defs>
     <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#78aeed"/>
-      <stop offset="1" stop-color="#3584e4"/>
+      <stop offset="0" stop-color="#a56de2"/>
+      <stop offset="1" stop-color="#6d3bbf"/>
     </linearGradient>
+    <!-- La découpe garde les bouts arrondis à l'extérieur et des bords droits le long de la fente. -->
+    <clipPath id="moitie-haute"><rect x="0" y="0" width="128" height="60"/></clipPath>
+    <clipPath id="moitie-basse"><rect x="0" y="68" width="128" height="60"/></clipPath>
+    <g id="barres-exterieures" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round">
+      <path d="M28 50v28"/>
+      <path d="M92 50v28"/>
+    </g>
+    <g id="barres-centrales" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round">
+      <path d="M44 42v44"/>
+      <path d="M60 26v76"/>
+      <path d="M76 38v52"/>
+    </g>
   </defs>
   <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#fond)"/>
-  <g fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round">
-    <path d="M28 64v0"/>
-    <path d="M44 48v32"/>
-    <path d="M60 30v68"/>
-    <path d="M76 44v40"/>
-    <path d="M92 54v20"/>
-    <path d="M104 64v0"/>
+  <g clip-path="url(#moitie-haute)">
+    <use href="#barres-exterieures"/>
+    <use href="#barres-centrales"/>
+  </g>
+  <g clip-path="url(#moitie-basse)">
+    <use href="#barres-exterieures"/>
+    <use href="#barres-centrales"/>
   </g>
 </svg>
