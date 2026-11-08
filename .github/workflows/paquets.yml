@@ -467,6 +467,58 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # Pendant Fedora du job `installation` : installe les trois RPM de l'artefact `paquets-<sha court>` dans
+  # un Fedora vierge (44 et 45), à côté du paquet `wine` de Fedora, les utilise (Wine, yabridge, Carla,
+  # Dexed) puis les retire : tout est dans paquets/tester-installation-rpm.sh. Un conteneur n'applique
+  # pas SELinux : les étiquettes SELinux ne sont pas testées. fail-fast: false pour voir les deux résultats.
+  installation-rpm:
+    needs: sommes
+    # Condition explicite, pour la même raison que `installation`.
+    if: ${{ !cancelled() && needs.sommes.result == 'success' }}
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ matrix.image }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nom: fedora-44
+            image: registry.fedoraproject.org/fedora:44@sha256:4b39e947a92d0ac2df1db9ebbf7672256d828a73e6e0219f8a6e774f84f34d64
+          - nom: fedora-45
+            image: registry.fedoraproject.org/fedora:45@sha256:4a8a63ec2df9f26a96c35ff380237ad578cf42e326b979d9b5801c31c6daf2e8
+    steps:
+      # tar : requis par les actions de téléchargement d'artefacts. Les autres outils de test sont installés
+      # par le script, APRÈS les paquets de WiMao, pour ne pas masquer une dépendance manquante.
+      - name: Paquets de base
+        run: dnf install -y --setopt=install_weak_deps=False tar
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Même nom que celui de l'artefact du job `sommes`.
+      - name: Nom de l'artefact des paquets
+        id: paquets
+        run: echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: paquets-${{ steps.paquets.outputs.court }}
+          path: paquets-telecharges
+      # L'empreinte des RPM est vérifiée par le script avant toute installation ; celle de Dexed aussi
+      # (le script le télécharge : même version et même empreinte que pour les .deb).
+      - name: Installation, contrôles et retrait
+        run: paquets/tester-installation-rpm.sh paquets-telecharges "$GITHUB_WORKSPACE/journaux"
+      # Même en cas d'échec : les journaux servent à comprendre.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: installation-${{ matrix.nom }}
+          path: journaux
+          if-no-files-found: error
+          retention-days: 14
+
   # Attestation de provenance et Release BROUILLON, en DEUX jobs pour que les droits d'écriture ne soient
   # accordés que là où ils servent :
   #   - `brouillon` (droits d'écriture) : étiquette `v*`, ou lancement manuel avec a_blanc FAUX. C'est le seul
@@ -480,9 +532,9 @@ jobs:
   # --draft, pas de --latest). Un lancement manuel avec a_blanc faux exige une étiquette `v*` sélectionnée
   # comme référence (`gh release create --verify-tag` en a besoin) : sinon `brouillon` échoue.
   brouillon-a-blanc:
-    needs: [installation, reproductible, reproductible-wine, sommes]
+    needs: [installation, installation-rpm, reproductible, reproductible-wine, sommes]
     # Même logique que `sommes` : sauté = accepté pour reproductible-wine, échoué = bloquant.
-    if: ${{ !cancelled() && needs.installation.result == 'success' && needs.reproductible.result == 'success' && needs.sommes.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.a_blanc)) }}
+    if: ${{ !cancelled() && needs.installation.result == 'success' && needs.installation-rpm.result == 'success' && needs.reproductible.result == 'success' && needs.sommes.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.a_blanc)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # Aucun droit supplémentaire : `contents: read` hérité de la racine suffit (téléchargement de l'artefact).
@@ -525,9 +577,9 @@ jobs:
   # dépôt PRIVÉ. La spec ne publie qu'après le passage du dépôt en public : la première étiquette `v*` réelle
   # doit donc venir APRÈS ce passage (sinon l'étape d'attestation échoue).
   brouillon:
-    needs: [installation, reproductible, reproductible-wine, sommes]
+    needs: [installation, installation-rpm, reproductible, reproductible-wine, sommes]
     # Même logique que `sommes` : sauté = accepté pour reproductible-wine, échoué = bloquant.
-    if: ${{ !cancelled() && needs.installation.result == 'success' && needs.reproductible.result == 'success' && needs.sommes.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && !inputs.a_blanc)) }}
+    if: ${{ !cancelled() && needs.installation.result == 'success' && needs.installation-rpm.result == 'success' && needs.reproductible.result == 'success' && needs.sommes.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && !inputs.a_blanc)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # SEUL job avec des droits d'écriture : contents (créer la Release), id-token (certificat Sigstore)
