@@ -2,13 +2,13 @@
 
 ## Un plugin est marqué « Problème »
 
-Son test d'ouverture a échoué. Lisez l'explication sous son nom, puis :
+Il ne se charge pas, ou plante dans Wine pendant le test. Lisez l'explication sous son nom, puis :
 
 1. Essayez-le quand même dans votre logiciel de musique : le test de WiMao utilise un autre hôte, qui plante parfois là où votre logiciel fonctionne.
 2. Cliquez sur **Réparer** : un composant manquant est souvent en cause.
 3. Si le plugin vient d'un gestionnaire, vérifiez qu'il y est bien installé et activé.
 
-Un plugin marqué **À vérifier** s'est chargé, mais son interface n'a pas pu être vérifiée : essayez-le dans votre logiciel de musique.
+Un plugin marqué **À vérifier** n'a pas permis de conclure (par exemple, 5 minutes sans fin de chargement) : essayez-le dans votre logiciel de musique.
 
 ## « Un plugin est en cours d'utilisation »
 

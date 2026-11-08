@@ -145,7 +145,10 @@ impl Fenetre {
             .application()
             .and_downcast::<adw::Application>()
         {
-            Fenetre::nouvelle(&app, self.chemins.clone(), None).presenter();
+            // Les marques « Updated » passent à la nouvelle fenêtre : copie prise avant la
+            // fermeture de l'ancienne, qui vide l'ensemble.
+            let mis_a_jour = self.mis_a_jour.borrow().clone();
+            Fenetre::nouvelle(&app, self.chemins.clone(), None, mis_a_jour).presenter();
         }
         self.fenetre.close();
         true

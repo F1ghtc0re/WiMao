@@ -11,6 +11,13 @@
 //! apparaît, l'interface du plugin s'ouvre. Tout se passe sur Xvfb, donc aucune
 //! fenêtre n'apparaît sur l'écran de l'utilisateur.
 //!
+//! Carla sur Xvfb n'est pas un vrai logiciel de musique : il plante ou n'affiche rien pour
+//! des plugins sains. Le verdict repose donc surtout sur le journal de Carla, qui contient
+//! la sortie de yabridge : la ligne `[Wine STDERR] Finished initializing` prouve que le plugin
+//! est chargé (`ResultatTest::Charge`), un plantage portant `[Wine STDERR]` accuse le plugin,
+//! un plantage sans cette marque accuse Carla. Voir `analyser_journal` et la spec du
+//! sous-projet 7 (§ 3).
+//!
 //! Utilise : [`Chemins`] (Wine, yabridge, préfixe), [`Format`], [`lancer`], [`tr`].
 //! Utilisé par : `wimao-recettes::installation` (test des plugins installés) et la commande
 //! `verifier` de `wimao-cli`.
@@ -22,6 +29,7 @@
 use crate::chemins::Chemins;
 use crate::i18n::{tr, trf};
 use crate::inventaire::Format;
+use crate::journal;
 use crate::outils::lancer;
 use crate::wine::preparer_environnement;
 use std::ffi::OsString;
@@ -37,6 +45,10 @@ const INTERVALLE: Duration = Duration::from_secs(3);
 /// Attente après l'apparition de la fenêtre : un plugin qui plante juste après
 /// s'être affiché ne doit pas être déclaré prêt trop vite.
 const ATTENTE_APRES_FENETRE: Duration = Duration::from_secs(10);
+/// Sursis laissé à Carla après la première ligne de plantage hors Wine alors qu'il est encore
+/// vivant : yabridge peut écrire `Finished initializing` juste après, et seul cet état le
+/// plus récent doit décider du verdict (chargé ou non).
+const SURSIS_APRES_PLANTAGE: Duration = Duration::from_secs(10);
 /// Premier numéro d'écran essayé : loin des écrans réels (:0, :1…).
 const PREMIER_ECRAN: u32 = 90;
 /// Dernier numéro d'écran essayé (au-delà, on renonce à Xvfb).
@@ -53,8 +65,22 @@ const ECHECS_XWININFO_MAX: u32 = 3;
 const PAUSE_VERIF_XVFB: Duration = Duration::from_millis(300);
 /// Délai maximal d'un appel à `xwininfo`.
 const DELAI_XWININFO: Duration = Duration::from_secs(10);
-/// Motifs du journal de Carla qui signalent un plantage (repris de `tester-plugins.sh`).
-const MOTIFS_PLANTAGE: &[&str] = &["aborting", "stack overflow", "Unhandled exception"];
+/// Motifs du journal de Carla qui signalent un plantage (repris de `tester-plugins.sh`,
+/// plus `page fault`, message de Wine). Une ligne qui en contient un est un plantage ;
+/// qu'il soit celui du plugin ou celui de Carla dépend de [`MARQUE_WINE`].
+const MOTIFS_PLANTAGE: &[&str] = &[
+    "aborting",
+    "stack overflow",
+    "Unhandled exception",
+    "page fault",
+];
+/// Préfixe que yabridge met aux lignes venues de Wine, donc du plugin lui-même. Un motif de
+/// plantage sur une telle ligne accuse le plugin ; sans ce préfixe, il accuse Carla (par
+/// exemple l'assertion JUCE ou la segmentation de Carla, intermittentes et étrangères au plugin).
+const MARQUE_WINE: &str = "[Wine STDERR]";
+/// Ligne que yabridge écrit quand le plugin est chargé dans Wine : c'est ce fait, et non
+/// l'ouverture d'une fenêtre sur Xvfb, qui prouve que le plugin se charge.
+const MARQUE_CHARGE: &str = "[Wine STDERR] Finished initializing";
 /// Message de Carla quand il ne peut pas démarrer son moteur audio (aucun serveur JACK ou
 /// PipeWire joignable) ; relevé à la vérification réelle du sous-projet 3, dans un
 /// environnement isolé dont le `XDG_RUNTIME_DIR` ne contenait pas le socket de PipeWire.
@@ -69,6 +95,10 @@ const GEOMETRIE_ECRAN: &str = "1920x1080x24";
 pub enum ResultatTest {
     /// L'interface du plugin s'est ouverte et le plugin est resté vivant.
     Pret,
+    /// Le plugin s'est chargé dans Wine (le journal de yabridge le dit), mais le test n'a
+    /// pas pu vérifier son interface : Carla sur un écran virtuel n'est pas un vrai logiciel
+    /// de musique. Ce n'est pas une faute du plugin.
+    Charge,
     /// Le test n'a pas pu conclure (outil absent, format non testé, interface non vérifiée).
     Remarque(String),
     /// Le plugin ou son hôte a planté ou s'est arrêté ; le texte donne la cause.
@@ -87,6 +117,8 @@ pub(crate) struct Delais {
     pub intervalle: Duration,
     /// Attente entre l'apparition de la fenêtre et le verdict.
     pub apres_fenetre: Duration,
+    /// Sursis après un plantage hors Wine vu alors que Carla vit encore.
+    pub apres_plantage: Duration,
 }
 
 impl Delais {
@@ -96,6 +128,7 @@ impl Delais {
             total: DELAI_TOTAL,
             intervalle: INTERVALLE,
             apres_fenetre: ATTENTE_APRES_FENETRE,
+            apres_plantage: SURSIS_APRES_PLANTAGE,
         }
     }
 }
@@ -206,7 +239,55 @@ fn lancer_et_observer(
     surveiller(&mut groupe, path, ecran, journal, delais)
 }
 
+/// Ce que le journal de Carla (qui contient aussi la sortie de yabridge) permet de constater.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct AnalyseJournal {
+    /// yabridge a écrit [`MARQUE_CHARGE`] : le plugin est chargé dans Wine.
+    charge: bool,
+    /// Première ligne de plantage portant [`MARQUE_WINE`] : la faute est celle du plugin.
+    plantage_wine: Option<String>,
+    /// Première ligne de plantage sans [`MARQUE_WINE`] : la faute est celle de Carla.
+    plantage_hors_wine: Option<String>,
+    /// Carla n'a pas pu démarrer son moteur audio ([`MOTIF_SANS_AUDIO`]).
+    sans_audio: bool,
+}
+
+/// Analyse le texte du journal. Fonction pure : l'ordre des lignes n'a aucune importance
+/// (un plantage de Carla avant ou après la ligne de chargement donne la même analyse).
+fn analyser_journal(texte: &str) -> AnalyseJournal {
+    let mut a = AnalyseJournal::default();
+    for ligne in texte.lines() {
+        if ligne.contains(MOTIF_SANS_AUDIO) {
+            a.sans_audio = true;
+        }
+        if ligne.contains(MARQUE_CHARGE) {
+            // Le nom du plugin peut contenir un motif de plantage : cette ligne n'en est pas un.
+            a.charge = true;
+        } else if MOTIFS_PLANTAGE.iter().any(|m| ligne.contains(m)) {
+            // On ne garde que la première ligne de chaque famille : c'est la cause probable.
+            let cible = if ligne.contains(MARQUE_WINE) {
+                &mut a.plantage_wine
+            } else {
+                &mut a.plantage_hors_wine
+            };
+            cible.get_or_insert_with(|| ligne.trim().to_string());
+        }
+    }
+    a
+}
+
+/// Lit et analyse le journal ; un journal illisible ou absent est un journal vide.
+fn lire_journal(journal: &Path) -> AnalyseJournal {
+    let texte = std::fs::read(journal).unwrap_or_default();
+    analyser_journal(&String::from_utf8_lossy(&texte))
+}
+
 /// Boucle de surveillance : fenêtre, plantage dans le journal, ou arrêt de l'hôte.
+/// L'ordre de décision est celui de la spec du sous-projet 7 (§ 3.2).
+///
+/// Un plantage hors Wine alors que Carla vit encore ne tranche pas tout de suite : la ligne de
+/// chargement peut arriver juste après. On laisse `delais.apres_plantage` (compté depuis la
+/// première de ces lignes), puis on décide avec l'état le plus récent du journal.
 fn surveiller(
     groupe: &mut Groupe,
     path: &OsString,
@@ -216,6 +297,8 @@ fn surveiller(
 ) -> ResultatTest {
     let echeance = Instant::now() + delais.total;
     let mut echecs = 0;
+    // Instant où la première ligne de plantage hors Wine a été vue (Carla encore vivant).
+    let mut debut_plantage: Option<Instant> = None;
     loop {
         let mut derniere_erreur = String::new();
         match observer_ecran(path, ecran) {
@@ -229,11 +312,25 @@ fn surveiller(
                 derniere_erreur = e;
             }
         }
-        if let Some(ligne) = ligne_de_plantage(journal) {
+        // L'état de Carla est lu AVANT le journal : une ligne écrite juste avant sa sortie
+        // est alors forcément visible dans la lecture qui suit.
+        let termine = groupe.est_termine();
+        let analyse = lire_journal(journal);
+        // 1. Plantage dans Wine : c'est le plugin.
+        if let Some(ligne) = analyse.plantage_wine {
+            journal::noter("test du plugin", &format!("plantage dans Wine : {ligne}"));
             return ResultatTest::Probleme(ligne);
         }
-        if groupe.est_termine() {
-            return verdict_hote_arrete(journal);
+        // 4. Carla arrêté : le verdict dépend du chargement du plugin.
+        if termine {
+            return verdict_hote_arrete(&analyse);
+        }
+        // 4 bis. Plantage de Carla alors qu'il vit encore : sursis borné avant de décider.
+        if analyse.plantage_hors_wine.is_some() {
+            let debut = *debut_plantage.get_or_insert_with(Instant::now);
+            if debut.elapsed() >= delais.apres_plantage {
+                return verdict_hote_arrete(&analyse);
+            }
         }
         if echecs >= ECHECS_XWININFO_MAX {
             return ResultatTest::Remarque(trf(
@@ -241,49 +338,58 @@ fn surveiller(
                 &[("error", &derniere_erreur)],
             ));
         }
+        // 5. Délai écoulé sans fenêtre.
         if Instant::now() >= echeance {
-            return ResultatTest::Remarque(tr("Loaded, but the interface could not be checked"));
+            return if analyse.charge {
+                journal::noter_info("test du plugin", "délai écoulé sans fenêtre, plugin chargé");
+                ResultatTest::Charge
+            } else {
+                journal::noter("test du plugin", "délai écoulé, plugin non chargé");
+                ResultatTest::Remarque(tr("The plugin did not finish loading within 5 minutes"))
+            };
         }
         std::thread::sleep(delais.intervalle);
     }
 }
 
-/// Après l'attente suivant l'apparition de la fenêtre : un plantage ou un arrêt
-/// pendant ce temps est un problème, sinon le plugin est prêt.
+/// Après l'attente suivant l'apparition de la fenêtre : un plantage du plugin ou un arrêt
+/// de Carla pendant ce temps est un problème, sinon le plugin est prêt (un plantage de
+/// Carla seul, Carla restant vivant avec sa fenêtre, n'empêche pas l'interface de s'ouvrir).
 fn verdict_apres_fenetre(groupe: &mut Groupe, journal: &Path) -> ResultatTest {
-    if let Some(ligne) = ligne_de_plantage(journal) {
+    // État de Carla lu avant le journal (voir `surveiller`).
+    let termine = groupe.est_termine();
+    let analyse = lire_journal(journal);
+    if let Some(ligne) = analyse.plantage_wine {
+        journal::noter("test du plugin", &format!("plantage dans Wine : {ligne}"));
         return ResultatTest::Probleme(ligne);
     }
-    if groupe.est_termine() {
-        return verdict_hote_arrete(journal);
+    if termine {
+        return verdict_hote_arrete(&analyse);
     }
     ResultatTest::Pret
 }
 
-/// Carla s'est arrêté sans motif de plantage connu. S'il n'a pas pu démarrer son moteur
-/// audio ([`MOTIF_SANS_AUDIO`] dans son journal), le plugin n'y est pour rien : c'est une
-/// `Remarque` (test impossible), pas un `Probleme` qui accuserait le plugin à tort.
-fn verdict_hote_arrete(journal: &Path) -> ResultatTest {
-    let sans_audio = std::fs::read(journal)
-        .map(|t| String::from_utf8_lossy(&t).contains(MOTIF_SANS_AUDIO))
-        .unwrap_or(false);
-    if sans_audio {
-        ResultatTest::Remarque(tr(
+/// Carla s'est arrêté ou a planté, sans plantage dans Wine. Dans l'ordre :
+/// - pas de moteur audio ([`MOTIF_SANS_AUDIO`]) : le plugin n'y est pour rien, `Remarque` ;
+/// - plugin chargé : `Charge` (la cause de l'arrêt, souvent un bogue de Carla, est notée au
+///   journal technique mais jamais imputée au plugin) ;
+/// - sinon `Probleme` : la ligne de plantage de Carla, ou « The plugin host stopped ».
+fn verdict_hote_arrete(a: &AnalyseJournal) -> ResultatTest {
+    if a.sans_audio {
+        return ResultatTest::Remarque(tr(
             "The audio server (PipeWire or JACK) could not be reached: the plugin was not tested",
-        ))
-    } else {
-        ResultatTest::Probleme(tr("The plugin host stopped"))
+        ));
     }
-}
-
-/// Première ligne du journal qui contient un motif de plantage.
-fn ligne_de_plantage(journal: &Path) -> Option<String> {
-    let texte = std::fs::read(journal).ok()?;
-    let texte = String::from_utf8_lossy(&texte);
-    texte
-        .lines()
-        .find(|l| MOTIFS_PLANTAGE.iter().any(|m| l.contains(m)))
-        .map(|l| l.trim().to_string())
+    let cause = a.plantage_hors_wine.as_deref().unwrap_or("Carla arrêté");
+    if a.charge {
+        journal::noter_info("test du plugin", &format!("plugin chargé ; {cause}"));
+        return ResultatTest::Charge;
+    }
+    journal::noter("test du plugin", &format!("plugin non chargé ; {cause}"));
+    match &a.plantage_hors_wine {
+        Some(ligne) => ResultatTest::Probleme(ligne.clone()),
+        None => ResultatTest::Probleme(tr("The plugin host stopped")),
+    }
 }
 
 /// Ce que `xwininfo -root -tree` a permis de constater.
@@ -463,6 +569,7 @@ impl Drop for Groupe {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::init_langue;
 
     /// Dossier d'outils factices ; le nom contient `faux-carla` pour que `pgrep -f`
     /// retrouve tout processus lancé depuis ce dossier. Le faux Xvfb crée le socket de
@@ -504,10 +611,13 @@ mod tests {
 
     fn reglages(outils: &tempfile::TempDir) -> Reglages {
         Reglages {
+            // Marges d'environ 1 s entre le sursis (2 s), le chargement tardif simulé (1 s) et
+            // l'échéance totale (4 s) : les tests restent stables sur une machine de CI chargée.
             delais: Delais {
-                total: Duration::from_secs(2),
+                total: Duration::from_secs(4),
                 intervalle: Duration::from_millis(200),
                 apres_fenetre: Duration::from_millis(300),
+                apres_plantage: Duration::from_secs(2),
             },
             outils_prioritaires: Some(outils.path().to_path_buf()),
             // Seuls les faux outils et /bin (sh, sleep) : jamais le vrai Xvfb ni xwininfo.
@@ -601,14 +711,184 @@ mod tests {
         );
     }
 
+    /// Faux Carla qui écrit `lignes` dans son journal puis `suite` (`exit 0` ou un `sleep`).
+    fn carla_qui_ecrit(lignes: &[&str], suite: &str) -> String {
+        let echos: Vec<String> = lignes.iter().map(|l| format!("echo \"{l}\"")).collect();
+        format!("{}; {suite}", echos.join("; "))
+    }
+
+    /// Ligne de chargement réelle de yabridge (relevée le 2026-11-07).
+    const LIGNE_CHARGE: &str =
+        "22:46:56 [DrumSynth-CHPRZdmo] [Wine STDERR] Finished initializing '/x/DrumSynth.vst3'";
+    /// Assertion JUCE réelle, hors `[Wine STDERR]`, suivie d'un plantage de Carla.
+    const LIGNE_JUCE: &str = "JUCE Assertion failure in juce_VST3PluginFormat.cpp:3636";
+    const LIGNE_SEGFAULT: &str = "Segmentation fault, aborting";
+
+    const VIVANT: &str = "exec /bin/sleep 31338";
+
     #[test]
     #[serial_test::serial(faux_carla)]
-    fn vivant_sans_fenetre_donne_une_remarque() {
+    fn charge_puis_carla_arrete_donne_charge() {
+        let o = dossier_outils(&carla_qui_ecrit(&[LIGNE_CHARGE], "exit 0"), SANS_FENETRE);
+        assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn plantage_hors_wine_apres_chargement_donne_charge() {
+        let o = dossier_outils(
+            &carla_qui_ecrit(&[LIGNE_CHARGE, LIGNE_JUCE, LIGNE_SEGFAULT], VIVANT),
+            SANS_FENETRE,
+        );
+        assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    /// Ordre inverse : le plantage de Carla précède la ligne de chargement. Déterministe :
+    /// Carla s'arrête après avoir tout écrit, et l'état de Carla est lu avant le journal.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn plantage_hors_wine_avant_chargement_donne_charge() {
+        let o = dossier_outils(
+            &carla_qui_ecrit(&[LIGNE_JUCE, LIGNE_SEGFAULT, LIGNE_CHARGE], "exit 0"),
+            SANS_FENETRE,
+        );
+        assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    /// Carla vivant : le plantage est écrit, la ligne de chargement n'arrive qu'une seconde
+    /// plus tard (dans le sursis) ; le verdict suit l'état le plus récent.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn chargement_tardif_apres_plantage_hors_wine_donne_charge() {
+        let o = dossier_outils(
+            &format!(
+                "echo \"{LIGNE_JUCE}\"; echo \"{LIGNE_SEGFAULT}\"; /bin/sleep 1; \
+                 echo \"{LIGNE_CHARGE}\"; {VIVANT}"
+            ),
+            SANS_FENETRE,
+        );
+        assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    /// Plantage de Carla, jamais de chargement, Carla vivant : à la fin du sursis, `Probleme`
+    /// avec la ligne de plantage elle-même.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn plantage_hors_wine_sans_chargement_donne_probleme_avec_la_ligne() {
+        let o = dossier_outils(&carla_qui_ecrit(&[LIGNE_SEGFAULT], VIVANT), SANS_FENETRE);
+        assert_eq!(
+            tester(&o),
+            ResultatTest::Probleme(LIGNE_SEGFAULT.to_string())
+        );
+    }
+
+    /// Sans audio est prioritaire, même si la ligne de chargement est présente.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    // Exclusif aussi des tests de langue (clé par défaut) : `tr` lit la langue globale.
+    #[serial_test::serial]
+    fn sans_audio_et_charge_donne_remarque() {
+        init_langue(Some("en"));
+        let o = dossier_outils(
+            &carla_qui_ecrit(&[LIGNE_CHARGE, "[carla] Failed to init engine"], "exit 1"),
+            SANS_FENETRE,
+        );
+        assert_eq!(
+            tester(&o),
+            ResultatTest::Remarque(tr(
+                "The audio server (PipeWire or JACK) could not be reached: the plugin was not tested"
+            ))
+        );
+    }
+
+    #[test]
+    fn la_ligne_de_chargement_n_est_pas_un_plantage() {
+        let a = analyser_journal("[P] [Wine STDERR] Finished initializing '/x/aborting.vst3'\n");
+        assert!(a.charge);
+        assert_eq!(a.plantage_wine, None);
+        assert_eq!(a.plantage_hors_wine, None);
+    }
+
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn plantage_dans_wine_donne_probleme() {
+        let o = dossier_outils(
+            &carla_qui_ecrit(
+                &[LIGNE_CHARGE, "[P] [Wine STDERR] Unhandled exception: boum"],
+                VIVANT,
+            ),
+            SANS_FENETRE,
+        );
+        match tester(&o) {
+            ResultatTest::Probleme(t) => assert!(t.contains("Unhandled exception"), "{t}"),
+            autre => panic!("attendu Probleme, obtenu {autre:?}"),
+        }
+    }
+
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn page_fault_dans_wine_donne_probleme() {
+        let o = dossier_outils(
+            &carla_qui_ecrit(
+                &[
+                    LIGNE_CHARGE,
+                    "[P] [Wine STDERR] Unhandled page fault on read access",
+                ],
+                VIVANT,
+            ),
+            SANS_FENETRE,
+        );
+        match tester(&o) {
+            ResultatTest::Probleme(t) => assert!(t.contains("page fault"), "{t}"),
+            autre => panic!("attendu Probleme, obtenu {autre:?}"),
+        }
+    }
+
+    /// Carla plante sans que le plugin se soit chargé : la faute peut être au plugin.
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    // Exclusif aussi des tests de langue (clé par défaut) : `tr` lit la langue globale.
+    #[serial_test::serial]
+    fn arret_sans_chargement_donne_probleme() {
+        init_langue(Some("en"));
+        let o = dossier_outils(&carla_qui_ecrit(&[LIGNE_JUCE], "exit 0"), SANS_FENETRE);
+        assert_eq!(
+            tester(&o),
+            ResultatTest::Probleme(tr("The plugin host stopped"))
+        );
+    }
+
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    fn delai_sans_fenetre_charge_donne_charge() {
+        let o = dossier_outils(&carla_qui_ecrit(&[LIGNE_CHARGE], VIVANT), SANS_FENETRE);
+        assert_eq!(tester(&o), ResultatTest::Charge);
+    }
+
+    #[test]
+    #[serial_test::serial(faux_carla)]
+    // Exclusif aussi des tests de langue (clé par défaut) : `tr` lit la langue globale.
+    #[serial_test::serial]
+    fn delai_sans_fenetre_non_charge_donne_remarque() {
+        init_langue(Some("en"));
         let o = dossier_outils("/bin/sleep 31338 & /bin/sleep 31338", SANS_FENETRE);
         assert_eq!(
             tester(&o),
-            ResultatTest::Remarque(tr("Loaded, but the interface could not be checked"))
+            ResultatTest::Remarque(tr("The plugin did not finish loading within 5 minutes"))
         );
+    }
+
+    #[test]
+    fn analyse_distingue_wine_et_hors_wine() {
+        let a = analyser_journal(&format!("{LIGNE_JUCE}\n{LIGNE_SEGFAULT}\n{LIGNE_CHARGE}\n"));
+        assert!(a.charge);
+        assert_eq!(a.plantage_hors_wine.as_deref(), Some(LIGNE_SEGFAULT));
+        assert_eq!(a.plantage_wine, None);
+        assert!(!a.sans_audio);
+        let a =
+            analyser_journal("[Wine STDERR] Unhandled page fault\n[carla] Failed to init engine");
+        assert!(!a.charge && a.sans_audio);
+        assert!(a.plantage_wine.is_some() && a.plantage_hors_wine.is_none());
     }
 
     #[test]

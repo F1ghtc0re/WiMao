@@ -19,7 +19,7 @@ use crate::chemins::Chemins;
 use crate::correctifs::{dxvk::Dxvk, mono::Mono, msvcp::Msvcp140, Correctif};
 use crate::environnement::{creer_environnement, dossiers_relies, remplacer_dossiers_relies};
 use crate::erreur::{Erreur, Resultat};
-use crate::historique::{self, Action, ResultatAction};
+use crate::historique::{self, Action, ResultatAction, TexteNeutre};
 use crate::i18n::{tr, trf, trn};
 use crate::inventaire::Inventaire;
 use crate::pontage::{
@@ -161,6 +161,24 @@ pub fn message_probleme(p: &Probleme) -> String {
     }
 }
 
+/// La commande seule qui remédie à [`Probleme::LienYabridge`], déjà citée pour le shell : c'est
+/// ce que l'interface place dans le presse-papiers, et ce que contient le message. WiMao ne
+/// l'exécute jamais.
+///
+/// - lien vers un autre yabridge ou cassé : `ln -sfn` remplace le lien ;
+/// - vrai dossier : `ln -s`, à lancer une fois le dossier déplacé (voir le message de `message_lien_yabridge`, privé).
+pub fn commande_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -> String {
+    let (lien_sh, attendu_sh) = (pour_shell(lien), pour_shell(attendu));
+    match etat {
+        EtatLienYabridge::Ailleurs(_) | EtatLienYabridge::Casse(_) => {
+            format!("ln -sfn {attendu_sh} {lien_sh}")
+        }
+        EtatLienYabridge::Dossier | EtatLienYabridge::Absent | EtatLienYabridge::Bon => {
+            format!("ln -s {attendu_sh} {lien_sh}")
+        }
+    }
+}
+
 /// Texte de [`Probleme::LienYabridge`] : ce qui se passe, puis la commande qui y remédie. Sans
 /// alarme (c'est un avertissement, parfois voulu), sans rien faire à la place de la personne.
 ///
@@ -168,37 +186,34 @@ pub fn message_probleme(p: &Probleme) -> String {
 ///   le dossier visé, `-f` : en écrasant l'ancien lien) ;
 /// - vrai dossier : `ln -sfn` créerait le lien *dans* ce dossier ; il faut d'abord le déplacer.
 fn message_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -> String {
-    let (lien_sh, attendu_sh) = (pour_shell(lien), pour_shell(attendu));
+    let commande = commande_lien_yabridge(lien, attendu, etat);
     let (lien_txt, attendu_txt) = (lien.display().to_string(), attendu.display().to_string());
     match etat {
         EtatLienYabridge::Ailleurs(cible) => trf(
-            "The plugins in your music software use another yabridge than WiMao's: {link} leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn {expected_sh} {link_sh}",
+            "The plugins in your music software use another yabridge than WiMao's: {link} leads to {current}, not to {expected}. To use WiMao's, run: {command}",
             &[
                 ("link", &lien_txt),
                 ("current", &cible.display().to_string()),
                 ("expected", &attendu_txt),
-                ("expected_sh", &attendu_sh),
-                ("link_sh", &lien_sh),
+                ("command", &commande),
             ],
         ),
         EtatLienYabridge::Casse(cible) => trf(
-            "The plugins in your music software cannot find yabridge: {link} leads to {current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn {expected_sh} {link_sh}",
+            "The plugins in your music software cannot find yabridge: {link} leads to {current}, which no longer exists. To use WiMao's ({expected}), run: {command}",
             &[
                 ("link", &lien_txt),
                 ("current", &cible.display().to_string()),
                 ("expected", &attendu_txt),
-                ("expected_sh", &attendu_sh),
-                ("link_sh", &lien_sh),
+                ("command", &commande),
             ],
         ),
         // `Absent` et `Bon` ne sont pas des problèmes : texte neutre, jamais montré en pratique.
         EtatLienYabridge::Dossier | EtatLienYabridge::Absent | EtatLienYabridge::Bon => trf(
-            "The plugins in your music software use the yabridge in the folder {link}, not WiMao's ({expected}). To use WiMao's, move that folder away, then run: ln -s {expected_sh} {link_sh}",
+            "The plugins in your music software use the yabridge in the folder {link}, not WiMao's ({expected}). To use WiMao's, move that folder away, then run: {command}",
             &[
                 ("link", &lien_txt),
                 ("expected", &attendu_txt),
-                ("expected_sh", &attendu_sh),
-                ("link_sh", &lien_sh),
+                ("command", &commande),
             ],
         ),
     }
@@ -481,12 +496,14 @@ pub fn reparer(c: &Chemins, problemes: &[Probleme], p: &dyn Progression) -> Resu
         Ok(()) => (ResultatAction::Reussi, String::new()),
         Err(e) => (ResultatAction::Echec, e.to_string()),
     };
-    historique::ajouter(
+    // Sujet neutre (traduit à l'affichage) ; la cause d'un échec reste du texte libre.
+    historique::ajouter_neutre(
         c,
         Action::Reparation,
-        &tr("Repair"),
+        &TexteNeutre::nouveau(historique::CLE_REPARATION, &[]),
         issue,
         id_point.as_deref(),
+        None,
         &details,
     );
     resultat
@@ -560,6 +577,7 @@ fn reparer_un(c: &Chemins, probleme: &Probleme, p: &dyn Progression) -> Resultat
 mod tests {
     use super::*;
     use crate::progression::ProgressionMuette;
+    use serial_test::serial;
     use std::collections::BTreeMap;
     use std::process::{Child, Command};
     use std::time::{Duration, Instant};
@@ -727,7 +745,11 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn lien_yabridge_vers_un_autre_yabridge_est_signale() {
+        // Le message est comparé en anglais : langue imposée, et test sérialisé pour que les
+        // tests qui changent la langue globale ne le perturbent pas.
+        crate::i18n::init_langue(Some("en"));
         let banc = Banc::nouveau();
         let autre = banc._racine.path().join("autre-yabridge");
         std::fs::create_dir_all(&autre).unwrap();
@@ -756,7 +778,11 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn lien_yabridge_casse_est_signale() {
+        // Le message est comparé en anglais : langue imposée, et test sérialisé pour que les
+        // tests qui changent la langue globale ne le perturbent pas.
+        crate::i18n::init_langue(Some("en"));
         let banc = Banc::nouveau();
         let disparu = banc._racine.path().join("disparu");
         let lien = lien_du_banc(&banc);
@@ -773,7 +799,11 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn lien_yabridge_vrai_dossier_est_signale_sans_ln_sfn() {
+        // Le message est comparé en anglais : langue imposée, et test sérialisé pour que les
+        // tests qui changent la langue globale ne le perturbent pas.
+        crate::i18n::init_langue(Some("en"));
         let banc = Banc::nouveau();
         let lien = lien_du_banc(&banc);
         std::fs::create_dir_all(&lien).unwrap();
@@ -793,6 +823,75 @@ mod tests {
         assert!(message.contains("move that folder away"), "{message}");
         assert!(!message.contains("ln -sfn"), "{message}");
         assert!(lien.is_dir() && !lien.is_symlink(), "dossier intact");
+    }
+
+    // --- Commande du lien : celle que l'interface met dans le presse-papiers ---
+
+    #[test]
+    fn commande_du_lien_vers_autre_yabridge() {
+        let (lien, attendu) = (Path::new("/h/.local/share/yabridge"), Path::new("/w/yb"));
+        let etat = EtatLienYabridge::Ailleurs(PathBuf::from("/autre"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn /w/yb /h/.local/share/yabridge"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_casse() {
+        let (lien, attendu) = (Path::new("/h/yabridge"), Path::new("/w/yb"));
+        let etat = EtatLienYabridge::Casse(PathBuf::from("/disparu"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn /w/yb /h/yabridge"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_vrai_dossier() {
+        // Vrai dossier : `ln -s` (sans `-f`) une fois le dossier déplacé.
+        let (lien, attendu) = (Path::new("/h/yabridge"), Path::new("/w/yb"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &EtatLienYabridge::Dossier),
+            "ln -s /w/yb /h/yabridge"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_cite_espace_et_apostrophe() {
+        let (lien, attendu) = (Path::new("/h/it's me/yabridge"), Path::new("/w/mon yb"));
+        let etat = EtatLienYabridge::Casse(PathBuf::from("/x"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn '/w/mon yb' '/h/it'\\''s me/yabridge'"
+        );
+    }
+
+    #[test]
+    fn commande_du_lien_cite_le_dollar() {
+        // `$` serait développé par le shell : le chemin doit être entre apostrophes.
+        let (lien, attendu) = (Path::new("/h/$HOME/yabridge"), Path::new("/w/yb"));
+        let etat = EtatLienYabridge::Casse(PathBuf::from("/x"));
+        assert_eq!(
+            commande_lien_yabridge(lien, attendu, &etat),
+            "ln -sfn /w/yb '/h/$HOME/yabridge'"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn le_message_contient_la_commande() {
+        crate::i18n::init_langue(Some("en"));
+        let (lien, attendu) = (Path::new("/h/mon lien"), Path::new("/w/yb"));
+        for etat in [
+            EtatLienYabridge::Ailleurs(PathBuf::from("/autre")),
+            EtatLienYabridge::Casse(PathBuf::from("/disparu")),
+            EtatLienYabridge::Dossier,
+        ] {
+            let commande = commande_lien_yabridge(lien, attendu, &etat);
+            let message = message_lien_yabridge(lien, attendu, &etat);
+            assert!(message.contains(&commande), "{message} / {commande}");
+        }
     }
 
     #[test]
@@ -999,6 +1098,9 @@ mod tests {
         assert_eq!(entrees.len(), 1, "{entrees:?}");
         assert_eq!(entrees[0].action, Action::Reparation);
         assert_eq!(entrees[0].resultat, ResultatAction::Reussi);
+        // Le sujet est neutre, avec une clé déclarée.
+        let cle = &entrees[0].sujet_neutre.as_ref().expect("sujet neutre").cle;
+        assert!(historique::CLES_CONNUES.contains(&cle.as_str()), "{cle}");
         assert_eq!(
             entrees[0].point.as_deref(),
             Some(liste.points[0].id.as_str())

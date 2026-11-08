@@ -53,8 +53,8 @@
 use crate::chemins::Chemins;
 use crate::diagnostic::poser_verrou_installation;
 use crate::erreur::{Erreur, Resultat};
-use crate::historique::{self, Action, ResultatAction};
-use crate::i18n::{tr, trf, trn};
+use crate::historique::{self, Action, ResultatAction, TexteNeutre};
+use crate::i18n::{tr, trf};
 use crate::import;
 use crate::journal;
 use crate::pontage::retirer_liens_casses;
@@ -139,6 +139,25 @@ pub fn libelle_motif(motif: &str) -> String {
         Some(fichier) => trf("before installing {file}", &[("file", fichier)]),
         None => motif.to_string(),
     }
+}
+
+/// Le motif enregistré sous forme de texte neutre pour l'historique (traduit à l'affichage,
+/// comme [`libelle_motif`]) ; `None` pour un motif inconnu, qui n'a pas de traduction.
+pub fn motif_neutre(motif: &str) -> Option<TexteNeutre> {
+    if motif == MOTIF_REPARATION {
+        return Some(TexteNeutre::nouveau(historique::CLE_AVANT_REPARATION, &[]));
+    }
+    if let Some(nom) = motif.strip_prefix(PREFIXE_MOTIF_SESSION) {
+        return Some(TexteNeutre::nouveau(
+            historique::CLE_AVANT_SESSION,
+            &[("name", nom)],
+        ));
+    }
+    motif
+        .strip_prefix(PREFIXE_MOTIF_INSTALLATION)
+        .map(|fichier| {
+            TexteNeutre::nouveau(historique::CLE_AVANT_INSTALLATION, &[("file", fichier)])
+        })
 }
 
 /// File de conservation d'un point : chaque file a son propre quota (voir [`creer`]).
@@ -737,26 +756,39 @@ fn revenir_dans(
     let _verrou = poser_verrou_installation(c)?;
     // À partir d'ici le retour est engagé : une seule entrée d'historique, quelle que soit l'issue.
     let resultat = revenir_engage(c, point, confirmes);
-    let (issue, details) = match &resultat {
+    // Détail neutre en cas de réussite (nombre de fichiers retirés, pluriel géré à l'affichage) ;
+    // la cause d'un échec reste du texte libre.
+    let (issue, details_neutre, details_libre) = match &resultat {
         Ok(bilan) => (
             ResultatAction::Reussi,
-            trn(
-                "{n} file removed",
-                "{n} files removed",
-                bilan.fichiers_supprimes as u64,
-                &[],
-            ),
+            Some(TexteNeutre::nouveau(
+                historique::CLE_FICHIERS_RETIRES,
+                &[("n", &bilan.fichiers_supprimes.to_string())],
+            )),
+            String::new(),
         ),
-        Err(e) => (ResultatAction::Echec, e.to_string()),
+        Err(e) => (ResultatAction::Echec, None, e.to_string()),
     };
-    historique::ajouter(
-        c,
-        Action::Retour,
-        &libelle_motif(&point.motif),
-        issue,
-        None,
-        &details,
-    );
+    // Motif connu : sujet neutre ; motif inconnu (point d'une version future) : texte brut.
+    match motif_neutre(&point.motif) {
+        Some(sujet) => historique::ajouter_neutre(
+            c,
+            Action::Retour,
+            &sujet,
+            issue,
+            None,
+            details_neutre.as_ref(),
+            &details_libre,
+        ),
+        None => historique::ajouter(
+            c,
+            Action::Retour,
+            &libelle_motif(&point.motif),
+            issue,
+            None,
+            &details_neutre.map_or(details_libre, |d| d.en_clair()),
+        ),
+    }
     resultat
 }
 
@@ -988,6 +1020,33 @@ exit 0
         // Le retour ne crée aucun point : il n'y a donc rien à rattacher à l'entrée.
         assert_eq!(entrees[0].point, None);
         assert!(!entrees[0].details.is_empty(), "nombre de fichiers attendu");
+    }
+
+    #[test]
+    fn revenir_ecrit_un_sujet_et_des_details_neutres() {
+        use crate::historique::{lire, CLES_CONNUES};
+        let d = tempfile::tempdir().unwrap();
+        let c = faux_environnement(d.path());
+        // Motif d'installation : connu, donc neutre.
+        let point = creer(&c, &motif_installation("Setup.exe")).unwrap();
+        std::fs::write(c.drive_c().join("Program Files/nouveau.dll"), "x").unwrap();
+        let apercu = apercu_retour(&c, &point).unwrap();
+        revenir(&c, &point, &apercu).unwrap();
+        let e = &lire(&c).unwrap()[0];
+        let sujet = e.sujet_neutre.as_ref().expect("sujet neutre");
+        let details = e.details_neutre.as_ref().expect("détails neutres");
+        assert!(CLES_CONNUES.contains(&sujet.cle.as_str()), "{sujet:?}");
+        assert!(CLES_CONNUES.contains(&details.cle.as_str()), "{details:?}");
+        assert_eq!(sujet.valeurs["file"], "Setup.exe");
+        assert_eq!(details.valeurs["n"], "1");
+        assert_eq!(e.sujet_affiche(), libelle_motif(&point.motif));
+    }
+
+    #[test]
+    fn motif_inconnu_n_a_pas_de_texte_neutre() {
+        assert!(motif_neutre("autre chose").is_none());
+        assert!(motif_neutre(MOTIF_REPARATION).is_some());
+        assert!(motif_neutre(&motif_session("Native Access")).is_some());
     }
 
     /// Défaut trouvé à la vérification réelle du sous-projet 3 : après un retour vers un point

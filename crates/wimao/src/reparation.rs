@@ -17,7 +17,7 @@
 
 use libadwaita as adw;
 use wimao_core::i18n::{tr, trn};
-use wimao_core::{journal, Probleme};
+use wimao_core::{commande_lien_yabridge, journal, message_probleme, Probleme};
 
 use crate::dialogues;
 use crate::fenetre::Fenetre;
@@ -67,26 +67,55 @@ impl Fenetre {
     /// gestionnaires et redémarre leurs services.
     fn lancer_reparation(&self, problemes: Vec<Probleme>) {
         let (moi, c) = (self.clone(), (*self.chemins).clone());
-        // Un simple avertissement (lien yabridge) ne se répare pas : il ne compte pas comme un problème
-        // réparé (son texte, lui, est montré par « Diagnose » de la ligne de commande).
-        let aucun_probleme = !problemes.iter().any(Probleme::est_reparable);
+        // Un simple avertissement (lien yabridge) ne se répare pas : il ne compte pas comme un
+        // problème réparé. Son information (message + commande à copier) vient dans une boîte.
+        let reparables = problemes.iter().any(Probleme::est_reparable);
+        let lien = problemes
+            .iter()
+            .find(|p| matches!(p, Probleme::LienYabridge { .. }))
+            .cloned();
+        let (toast, boite) = issue_reparation(reparables, lien.is_some());
         self.lancer(
             &tr("Repairing…"),
             move |p| operations::reparer(&c, &problemes, p),
             move |resultat| match resultat {
                 Err(erreur) => moi.erreur(&erreur, false),
                 Ok(avertissements) => {
-                    moi.toast(&if aucun_probleme {
-                        tr("No problem found")
-                    } else {
-                        tr("Repair finished")
-                    });
+                    if toast {
+                        moi.toast(&if reparables {
+                            tr("Repair finished")
+                        } else {
+                            tr("No problem found")
+                        });
+                    }
                     moi.avertir(&avertissements);
+                    if let (true, Some(lien)) = (boite, lien) {
+                        moi.informer_lien(&lien);
+                    }
                     // Une réparation du pontage ajoute des plugins à la liste.
                     moi.rafraichir();
                 }
             },
         );
+    }
+
+    /// Boîte « Information » du lien yabridge : message du diagnostic, bouton qui copie la
+    /// commande (toast « Command copied »). WiMao ne touche jamais au lien lui-même.
+    fn informer_lien(&self, probleme: &Probleme) {
+        let Probleme::LienYabridge {
+            lien,
+            attendu,
+            etat,
+        } = probleme
+        else {
+            return;
+        };
+        let commande = commande_lien_yabridge(lien, attendu, etat);
+        let moi = self.clone();
+        dialogues::informer_lien_yabridge(&self.fenetre, &message_probleme(probleme), move || {
+            dialogues::copier(&moi.fenetre, &commande);
+            moi.toast(&tr("Command copied"));
+        });
     }
 
     /// Au démarrage : si des plugins ne sont pas pontés (par exemple WiMao fermé pendant une
@@ -146,5 +175,32 @@ impl Fenetre {
         if let Some(toast) = toast {
             toast.dismiss();
         }
+    }
+}
+
+/// Ce que montre la fin d'une réparation : `(toast, boîte)`.
+///
+/// - `reparables` : au moins un vrai problème a été réparé ;
+/// - `avertissement_lien` : le diagnostic a signalé le lien yabridge (avertissement).
+///
+/// Le toast dit « Repair finished » (réparé) ou « No problem found » (rien du tout). Avec le
+/// seul avertissement de lien, il est omis : « No problem found » serait faux, puisque la boîte
+/// d'information s'ouvre, et elle s'ouvre dès qu'il y a cet avertissement, réparation ou non.
+fn issue_reparation(reparables: bool, avertissement_lien: bool) -> (bool, bool) {
+    // Rien du tout (ni réparé, ni lien) : le toast « rien à réparer » reste utile.
+    (reparables || !avertissement_lien, avertissement_lien)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn les_quatre_issues_de_la_reparation() {
+        // (réparables, avertissement de lien) -> (toast, boîte)
+        assert_eq!(issue_reparation(true, false), (true, false));
+        assert_eq!(issue_reparation(true, true), (true, true));
+        assert_eq!(issue_reparation(false, true), (false, true));
+        assert_eq!(issue_reparation(false, false), (true, false));
     }
 }

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 19:36+0100\n"
+"POT-Creation-Date: 2026-11-07 23:41+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -265,7 +265,7 @@ msgid ""
 "link is removed."
 msgstr ""
 
-#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/historique.rs
+#: crates/wimao-cli/src/commandes/import.rs
 msgid "Import cancelled"
 msgstr ""
 
@@ -524,34 +524,27 @@ msgstr ""
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use another yabridge than WiMao's: {link} "
-"leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn "
-"{expected_sh} {link_sh}"
+"leads to {current}, not to {expected}. To use WiMao's, run: {command}"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software cannot find yabridge: {link} leads to "
-"{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
-"{expected_sh} {link_sh}"
+"{current}, which no longer exists. To use WiMao's ({expected}), run: "
+"{command}"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use the yabridge in the folder {link}, "
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
-"ln -s {expected_sh} {link_sh}"
+"{command}"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
 #: crates/wimao-recettes/src/gestionnaire.rs
 #: crates/wimao-recettes/src/installation.rs
 msgid "Creating a restore point…"
-msgstr ""
-
-#: crates/wimao-core/src/diagnostic.rs crates/wimao-core/src/historique.rs
-#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
-#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
-msgid "Repair"
 msgstr ""
 
 #: crates/wimao-core/src/diagnostic.rs
@@ -678,28 +671,105 @@ msgid ""
 "safely: nothing was changed. Check {old} and {new} by hand"
 msgstr ""
 
+#. --- Clés des textes neutres ---------------------------------------------------------------
+#.
+#. Chaque clé est un msgid anglais. Les clés simples passent par `tr_noop` pour que `xgettext`
+#. les extraie ; les clés **à pluriel** sont de simples littéraux, car leur msgid est déjà extrait
+#. par l'appel `trn` de `TexteNeutre::traduit` (un `tr_noop` en plus donnerait deux entrées
+#. contradictoires pour le même msgid).
+#. / Sujet : réparation (valeur : aucune).
+#: crates/wimao-core/src/historique.rs crates/wimao/src/aide.rs
+#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
+msgid "Repair"
+msgstr ""
+
+#. / Sujet : retour vers le point créé avant une réparation.
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before a repair"
+msgstr ""
+
+#. / Sujet : retour vers le point d'une session de gestionnaire (valeur `name`).
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before the {name} session"
+msgstr ""
+
+#. / Sujet : retour vers le point d'une installation (valeur `file`).
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before installing {file}"
+msgstr ""
+
 #: crates/wimao-core/src/historique.rs
+msgid "The import of {path} had been interrupted: it has been completed"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"Cancelling the import of {path} had been interrupted: it has been completed. "
+"If you use yabridgectl yourself, run \"{command}\""
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
+"\"{command}\" to update your plugin links"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs crates/wimao/src/historique_vue.rs
+msgid "{n} file removed"
+msgid_plural "{n} files removed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/wimao-core/src/historique.rs
+msgid "{n} plugin processed"
+msgid_plural "{n} plugins processed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Installation"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Manager session"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Repair"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Undo"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Backup"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Restore"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Import"
+msgstr ""
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Import cancelled"
 msgstr ""
 
 #: crates/wimao-core/src/historique.rs
@@ -788,10 +858,6 @@ msgid "Moving the Wine environment back…"
 msgstr ""
 
 #: crates/wimao-core/src/import.rs
-msgid "The import of {path} had been interrupted: it has been completed"
-msgstr ""
-
-#: crates/wimao-core/src/import.rs
 msgid ""
 "The import of {path} had been interrupted before anything was moved: it has "
 "been abandoned"
@@ -804,24 +870,7 @@ msgid ""
 msgstr ""
 
 #: crates/wimao-core/src/import.rs
-msgid ""
-"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
-"\"{command}\" to update your plugin links"
-msgstr ""
-
-#: crates/wimao-core/src/import.rs
 msgid "Updating your plugin links (yabridgectl sync)…"
-msgstr ""
-
-#: crates/wimao-core/src/import.rs
-msgid ""
-"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
-msgstr ""
-
-#: crates/wimao-core/src/import.rs
-msgid ""
-"Cancelling the import of {path} had been interrupted: it has been completed. "
-"If you use yabridgectl yourself, run \"{command}\""
 msgstr ""
 
 #: crates/wimao-core/src/journal.rs
@@ -933,18 +982,6 @@ msgid ""
 msgstr ""
 
 #: crates/wimao-core/src/restauration.rs
-msgid "before a repair"
-msgstr ""
-
-#: crates/wimao-core/src/restauration.rs
-msgid "before the {name} session"
-msgstr ""
-
-#: crates/wimao-core/src/restauration.rs
-msgid "before installing {file}"
-msgstr ""
-
-#: crates/wimao-core/src/restauration.rs
 msgid "no free name found for the restore point {id}"
 msgstr ""
 
@@ -959,12 +996,6 @@ msgstr ""
 #: crates/wimao-core/src/restauration.rs
 msgid "{file} of the restore point {id}"
 msgstr ""
-
-#: crates/wimao-core/src/restauration.rs crates/wimao/src/historique_vue.rs
-msgid "{n} file removed"
-msgid_plural "{n} files removed"
-msgstr[0] ""
-msgstr[1] ""
 
 #: crates/wimao-core/src/restauration.rs
 msgid "{path} is not a real folder (symbolic link?)"
@@ -1078,6 +1109,10 @@ msgstr ""
 msgid "The plugin opens"
 msgstr ""
 
+#: crates/wimao-core/src/tableau.rs
+msgid "Loads correctly; open it in your music software to check its interface"
+msgstr ""
+
 #. / Détail d'un VST2 écarté au profit du VST3.
 #: crates/wimao-core/src/tableau.rs
 msgid "VST2 skipped: the same plugin is available as VST3"
@@ -1118,7 +1153,7 @@ msgid "The virtual screen does not respond: {error}"
 msgstr ""
 
 #: crates/wimao-core/src/test_plugin.rs
-msgid "Loaded, but the interface could not be checked"
+msgid "The plugin did not finish loading within 5 minutes"
 msgstr ""
 
 #: crates/wimao-core/src/test_plugin.rs
@@ -1267,12 +1302,6 @@ msgstr ""
 #: crates/wimao-recettes/src/installation.rs
 msgid "Updating the Wine environment…"
 msgstr ""
-
-#: crates/wimao-recettes/src/installation.rs
-msgid "{n} plugin processed"
-msgid_plural "{n} plugins processed"
-msgstr[0] ""
-msgstr[1] ""
 
 #: crates/wimao-recettes/src/installation.rs
 msgid ""
@@ -1689,6 +1718,14 @@ msgstr ""
 msgid "Windows audio plugins on Linux"
 msgstr ""
 
+#: crates/wimao/src/dialogues.rs
+msgid "Information"
+msgstr ""
+
+#: crates/wimao/src/dialogues.rs
+msgid "Copy the command"
+msgstr ""
+
 #: crates/wimao/src/fenetre/entete.rs
 msgid "Main menu"
 msgstr ""
@@ -1952,6 +1989,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: crates/wimao/src/operations.rs
+msgid "{n} to check"
+msgid_plural "{n} to check"
+msgstr[0] ""
+msgstr[1] ""
+
+#: crates/wimao/src/operations.rs
 msgid "{n} with a problem"
 msgid_plural "{n} with a problem"
 msgstr[0] ""
@@ -1979,6 +2022,10 @@ msgstr ""
 
 #: crates/wimao/src/reparation.rs
 msgid "Repairing…"
+msgstr ""
+
+#: crates/wimao/src/reparation.rs
+msgid "Command copied"
 msgstr ""
 
 #: crates/wimao/src/reparation.rs

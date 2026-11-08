@@ -157,10 +157,14 @@ impl Fenetre {
     ///
     /// `avertissement_reglages` : le message rendu par `Reglages::charger` si `reglages.toml`
     /// était abîmé ; il est montré en toast dès l'ouverture (`None` après un changement de langue).
+    /// `mis_a_jour` : plugins déjà marqués « Updated » à reprendre. Vide à l'ouverture de
+    /// WiMao ; rempli quand la fenêtre est reconstruite au changement de langue, pour que la
+    /// marque survive. Il est posé avant le premier relevé, qui en prend une copie.
     pub fn nouvelle(
         app: &adw::Application,
         chemins: Rc<Chemins>,
         avertissement_reglages: Option<String>,
+        mis_a_jour: BTreeSet<PathBuf>,
     ) -> Fenetre {
         let titre = adw::WindowTitle::new("WiMao", "");
         let bandeau = adw::Banner::builder().revealed(false).build();
@@ -225,7 +229,7 @@ impl Fenetre {
             pulsation: Rc::new(RefCell::new(None)),
             sortie_confirmee: Rc::new(Cell::new(false)),
             toast_pontage: Rc::new(RefCell::new(None)),
-            mis_a_jour: Rc::new(RefCell::new(BTreeSet::new())),
+            mis_a_jour: Rc::new(RefCell::new(mis_a_jour)),
             actions_travail: Rc::new(RefCell::new(Vec::new())),
         };
         moi.construire_pages();

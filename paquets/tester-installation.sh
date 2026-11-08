@@ -265,11 +265,13 @@ grep -qx 'No problem found' "$JOURNAUX/diagnostiquer.log" \
 # wimao-bridge lancent Wine avec WINELOADER=/opt/wimao/wine/bin/wine. `verifier` ouvre chaque plugin
 # ponté dans Carla (écran Xvfb à lui) avec un serveur JACK factice lancé ci-dessous. Verdicts exigés :
 #   Dexed     ✅ « The plugin opens » : sa fenêtre apparaît, la chaîne Wine + yabridge des paquets marche ;
-#   WiMaoTest ❌ « The plugin host stopped » OU ⚠️ « Loaded, but the interface could not be checked » :
-#             sa fabrique VST3 est vide (tests/fixtures/plugin/WiMaoTest.c). Selon le moment, Carla
-#             s'arrête en l'examinant (❌) ou le « charge » sans pouvoir ouvrir d'interface (⚠️) : constaté
-#             3 fois sur 7 sur ubuntu-24.04 le 2026-11-01, les deux issues sont donc admises. Il ne sert qu'à
-#             tester installeur et pontage ; ce qui compte est qu'il ne soit JAMAIS ✅.
+#   WiMaoTest ❌ « The plugin host stopped » (code 2) OU ⚠️ « The plugin did not finish loading within
+#             5 minutes » (code 0) : sa fabrique VST3 est vide (tests/fixtures/plugin/WiMaoTest.c),
+#             donc yabridge n'écrit jamais « Finished initializing » pour lui : il n'est JAMAIS « chargé ».
+#             Selon le moment, Carla s'arrête en l'examinant (❌), ou reste vivant sans ouvrir de fenêtre
+#             jusqu'au délai (⚠️). Les deux issues ont été constatées (3 fois sur 7 sur ubuntu-24.04
+#             le 2026-11-01), donc les deux sont admises. En revanche ✅ « Loads correctly… » est REFUSÉ :
+#             pour ce plugin-là, ce verdict serait un faux « chargé » (comme « The plugin opens »).
 # `verifier` rend le code 2 si WiMaoTest est ❌, 0 s'il est ⚠️ ; aucun autre verdict n'est accepté.
 # Exception : sur une distribution sans Carla (décidé par apt-cache policy), le seul verdict accepté pour
 # les deux est ⚠️ « Install Carla to test plugins » (code 0) ; pontage et lien yabridge restent exigés.
@@ -306,12 +308,13 @@ cat "$JOURNAUX/verifier.log"
 AVERTISSEMENT=$'\xe2\x9a\xa0\xef\xb8\x8f'
 if [ "$CARLA_DISPONIBLE" = 1 ]; then
     # Dexed : un seul verdict admis. WiMaoTest : deux issues admises (voir plus haut) ; le code attendu
-    # de `verifier` dépend de celle obtenue, lue dans son journal avant la comparaison.
+    # de `verifier` dépend de celle obtenue, lue dans son journal avant la comparaison. Tout autre
+    # verdict (dont ✅ « Loads correctly… ») ne correspond à aucune des deux : il est signalé comme écart.
     attendus=("Dexed | VST3 | ✅ | The plugin opens")
     wimaotest_echec="WiMaoTest | VST3 | ❌ | The plugin host stopped"
-    wimaotest_remarque="WiMaoTest | VST3 | $AVERTISSEMENT | Loaded, but the interface could not be checked"
-    if grep -q -x -F "$wimaotest_remarque" "$JOURNAUX/verifier.log"; then
-        attendus+=("$wimaotest_remarque")
+    wimaotest_delai="WiMaoTest | VST3 | $AVERTISSEMENT | The plugin did not finish loading within 5 minutes"
+    if grep -q -x -F "$wimaotest_delai" "$JOURNAUX/verifier.log"; then
+        attendus+=("$wimaotest_delai")
         code_attendu=0
     else
         attendus+=("$wimaotest_echec")

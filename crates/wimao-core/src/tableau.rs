@@ -89,6 +89,9 @@ impl DetailBrut {
 
 /// Détail d'un plugin qui s'ouvre.
 pub const DETAIL_OUVRE: &str = tr_noop("The plugin opens");
+/// Détail d'un plugin chargé dont l'interface n'a pas pu être vérifiée par le test.
+pub const DETAIL_CHARGE: &str =
+    tr_noop("Loads correctly; open it in your music software to check its interface");
 /// Détail d'un VST2 écarté au profit du VST3.
 pub const DETAIL_DOUBLON: &str = tr_noop("VST2 skipped: the same plugin is available as VST3");
 /// Détail d'un plugin déjà ponté depuis un autre environnement.
@@ -100,6 +103,7 @@ pub const DETAIL_NON_TESTE: &str = tr_noop("bridged, not tested");
 pub fn brut_depuis_test(test: &ResultatTest) -> (Statut, DetailBrut) {
     match test {
         ResultatTest::Pret => (Statut::Bon, DetailBrut::Cle(DETAIL_OUVRE)),
+        ResultatTest::Charge => (Statut::Bon, DetailBrut::Cle(DETAIL_CHARGE)),
         ResultatTest::Remarque(texte) => (Statut::Avertissement, DetailBrut::Libre(texte.clone())),
         ResultatTest::Probleme(texte) => (Statut::Echec, DetailBrut::Libre(texte.clone())),
     }
@@ -154,6 +158,14 @@ mod tests {
         assert_eq!(statut, Statut::Echec);
         let (statut, _) = depuis_test(&ResultatTest::Remarque("x".into()));
         assert_eq!(statut, Statut::Avertissement);
+    }
+
+    #[test]
+    fn charge_donne_bon_avec_le_detail() {
+        assert_eq!(
+            brut_depuis_test(&ResultatTest::Charge),
+            (Statut::Bon, DetailBrut::Cle(DETAIL_CHARGE))
+        );
     }
 
     #[test]

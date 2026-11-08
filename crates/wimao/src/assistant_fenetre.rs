@@ -66,6 +66,11 @@ const CHAPITRE_AIDE: &str = "premiers-pas";
 /// thème changent d'un thème à l'autre et certaines manquent à taille de page d'état.
 const ICONE_PRET: &str = "wimao-pret-symbolic";
 const ICONE_ERREUR: &str = "wimao-erreur-symbolic";
+/// Classes WiMao (voir `style.css`) qui colorent **seulement l'icône** d'une page d'état : vert
+/// « succès » et rouge « erreur » d'Adwaita, qui suivent le thème clair ou sombre. Les classes
+/// `success` / `error` posées sur la page colorent aussi son titre et sa description.
+const CLASSE_SUCCES: &str = "wimao-pret";
+const CLASSE_ERREUR: &str = "wimao-erreur";
 /// Classe libadwaita d'une `adw::StatusPage` resserrée (icône et marges réduites) : les pages
 /// qui portent une liste doivent tenir dans 560 px de haut.
 const CLASSE_COMPACTE: &str = "compact";
@@ -342,6 +347,7 @@ impl FenetreAssistant {
         boutons.append(&reessayer);
         boutons.append(&rapport);
         self.page_echec.set_icon_name(Some(ICONE_ERREUR));
+        self.page_echec.add_css_class(CLASSE_ERREUR);
         self.page_echec
             .set_title(&tr("The environment could not be set up"));
         self.page_echec.set_child(Some(&boutons));
@@ -382,7 +388,7 @@ impl FenetreAssistant {
         }
         let statut = adw::StatusPage::builder()
             .icon_name(ICONE_PRET)
-            .css_classes([CLASSE_COMPACTE])
+            .css_classes([CLASSE_COMPACTE, CLASSE_SUCCES])
             .title(tr("Your environment is ready"))
             .description(tr("What would you like to do first?"))
             .child(&Self::resserrer(&liste))
@@ -648,7 +654,8 @@ impl FenetreAssistant {
         if self.sortie_confirmee.replace(true) {
             return;
         }
-        let principale = Fenetre::nouvelle(&self.app, self.chemins.clone(), None);
+        let principale =
+            Fenetre::nouvelle(&self.app, self.chemins.clone(), None, Default::default());
         principale.presenter();
         self.fenetre.close();
         if suite == Suite::Installeur {

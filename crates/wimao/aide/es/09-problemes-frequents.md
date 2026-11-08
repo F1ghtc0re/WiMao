@@ -2,13 +2,13 @@
 
 ## Un plugin está marcado como «Problema»
 
-Su prueba de apertura ha fallado. Lea la explicación bajo su nombre y después:
+El plugin no se carga o falla en Wine durante la prueba de apertura. Lea la explicación bajo su nombre y después:
 
 1. Pruébelo de todos modos en su programa de música: la prueba de WiMao usa otro programa anfitrión, que a veces falla donde su programa de música funciona.
 2. Haga clic en **Reparar**: a menudo la causa es un componente que falta.
 3. Si el plugin viene de un gestor, compruebe que está bien instalado y activado en él.
 
-Un plugin marcado como **Revisar** se ha cargado, pero no se pudo comprobar su interfaz: pruébelo en su programa de música.
+Un plugin marcado como **Revisar** no dio un resultado claro (por ejemplo, no terminó de cargarse en 5 minutos): pruébelo en su programa de música.
 
 ## «Hay un plugin en ejecución»
 

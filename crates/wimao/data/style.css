@@ -49,3 +49,14 @@ banner.banniere-session button {
   background-color: @accent_bg_color;
   color: @accent_fg_color;
 }
+
+/* Icône des pages d'état de l'assistant : seule l'icône prend la couleur Adwaita (vert « succès »,
+   rouge « erreur »), pas le titre ni la description. Le sélecteur suit la structure interne de
+   libadwaita 1.x (`.icon` de l'image dans la StatusPage) ; s'il ne correspond plus à une version
+   future, la seule conséquence est une icône non colorée. */
+statuspage.wimao-pret > scrolledwindow > viewport > box > clamp > box > .icon {
+  color: @success_color;
+}
+statuspage.wimao-erreur > scrolledwindow > viewport > box > clamp > box > .icon {
+  color: @error_color;
+}

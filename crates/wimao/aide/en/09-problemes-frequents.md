@@ -2,13 +2,13 @@
 
 ## A plugin is marked "Problem"
 
-Its opening test failed. Read the explanation under its name, then:
+The plugin does not load, or crashes in Wine during the opening test. Read the explanation under its name, then:
 
 1. Try it in your music software anyway: the WiMao test uses another host program, which sometimes crashes where your music software works.
 2. Click **Repair**: a missing component is often the cause.
 3. If the plugin comes from a manager, check that it is properly installed and activated there.
 
-A plugin marked **Check** loaded, but its interface could not be checked: try it in your music software.
+A plugin marked **Check** did not give a clear result (for example, it did not finish loading within 5 minutes): try it in your music software.
 
 ## "A plugin is running"
 

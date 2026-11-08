@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 19:35+0100\n"
+"POT-Creation-Date: 2026-11-07 23:40+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -273,7 +273,7 @@ msgstr ""
 "L'import va être annulé : l'environnement retourne dans {path} et le lien "
 "est retiré."
 
-#: crates/wimao-cli/src/commandes/import.rs crates/wimao-core/src/historique.rs
+#: crates/wimao-cli/src/commandes/import.rs
 msgid "Import cancelled"
 msgstr "Import annulé"
 
@@ -552,44 +552,37 @@ msgstr ""
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use another yabridge than WiMao's: {link} "
-"leads to {current}, not to {expected}. To use WiMao's, run: ln -sfn "
-"{expected_sh} {link_sh}"
+"leads to {current}, not to {expected}. To use WiMao's, run: {command}"
 msgstr ""
 "Les plugins de votre logiciel de musique utilisent un autre yabridge que "
-"celui de WiMao : {link} mène à {current} et non à {expected}. Pour "
-"utiliser celui de WiMao, lancez : ln -sfn {expected_sh} {link_sh}"
+"celui de WiMao : {link} mène à {current} et non à {expected}. Pour utiliser "
+"celui de WiMao, lancez : {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software cannot find yabridge: {link} leads to "
-"{current}, which no longer exists. To use WiMao's ({expected}), run: ln -sfn "
-"{expected_sh} {link_sh}"
+"{current}, which no longer exists. To use WiMao's ({expected}), run: "
+"{command}"
 msgstr ""
-"Les plugins de votre logiciel de musique ne trouvent pas yabridge : "
-"{link} mène à {current}, qui n'existe plus. Pour utiliser celui de WiMao "
-"({expected}), lancez : ln -sfn {expected_sh} {link_sh}"
+"Les plugins de votre logiciel de musique ne trouvent pas yabridge : {link} "
+"mène à {current}, qui n'existe plus. Pour utiliser celui de WiMao "
+"({expected}), lancez : {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
 "The plugins in your music software use the yabridge in the folder {link}, "
 "not WiMao's ({expected}). To use WiMao's, move that folder away, then run: "
-"ln -s {expected_sh} {link_sh}"
+"{command}"
 msgstr ""
 "Les plugins de votre logiciel de musique utilisent le yabridge du dossier "
 "{link}, et non celui de WiMao ({expected}). Pour utiliser celui de WiMao, "
-"déplacez ce dossier ailleurs, puis lancez : ln -s {expected_sh} {link_sh}"
+"déplacez ce dossier ailleurs, puis lancez : {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 #: crates/wimao-recettes/src/gestionnaire.rs
 #: crates/wimao-recettes/src/installation.rs
 msgid "Creating a restore point…"
 msgstr "Création d'un point de restauration…"
-
-#: crates/wimao-core/src/diagnostic.rs crates/wimao-core/src/historique.rs
-#: crates/wimao/src/aide.rs crates/wimao/src/dialogues.rs
-#: crates/wimao/src/fenetre/mod.rs crates/wimao/src/reparation.rs
-msgid "Repair"
-msgstr "Réparer"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid "Stopping Wine"
@@ -742,29 +735,112 @@ msgstr ""
 "Un import de l'environnement Wine a été interrompu et ne peut pas être "
 "terminé sans risque : rien n'a été modifié. Vérifiez {old} et {new} vous-même"
 
+#. --- Clés des textes neutres ---------------------------------------------------------------
+#.
+#. Chaque clé est un msgid anglais. Les clés simples passent par `tr_noop` pour que `xgettext`
+#. les extraie ; les clés **à pluriel** sont de simples littéraux, car leur msgid est déjà extrait
+#. par l'appel `trn` de `TexteNeutre::traduit` (un `tr_noop` en plus donnerait deux entrées
+#. contradictoires pour le même msgid).
+#. / Sujet : réparation (valeur : aucune).
+#: crates/wimao-core/src/historique.rs crates/wimao/src/aide.rs
+#: crates/wimao/src/dialogues.rs crates/wimao/src/fenetre/mod.rs
+#: crates/wimao/src/reparation.rs
+msgid "Repair"
+msgstr "Réparer"
+
+#. / Sujet : retour vers le point créé avant une réparation.
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before a repair"
+msgstr "avant une réparation"
+
+#. / Sujet : retour vers le point d'une session de gestionnaire (valeur `name`).
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before the {name} session"
+msgstr "avant la session {name}"
+
+#. / Sujet : retour vers le point d'une installation (valeur `file`).
+#: crates/wimao-core/src/historique.rs crates/wimao-core/src/restauration.rs
+msgid "before installing {file}"
+msgstr "avant l'installation de {file}"
+
 #: crates/wimao-core/src/historique.rs
+msgid "The import of {path} had been interrupted: it has been completed"
+msgstr "L'import de {path} avait été interrompu : il a été terminé"
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"Cancelling the import of {path} had been interrupted: it has been completed. "
+"If you use yabridgectl yourself, run \"{command}\""
+msgstr ""
+"L'annulation de l'import de {path} avait été interrompue : elle a été "
+"terminée. Si vous utilisez yabridgectl vous-même, lancez « {command} »"
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
+"\"{command}\" to update your plugin links"
+msgstr ""
+"Aucun réglage yabridgectl dans {path} : si vous utilisez yabridgectl vous-"
+"même, lancez « {command} » pour mettre à jour les liens de vos plugins"
+
+#: crates/wimao-core/src/historique.rs
+msgid ""
+"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
+msgstr ""
+"Les liens de vos plugins n'ont pas pu être mis à jour ({error}) : lancez "
+"« {command} » vous-même"
+
+#: crates/wimao-core/src/historique.rs crates/wimao/src/historique_vue.rs
+msgid "{n} file removed"
+msgid_plural "{n} files removed"
+msgstr[0] "{n} fichier supprimé"
+msgstr[1] "{n} fichiers supprimés"
+
+#: crates/wimao-core/src/historique.rs
+msgid "{n} plugin processed"
+msgid_plural "{n} plugins processed"
+msgstr[0] "{n} plugin traité"
+msgstr[1] "{n} plugins traités"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Installation"
 msgstr "Installation"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Manager session"
 msgstr "Session de gestionnaire"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Repair"
+msgstr "Réparation"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Undo"
 msgstr "Retour en arrière"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Backup"
 msgstr "Sauvegarde"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Restore"
 msgstr "Restauration"
 
 #: crates/wimao-core/src/historique.rs
+msgctxt "history"
 msgid "Import"
 msgstr "Import"
+
+#: crates/wimao-core/src/historique.rs
+msgctxt "history"
+msgid "Import cancelled"
+msgstr "Import annulé"
 
 #: crates/wimao-core/src/historique.rs
 msgid "Succeeded"
@@ -855,10 +931,6 @@ msgid "Moving the Wine environment back…"
 msgstr "Remise en place de l'environnement Wine…"
 
 #: crates/wimao-core/src/import.rs
-msgid "The import of {path} had been interrupted: it has been completed"
-msgstr "L'import de {path} avait été interrompu : il a été terminé"
-
-#: crates/wimao-core/src/import.rs
 msgid ""
 "The import of {path} had been interrupted before anything was moved: it has "
 "been abandoned"
@@ -875,31 +947,8 @@ msgstr ""
 "déplacement : l'import est toujours en place"
 
 #: crates/wimao-core/src/import.rs
-msgid ""
-"No yabridgectl settings in {path}: if you use yabridgectl yourself, run "
-"\"{command}\" to update your plugin links"
-msgstr ""
-"Aucun réglage yabridgectl dans {path} : si vous utilisez yabridgectl vous-"
-"même, lancez « {command} » pour mettre à jour les liens de vos plugins"
-
-#: crates/wimao-core/src/import.rs
 msgid "Updating your plugin links (yabridgectl sync)…"
 msgstr "Mise à jour des liens de vos plugins (yabridgectl sync)…"
-
-#: crates/wimao-core/src/import.rs
-msgid ""
-"Your plugin links could not be updated ({error}): run \"{command}\" yourself"
-msgstr ""
-"Les liens de vos plugins n'ont pas pu être mis à jour ({error}) : lancez "
-"« {command} » vous-même"
-
-#: crates/wimao-core/src/import.rs
-msgid ""
-"Cancelling the import of {path} had been interrupted: it has been completed. "
-"If you use yabridgectl yourself, run \"{command}\""
-msgstr ""
-"L'annulation de l'import de {path} avait été interrompue : elle a été "
-"terminée. Si vous utilisez yabridgectl vous-même, lancez « {command} »"
 
 #: crates/wimao-core/src/journal.rs
 msgid ""
@@ -1025,18 +1074,6 @@ msgstr ""
 "navigateur"
 
 #: crates/wimao-core/src/restauration.rs
-msgid "before a repair"
-msgstr "avant une réparation"
-
-#: crates/wimao-core/src/restauration.rs
-msgid "before the {name} session"
-msgstr "avant la session {name}"
-
-#: crates/wimao-core/src/restauration.rs
-msgid "before installing {file}"
-msgstr "avant l'installation de {file}"
-
-#: crates/wimao-core/src/restauration.rs
 msgid "no free name found for the restore point {id}"
 msgstr "aucun nom libre trouvé pour le point de restauration {id}"
 
@@ -1051,12 +1088,6 @@ msgstr "{file} du point de restauration {id} (incomplet ou abîmé)"
 #: crates/wimao-core/src/restauration.rs
 msgid "{file} of the restore point {id}"
 msgstr "{file} du point de restauration {id}"
-
-#: crates/wimao-core/src/restauration.rs crates/wimao/src/historique_vue.rs
-msgid "{n} file removed"
-msgid_plural "{n} files removed"
-msgstr[0] "{n} fichier supprimé"
-msgstr[1] "{n} fichiers supprimés"
 
 #: crates/wimao-core/src/restauration.rs
 msgid "{path} is not a real folder (symbolic link?)"
@@ -1184,6 +1215,12 @@ msgstr ""
 msgid "The plugin opens"
 msgstr "Le plugin s'ouvre"
 
+#: crates/wimao-core/src/tableau.rs
+msgid "Loads correctly; open it in your music software to check its interface"
+msgstr ""
+"Se charge correctement ; ouvrez-le dans votre logiciel de musique pour "
+"vérifier son interface"
+
 #. / Détail d'un VST2 écarté au profit du VST3.
 #: crates/wimao-core/src/tableau.rs
 msgid "VST2 skipped: the same plugin is available as VST3"
@@ -1224,8 +1261,8 @@ msgid "The virtual screen does not respond: {error}"
 msgstr "L'écran virtuel ne répond pas : {error}"
 
 #: crates/wimao-core/src/test_plugin.rs
-msgid "Loaded, but the interface could not be checked"
-msgstr "Chargé, mais l'interface n'a pas pu être vérifiée"
+msgid "The plugin did not finish loading within 5 minutes"
+msgstr "Le plugin n'a pas fini de se charger en 5 minutes"
 
 #: crates/wimao-core/src/test_plugin.rs
 msgid ""
@@ -1381,12 +1418,6 @@ msgstr "Type d'installeur inconnu : il faut l'ouvrir normalement"
 #: crates/wimao-recettes/src/installation.rs
 msgid "Updating the Wine environment…"
 msgstr "Mise à jour de l'environnement Wine…"
-
-#: crates/wimao-recettes/src/installation.rs
-msgid "{n} plugin processed"
-msgid_plural "{n} plugins processed"
-msgstr[0] "{n} plugin traité"
-msgstr[1] "{n} plugins traités"
 
 #: crates/wimao-recettes/src/installation.rs
 msgid ""
@@ -1837,6 +1868,14 @@ msgstr "Choisir la sauvegarde à restaurer"
 msgid "Windows audio plugins on Linux"
 msgstr "Plugins audio Windows sous Linux"
 
+#: crates/wimao/src/dialogues.rs
+msgid "Information"
+msgstr "Information"
+
+#: crates/wimao/src/dialogues.rs
+msgid "Copy the command"
+msgstr "Copier la commande"
+
 #: crates/wimao/src/fenetre/entete.rs
 msgid "Main menu"
 msgstr "Menu principal"
@@ -2103,6 +2142,12 @@ msgstr[0] "{n} plugin mis à jour"
 msgstr[1] "{n} plugins mis à jour"
 
 #: crates/wimao/src/operations.rs
+msgid "{n} to check"
+msgid_plural "{n} to check"
+msgstr[0] "{n} à vérifier"
+msgstr[1] "{n} à vérifier"
+
+#: crates/wimao/src/operations.rs
 msgid "{n} with a problem"
 msgid_plural "{n} with a problem"
 msgstr[0] "{n} avec un problème"
@@ -2135,6 +2180,10 @@ msgstr "Recherche des problèmes…"
 #: crates/wimao/src/reparation.rs
 msgid "Repairing…"
 msgstr "Réparation en cours…"
+
+#: crates/wimao/src/reparation.rs
+msgid "Command copied"
+msgstr "Commande copiée"
 
 #: crates/wimao/src/reparation.rs
 msgid "{n} plugin is not bridged yet"
@@ -2218,6 +2267,9 @@ msgstr "{name} fermé : {summary}"
 #: crates/wimao/src/session_fenetre.rs
 msgid "{name} closed: no new or updated plugin"
 msgstr "{name} fermé : aucun plugin nouveau ou mis à jour"
+
+#~ msgid "Loaded, but the interface could not be checked"
+#~ msgstr "Chargé, mais l'interface n'a pas pu être vérifiée"
 
 #~ msgid "this restore point predates the restored backup"
 #~ msgstr "ce point de restauration est antérieur à la sauvegarde restaurée"

@@ -25,7 +25,7 @@ fn ligne(e: &Entree) -> String {
         e.date,
         libelle_resultat(e.resultat),
         libelle_action(e.action),
-        e.sujet
+        e.sujet_affiche()
     );
     if let Some(point) = &e.point {
         texte.push_str(&format!("  [{point}]"));
