@@ -25,8 +25,8 @@
 #   2. empreinte attendue : celle publiée dans SECURITY.md (ou --cle à blanc) ;
 #   3. (réel) téléchargement des .deb, de SHA256SUMS et de SHA256SUMS.asc dans un dossier temporaire ;
 #   4. vérification : SHA256SUMS.asc doit être signé par la clé publiée (gpgv, trousseau tiré de
-#      docs/cle-publique.asc, jamais de ~/.gnupg) ; `sha256sum -c` ; les .deb présents sont exactement ceux
-#      listés ;
+#      docs/cle-publique.asc, jamais de ~/.gnupg) ; les lignes « .deb » de SHA256SUMS (qui liste aussi les trois .rpm) sont
+#      exactement trois, `sha256sum -c` dessus ; les .deb présents sont exactement ceux listés ;
 #   5. index : `apt-ftparchive packages` sur pool/vX.Y.Z/, fusionné avec le Packages existant (relancer la
 #      même version REMPLACE ses entrées au lieu de les dupliquer), trié par nom puis version (dpkg), puis
 #      Packages.gz (gzip -9n) et Release (apt-ftparchive release, SHA256 seulement, pas de Valid-Until) ;
@@ -223,10 +223,16 @@ done
 echo "== 4. Signature et sommes SHA-256"
 verifier_signature "$trousseau" "$empreinte" "$dossier/SHA256SUMS.asc" "$dossier/SHA256SUMS" \
     || arreter "SHA256SUMS n'est pas signé par la clé publiée ($empreinte)"
-(cd "$dossier" && sha256sum -c --strict SHA256SUMS) || arreter "un .deb ne correspond pas à SHA256SUMS (voir ci-dessus)"
+# SHA256SUMS (signé en entier, vérifié ci-dessus AVANT tout filtrage) liste six paquets : trois .deb et trois
+# .rpm. Seuls les .deb nous concernent (les .rpm relèvent de publier-depot-dnf.sh) : on en extrait les lignes
+# « .deb » (un « * » devant le nom est la marque du mode binaire de sha256sum : on le retire pour le nom).
+awk '{ n = $2; sub(/^\*/, "", n); if (n ~ /\.deb$/) print }' "$dossier/SHA256SUMS" > "$temporaire/SHA256SUMS.deb"
+listes="$(awk '{ n = $2; sub(/^\*/, "", n); print n }' "$temporaire/SHA256SUMS.deb" | LC_ALL=C sort)"
+nombre_liste="$(grep -c . <<< "$listes" || true)"
+[ "$nombre_liste" -eq 3 ] \
+    || arreter "SHA256SUMS liste $nombre_liste .deb au lieu de trois (wimao, wimao-bridge, wimao-wine)"
+(cd "$dossier" && sha256sum -c --strict "$temporaire/SHA256SUMS.deb") || arreter "un .deb ne correspond pas à SHA256SUMS (voir ci-dessus)"
 # sha256sum -c ne regarde que les fichiers LISTÉS : un .deb de plus dans le dossier passerait inaperçu.
-# Un « * » devant le nom est la marque du mode binaire de sha256sum : on le retire.
-listes="$(awk '{ n = $2; sub(/^\*/, "", n); print n }' "$dossier/SHA256SUMS" | LC_ALL=C sort)"
 presents="$(find "$dossier" -maxdepth 1 -name '*.deb' -printf '%f\n' | LC_ALL=C sort)"
 [ "$listes" = "$presents" ] || arreter "les .deb du dossier ne sont pas exactement ceux de SHA256SUMS
   listés   : $(echo "$listes" | tr '\n' ' ')

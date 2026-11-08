@@ -1,0 +1,19 @@
+# Dépendances obligatoires (Requires) du RPM wimao-wine : une par ligne, nom de paquet Fedora
+# éventuellement suivi d'une contrainte de version. Les lignes vides et celles qui commencent
+# par « # » sont ignorées. Lu par paquets/fabriquer-rpm.sh ; tableau de référence : § 3.1 de
+# docs/superpowers/specs/2026-11-08-wimao-sous-projet-8-design.md.
+freetype
+fontconfig
+libX11
+libXext
+libXrender
+libXrandr
+libXi
+libXcursor
+libXcomposite
+libXfixes
+vulkan-loader
+gnutls
+pulseaudio-libs
+alsa-lib
+libOpenCL.so.1()(64bit)

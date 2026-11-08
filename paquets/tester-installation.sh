@@ -82,7 +82,8 @@ exec > >(tee "$JOURNAUX/installation.log") 2>&1
 # --- 0. Empreintes -------------------------------------------------------------------------
 etape "0. Empreintes SHA-256 des paquets"
 [ -f "$DEBS/SHA256SUMS" ] || echec "$DEBS/SHA256SUMS absent"
-(cd "$DEBS" && sha256sum -c SHA256SUMS) || echec "une empreinte ne correspond pas : paquets non installés"
+# SHA256SUMS couvre aussi les RPM en CI : on ne contrôle que les lignes des .deb.
+(cd "$DEBS" && grep -E '\.deb$' SHA256SUMS | sha256sum -c -) || echec "une empreinte ne correspond pas : paquets non installés"
 
 # --- 1. Installation -----------------------------------------------------------------------
 etape "1. Installation des paquets"

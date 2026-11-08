@@ -4,7 +4,7 @@
 button (Security tab); we aim to answer within 7 days; only the latest release is supported.
 Releases are signed (`SHA256SUMS.asc`) and carry build attestations; see "Vérifier une version" below.
 The signed APT repository (https://f1ghtc0re.github.io/WiMao) is signed with the same key; see
-"Le dépôt APT" below.*
+"Le dépôt APT" below. The same key signs the dnf repository for Fedora; see "Le dépôt dnf".*
 
 ## Signaler une faille
 
@@ -51,8 +51,10 @@ Depuis la page de la Release, téléchargez les paquets, `SHA256SUMS` et `SHA256
 # 1. La signature de la liste d'empreintes (clé publique publiée dans le dépôt).
 gpg --verify SHA256SUMS.asc SHA256SUMS
 
-# 2. Les empreintes des fichiers téléchargés.
-sha256sum -c SHA256SUMS
+# 2. Les empreintes des fichiers téléchargés. La liste couvre six paquets (3 .deb, 3 .rpm) :
+#    --ignore-missing passe sur ceux que vous n'avez pas téléchargés, donc vérifiez que
+#    les trois paquets voulus sont bien marqués « OK ».
+sha256sum -c --ignore-missing SHA256SUMS
 
 # 3. L'attestation de fabrication (provenance GitHub), pour chaque paquet.
 gh attestation verify <paquet>.deb --repo F1ghtc0re/WiMao
@@ -93,3 +95,26 @@ l'explique ; la prolongation doit donc se faire assez tôt pour leur laisser le 
 
 Si la clé est perdue ou volée, la procédure de « Clé de signature perdue ou volée » s'applique aussi au
 dépôt : l'index doit être re-signé avec la nouvelle clé et la nouvelle clé publiée sur le site.
+
+## Le dépôt dnf
+
+Le dépôt `dnf` pour Fedora (`https://f1ghtc0re.github.io/WiMao/rpm`, fichier de réglages
+`https://f1ghtc0re.github.io/WiMao/wimao.repo`) suit la même logique que le dépôt APT, avec la même clé.
+
+- **C'est l'index qui est signé** : `repomd.xml.asc` couvre `repomd.xml`, qui contient les empreintes des
+  métadonnées, qui contiennent la taille et l'empreinte SHA-256 de chaque RPM. `dnf` applique `repo_gpgcheck=1` :
+  un index modifié d'un seul octet est refusé, et un RPM qui ne correspond pas à l'index aussi. La signature est
+  faite sur la machine du propriétaire ; la CI vérifie, elle ne signe pas.
+- **Les RPM ne sont pas signés un par un** (`gpgcheck=0`) : signer un RPM le modifierait après la CI et casserait
+  la comparaison octet pour octet, l'attestation de provenance et `SHA256SUMS`. `dnf` affiche donc « skipped
+  OpenPGP checks » à l'installation : c'est normal. Un RPM téléchargé à la main se vérifie avec `SHA256SUMS.asc`,
+  comme un `.deb`, et son attestation avec `gh attestation verify <paquet>.rpm --repo F1ghtc0re/WiMao`.
+- Les RPM ne sont pas hébergés sur le site : l'index pointe vers les Releases GitHub (immuables, signées et
+  attestées). La CI télécharge chacun, contrôle son adresse, sa taille et son SHA-256, puis le jette.
+- **Pas d'expiration de l'index**, comme pour apt : quelqu'un qui contrôlerait le site, ou une PR fusionnée qui
+  restaurerait un vieil index signé, pourrait maintenir des utilisateurs sur une ancienne version authentique ;
+  jamais leur faire installer un paquet forgé. L'index ne décrit que la dernière version.
+- **Expiration de la sous-clé** (2027-11-01) : comme pour apt, voir ci-dessus ; la prolongation concerne les deux
+  dépôts.
+- **Limite connue** : l'installation et l'ouverture d'un plugin n'ont été prouvées que dans des conteneurs
+  Fedora, qui n'appliquent pas SELinux ; l'ouverture des plugins sur un bureau Fedora réel n'est pas prouvée.

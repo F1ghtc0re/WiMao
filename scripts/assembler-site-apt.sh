@@ -29,9 +29,26 @@
 #      HTTPS seul), contrôle de la taille et du SHA256 annoncés ;
 #      Avant l'étape 3, tout élément de depot-apt/ qui n'est pas l'un des cinq fichiers ordinaires attendus
 #      (lien symbolique, fichier en trop, autre architecture...) est refusé (code 1) ;
+#   5b/6b. dépôt dnf (Fedora), SEULEMENT si depot-dnf/rpm/repodata existe ; sinon cette étape est sautée et le site
+#      est exactement celui d'avant son introduction (même octets). Quand elle a lieu :
+#        - depot-dnf/ n'a que l'arbre attendu (rpm/repodata/ et wimao.repo, fichiers ordinaires) ;
+#        - repomd.xml.asc doit être signé par la clé publiée (même clé que pour apt) ;
+#        - l'index est relu (scripts/lib/lire-index-dnf.py : cohérence de repomd.xml, de ses fichiers, lecture du
+#          fichier primary selon son extension, zstd ou autre) ;
+#        - CHAQUE adresse (location) de primary doit être exactement
+#          https://github.com/F1ghtc0re/WiMao/releases/download/vX.Y.Z/<nom>.rpm, avec la MÊME étiquette
+#          partout (l'index ne décrit que la dernière version) : tout ce qui sort de là est refusé, avant
+#          le moindre téléchargement, même si la signature est valide ;
+#        - (6b, après le téléchargement des .deb) chaque RPM est téléchargé à cette adresse, sa taille et son SHA-256 contrôlés, puis jeté : les RPM
+#          ne sont jamais copiés sur le site (limite de 1 Go de GitHub Pages) ;
+#        - wimao.repo doit avoir exactement le contenu attendu (adresse du dépôt et de la clé, contrôles de
+#          signature activés).
 #   7. assemblage : InRelease, Release, Release.gpg, Packages et Packages.gz (les seuls fichiers copiés), pool/<étiquette>/*.deb, wimao.asc (copie de
-#      docs/cle-publique.asc) et index.html (page autonome : commandes d'installation et empreinte).
+#      docs/cle-publique.asc) et index.html (page autonome : commandes d'installation et empreinte) ; avec le
+#      dépôt dnf : rpm/repodata/* et wimao.repo, et la page d'accueil ajoute alors la section Fedora (sans dépôt
+#      dnf, la page n'est pas modifiée d'un octet).
 #   Tout est construit dans un dossier temporaire puis copié à la fin : un contrôle qui échoue n'écrit rien.
+#   Le dépôt APT reste la condition de tout : s'il est vide (code 3), le dépôt dnf n'est pas regardé.
 #
 # Variables : WIMAO_SOURCE_RELEASES  (ESSAIS SEULEMENT) dossier local « <étiquette>/<nom> » qui remplace
 #             l'adresse des Releases : les fichiers y sont copiés au lieu d'être téléchargés. Elle n'est admise
@@ -39,7 +56,8 @@
 #             en silence : une CI qui l'aurait par erreur n'assemblerait pas un site à partir d'un dossier local.
 # Écrit     : <dossier du site> uniquement, en cas de succès (si la copie finale échoue, il est vidé) ; dossiers temporaires supprimés en sortie.
 # Code      : 0 = site complet ; 1 = contrôle échoué ; 2 = usage ; 3 = dépôt APT vide (rien écrit).
-# Dépend de : gpg, gpgv, curl (téléchargement réel), gzip, sha256sum, awk.
+# Dépend de : gpg, gpgv, curl (téléchargement réel), gzip, sha256sum, awk ; avec le dépôt dnf, python3 et l'outil
+#             de décompression de l'index (zstd).
 set -euo pipefail
 # Langue neutre : comparaisons, tri et awk ne dépendent pas de la langue de la machine.
 export LC_ALL=C
@@ -48,6 +66,17 @@ RACINE_DEPOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Adresse des Releases GitHub, et du dépôt de code (lien de la page d'accueil).
 URL_RELEASES="https://github.com/F1ghtc0re/WiMao/releases/download"
 URL_DEPOT="https://github.com/F1ghtc0re/WiMao"
+# Contenu EXACT de depot-dnf/wimao.repo (lignes de commentaire et lignes vides ignorées, ordre indifférent) : le
+# fichier est téléchargé par les utilisateurs, ses adresses et ses contrôles de signature ne doivent pas changer
+# sans qu'on le voie ici. À modifier ENSEMBLE avec depot-dnf/wimao.repo.
+CONTENU_WIMAO_REPO='[wimao]
+name=WiMao
+baseurl=https://f1ghtc0re.github.io/WiMao/rpm
+enabled=1
+repo_gpgcheck=1
+gpgcheck=0
+gpgkey=https://f1ghtc0re.github.io/WiMao/wimao.asc
+metadata_expire=6h'
 # Forme stricte d'un Filename : pool/vX.Y.Z/<nom de .deb sans « / » ni « .. » grâce au jeu de caractères>.
 MOTIF_FILENAME='^pool/v[0-9]+\.[0-9]+\.[0-9]+/[A-Za-z0-9.+~_-]+\.deb$'
 # shellcheck source=scripts/lib/publication.sh
@@ -241,6 +270,57 @@ doublons="$(cut -f1 "$temporaire/entrees.tsv" | sort | uniq -d)"
 [ -z "$doublons" ] || arreter "Filename en double dans Packages : $doublons"
 echo "$(wc -l < "$temporaire/entrees.tsv") entrée(s), toutes en pool/vX.Y.Z/."
 
+# --- 5b. Dépôt dnf : contrôles sans téléchargement (seulement si depot-dnf/rpm/repodata existe) ---
+# Sans index dnf, rien de ce bloc ne s'exécute et le site est identique à celui d'avant : l'absence du dossier
+# (ou un depot-dnf/ qui ne contient que wimao.repo) n'est pas une erreur, c'est l'état « pas encore publié ».
+depot_dnf="$racine/depot-dnf"
+avec_dnf=0
+if [ -e "$depot_dnf/rpm/repodata" ] || [ -L "$depot_dnf/rpm/repodata" ]; then
+    avec_dnf=1
+    echo "== 5b. Dépôt dnf (signature, index, adresses)"
+    command -v python3 > /dev/null || arreter "la commande python3 est introuvable (nécessaire pour lire l'index dnf)"
+    # Arbre strict, comme pour depot-apt/ : rpm/, rpm/repodata/ et wimao.repo, rien d'autre. Le contenu de
+    # repodata/ est contrôlé fichier par fichier par lire-index-dnf.py (liens, noms, fichiers non décrits).
+    trouves_dnf="$(find "$depot_dnf" -mindepth 1 -printf '%y %P\n' | grep -v '^. rpm/repodata/' | sort || true)"
+    attendus_dnf="d rpm
+d rpm/repodata
+f wimao.repo"
+    [ "$trouves_dnf" = "$(sort <<< "$attendus_dnf")" ] \
+        || arreter "depot-dnf/ n'a pas le contenu attendu (rpm/repodata/ et wimao.repo seulement) : $(tr '\n' ';' <<< "$trouves_dnf")"
+    repodata="$depot_dnf/rpm/repodata"
+    [ -f "$repodata/repomd.xml" ] || arreter "$repodata/repomd.xml est absent"
+    [ -f "$repodata/repomd.xml.asc" ] || arreter "$repodata/repomd.xml.asc est absent"
+    # Signature de repomd.xml par la clé publiée : c'est elle qui rend digne de confiance tout le reste.
+    verifier_signature "$temporaire/trousseau.gpg" "$empreinte" "$repodata/repomd.xml.asc" "$repodata/repomd.xml" \
+        || arreter "repomd.xml n'est pas signé par la clé publiée ($empreinte)"
+    echo "repomd.xml signé par la clé publiée."
+    # Cohérence de l'index, puis liste des RPM (adresse, taille, SHA-256).
+    index_dnf="$(lire_index_dnf "$repodata")" || exit 1
+    # TOUTES les adresses sont vérifiées avant le moindre téléchargement : exactement
+    # <Releases>/vX.Y.Z/<nom>.rpm. Une adresse qui sort de là (autre site, autre dépôt, « .. », identifiants
+    # « utilisateur@ ») est refusée même si l'index est correctement signé.
+    etiquette_dnf=""
+    while IFS=$'\t' read -r href taille somme; do
+        reste="${href#"$URL_RELEASES"/}"
+        # Deux conditions : le href commence bien par l'adresse des Releases (« ${href#…} » ne retire rien sinon),
+        # puis le reste a la forme <étiquette>/<nom>.rpm.
+        if [ "$reste" = "$href" ] || ! [[ "$reste" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+)/([A-Za-z0-9.+~_^-]+\.rpm)$ ]]; then
+            arreter "adresse de RPM refusée (attendu $URL_RELEASES/vX.Y.Z/<nom>.rpm) : $href"
+        fi
+        if [ -z "$etiquette_dnf" ]; then
+            etiquette_dnf="${BASH_REMATCH[1]}"
+        elif [ "${BASH_REMATCH[1]}" != "$etiquette_dnf" ]; then
+            arreter "l'index dnf mêle deux versions ($etiquette_dnf et ${BASH_REMATCH[1]}) : il ne décrit que la dernière"
+        fi
+    done <<< "$index_dnf"
+    [ "$(cut -f1 <<< "$index_dnf" | sort | uniq -d | wc -l)" -eq 0 ] || arreter "adresse en double dans l'index dnf"
+    # wimao.repo : contenu exact attendu (voir CONTENU_WIMAO_REPO).
+    obtenu_repo="$(grep -vE '^[[:space:]]*(#|$)' "$depot_dnf/wimao.repo" | sort || true)"
+    [ "$obtenu_repo" = "$(sort <<< "$CONTENU_WIMAO_REPO")" ] \
+        || arreter "depot-dnf/wimao.repo n'a pas le contenu attendu (voir CONTENU_WIMAO_REPO dans $(basename "$0"))"
+    echo "$(wc -l <<< "$index_dnf") adresse(s) de RPM conformes (version $etiquette_dnf)."
+fi
+
 # --- 6. Téléchargement et contrôle des .deb ---
 echo "== 6. Téléchargement des paquets"
 construit="$temporaire/site"
@@ -268,6 +348,35 @@ while IFS=$'\t' read -r fichier taille somme <&3; do
         || arreter "$nom : SHA256 différent de celui de l'index signé"
 done 3< "$temporaire/entrees.tsv"
 
+# --- 6b. Téléchargement et contrôle des RPM du dépôt dnf (adresses déjà vérifiées à l'étape 5b) ---
+if [ "$avec_dnf" -eq 1 ]; then
+    echo "== 6b. Téléchargement des RPM"
+    # Téléchargement, contrôle de la taille et du SHA-256 annoncés par l'index signé, puis suppression (les RPM
+    # restent sur GitHub). Même source locale d'essai que pour les .deb.
+    mkdir -p "$temporaire/rpm-telecharges"
+    while IFS=$'\t' read -r href taille somme <&4; do
+        reste="${href#"$URL_RELEASES"/}"
+        etiquette="${reste%%/*}"
+        nom="${reste#*/}"
+        destination="$temporaire/rpm-telecharges/$nom"
+        if [ -n "${WIMAO_SOURCE_RELEASES:-}" ]; then
+            echo "  copie (essai) $etiquette/$nom"
+            cp -- "$WIMAO_SOURCE_RELEASES/$etiquette/$nom" "$destination" 2> /dev/null \
+                || arreter "fichier d'essai introuvable : $WIMAO_SOURCE_RELEASES/$etiquette/$nom"
+        else
+            echo "  téléchargement $etiquette/$nom"
+            curl -fsSL --proto '=https' --retry 3 -o "$destination" "$href" \
+                || arreter "téléchargement impossible : $href"
+        fi
+        [ "$(stat -c %s -- "$destination")" = "$taille" ] \
+            || arreter "$nom : taille $(stat -c %s -- "$destination") au lieu de $taille annoncée"
+        [ "$(sha256sum -- "$destination" | cut -d' ' -f1)" = "$somme" ] \
+            || arreter "$nom : SHA256 différent de celui de l'index dnf signé"
+        rm -f -- "$destination"
+    done 4<<< "$index_dnf"
+    echo "RPM contrôlés (téléchargés puis jetés : ils ne sont pas copiés sur le site)."
+fi
+
 # --- 7. Assemblage ---
 echo "== 7. Assemblage du site"
 # Seuls les cinq fichiers vérifiés sont copiés (l'arbre de depot-apt/ a été contrôlé plus haut).
@@ -275,8 +384,31 @@ mkdir -p "$construit/dists/stable/main/binary-amd64"
 cp -- "$dists/InRelease" "$dists/Release" "$dists/Release.gpg" "$construit/dists/stable/"
 cp -- "$paquets" "$paquets_gz" "$construit/dists/stable/main/binary-amd64/"
 cp -- "$racine/docs/cle-publique.asc" "$construit/wimao.asc"
+# Dépôt dnf (contrôlé à l'étape 6b) : l'index et le fichier .repo, jamais les RPM.
+if [ "$avec_dnf" -eq 1 ]; then
+    mkdir -p "$construit/rpm/repodata"
+    cp -- "$depot_dnf"/rpm/repodata/* "$construit/rpm/repodata/"
+    cp -- "$depot_dnf/wimao.repo" "$construit/wimao.repo"
+fi
 # Empreinte en groupes de 4 (lisible, comparable à l'œil) ; hexadécimal pur, donc rien à échapper en HTML.
 empreinte_groupes="$(sed 's/.\{4\}/& /g; s/ $//' <<< "$empreinte")"
+# Section « Fedora » de la page d'accueil : VIDE sans dépôt dnf, de sorte que la page reste alors exactement
+# (octet pour octet) celle d'avant l'arrivée de Fedora. Avec un dépôt dnf, elle se termine par un retour à la
+# ligne et vient juste avant le titre « Empreinte de la clé de signature ». Le texte est dans un here-document
+# entre apostrophes : rien n'y est interprété par le shell.
+section_fedora=""
+if [ "$avec_dnf" -eq 1 ]; then
+    IFS= read -r -d '' section_fedora << 'FEDORA' || true
+<h2>Installation (Fedora)</h2>
+<p>Le dépôt dnf se déclare avec un seul fichier. <code>dnf</code> vérifie la signature de l'index, qui contient
+l'empreinte de chaque paquet.</p>
+<pre><code>sudo curl -fsSL -o /etc/yum.repos.d/wimao.repo https://f1ghtc0re.github.io/WiMao/wimao.repo
+sudo dnf install wimao</code></pre>
+<p>À l'installation, <code>dnf</code> affiche « skipped OpenPGP checks » : c'est normal. Ce sont l'index du dépôt
+et l'empreinte de chaque paquet qui sont contrôlés, pas une signature par paquet. Pour retirer le dépôt :
+<code>sudo rm /etc/yum.repos.d/wimao.repo</code>.</p>
+FEDORA
+fi
 # Page d'accueil autonome : aucune ressource externe, thème clair ou sombre selon le système.
 cat > "$construit/index.html" << HTML
 <!doctype html>
@@ -311,7 +443,7 @@ curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | sudo tee /etc/apt/keyri
 echo "deb [signed-by=/etc/apt/keyrings/wimao.asc] https://f1ghtc0re.github.io/WiMao stable main" \\
   | sudo tee /etc/apt/sources.list.d/wimao.list
 sudo apt update &amp;&amp; sudo apt install wimao</code></pre>
-<h2>Empreinte de la clé de signature</h2>
+${section_fedora}<h2>Empreinte de la clé de signature</h2>
 <p>Comparez-la avec celle de <code>SECURITY.md</code> dans le dépôt :</p>
 <pre><code>$empreinte_groupes</code></pre>
 <p>Clé publique : <a href="wimao.asc">wimao.asc</a>. Code source et documentation :

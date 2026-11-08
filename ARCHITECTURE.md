@@ -93,8 +93,9 @@ wimao-cli                         ──┼──> wimao-recettes ──> wimao-
 - `crates/wimao-recettes/tests/gestionnaire.rs` : tests `#[ignore = "Wine requis"]` d'une session de gestionnaire avec `FauxGestionnaire.exe` et sa recette `tests/recettes-gestionnaire/faux-gestionnaire.toml` : `session_pilote_et_ponte` (`installer_recette`, `ouvrir`, `tick` jusqu'à la fermeture, relance NSIS par le pilote, plugin ponté, gestionnaire fini normalement, aucun processus restant) et `relais_transmet_l_adresse` (`relayer_lien`). Même variable `WIMAO_FIXTURES`, même job CI.
 - `crates/wimao-cli/tests/cli.rs` : tests `assert_cmd` du vrai programme, avec `HOME` et `WIMAO_DONNEES` temporaires (aucun Wine).
 - `.github/workflows/ci.yml` : job `unitaires` (format, clippy, `cargo doc` sans avertissement, tests, traductions) et job `integration` (Wine stable de WineHQ dans /opt/wine-stable ; installeurs factices NSIS et MSI seulement, `WIMAO_FIXTURES_SANS_INNO=1` car l'installeur d'Inno Setup échoue sur l'image GitHub — le test Inno se fait en local ; yabridge 5.1.1 vérifié, installeurs factices dont `faux-gestionnaire-setup.exe` (7z), `cargo test --workspace --exclude wimao -- --ignored` sous `xvfb-run` : installation des installeurs factices (`integration.rs`) et session du faux gestionnaire avec pilote, pontage et relais de lien (`gestionnaire.rs`), avec `HOME`, `XDG_*` et `WIMAO_DONNEES` temporaires).
-- `.github/workflows/paquets.yml` : fabrication des trois paquets `.deb` (jobs `wine`, `bridge`, `wimao`, `reproductible`, `reproductible-wine`, `sommes`, `installation`, `signature-a-blanc`, `brouillon`, `brouillon-a-blanc`) ; description dans `paquets/README.md`. Job `chaine` de `ci.yml` : `shellcheck -x` des scripts, workflows figés (`paquets/verifier-workflows.sh` et son test), `cargo deny`, `cargo audit`, test de `scripts/signer-version.sh`. Aussi : `deny.toml` (licences et sources des dépendances), `.github/dependabot.yml`, `.github/CODEOWNERS`.
-- `paquets/` : fabrication, contrôle et test des paquets Debian (voir « Paquets Debian » plus bas et `paquets/README.md`).
+- `.github/workflows/paquets.yml` : fabrication des trois paquets `.deb` et des trois paquets `.rpm` (jobs `wine`, `bridge`, `wimao`, `reproductible`, `reproductible-wine`, `rpm`, `sommes`, `installation`, `installation-rpm`, `signature-a-blanc`, `brouillon`, `brouillon-a-blanc`) ; description dans `paquets/README.md`. Job `chaine` de `ci.yml` : `shellcheck -x` des scripts, workflows figés (`paquets/verifier-workflows.sh` et son test), `cargo deny`, `cargo audit`, test de `scripts/signer-version.sh`. Aussi : `deny.toml` (licences et sources des dépendances), `.github/dependabot.yml`, `.github/CODEOWNERS`.
+- `paquets/` : fabrication, contrôle et test des paquets Debian et RPM (voir « Paquets Debian » et « Paquets RPM (Fedora) » plus bas, et `paquets/README.md`).
+- `scripts/publier-depot-apt.sh`, `scripts/publier-depot-dnf.sh`, `scripts/assembler-site-apt.sh`, `scripts/lib/` : dépôts `apt` et `dnf` signés (index préparé et signé chez le propriétaire, site assemblé et déployé par la CI). `scripts/lib/lire-index-dnf.py` est le seul lecteur de l'index `dnf` (voir « Paquets RPM (Fedora) »).
 - `scripts/signer-version.sh` (+ test dans `scripts/tests/`) : vérification, refabrication et signature d'une version ; procédure dans `docs/publier-une-version.md`. `SECURITY.md` : signalement des failles et vérification d'une version.
 - `docs/recettes.md` : référence du format des recettes.
 - `scripts/`, `patches/`, `patches-v2/`, `NOTES.md` : ancienne installation en shell, correctifs Wine et journal des essais.
@@ -122,6 +123,26 @@ Liens avec le code :
 - `carla` et `x11-utils` sont des `Recommends` : sans Carla (absente de Debian 13), `test_plugin.rs`
   désactive le test d'ouverture avec un message clair.
 - Aucun script de mainteneur (`postinst`, etc.) : seuls les déclencheurs standard de `dpkg` agissent.
+
+## Paquets RPM (Fedora)
+
+Trois paquets `x86_64` pour Fedora 44 et 45, **réemballés depuis les `.deb`** (aucune recompilation) : les fichiers
+installés et leurs chemins sont identiques à ceux des `.deb`, donc le code n'a rien de propre à Fedora.
+
+- `paquets/fabriquer-rpm.sh <paquet.deb> <sortie/>` (dans un conteneur Fedora 45 figé) lit le `.deb`
+  (`dpkg-deb -x`, `dpkg-deb -f`) et le modèle `paquets/rpm/wimao.spec.in`, écrit un `.spec` puis lance `rpmbuild`.
+  Les dépendances sont dans `paquets/rpm/<paquet>.deps` (obligatoires) et `.recommends` (facultatives).
+  `AutoReqProv: no`, pas de `%post`, reproductible octet pour octet (`SOURCE_DATE_EPOCH` imposé).
+- `paquets/tester-installation-rpm.sh` : installation réelle et ouverture de Dexed dans un conteneur Fedora, avec
+  ou sans le `wine` de Fedora. Un conteneur n'applique pas SELinux : ce point reste à prouver sur un bureau réel.
+- Dépôt `dnf` : `scripts/publier-depot-dnf.sh` construit l'index avec `createrepo_c` (adresses des RPM = Releases
+  GitHub, `--location-prefix`) et signe `repomd.xml` (`repomd.xml.asc`) ; seul l'index est publié (`depot-dnf/`).
+  `scripts/lib/lire-index-dnf.py` relit `repomd.xml` et `primary` (une adresse, une taille, une somme SHA-256 par
+  RPM, aucun `xml:base`). `scripts/assembler-site-apt.sh` ajoute au site `rpm/repodata/`, `wimao.repo` et une
+  section Fedora sur la page d'accueil, seulement si `depot-dnf/` contient un index ; sinon le site reste inchangé.
+  `.github/workflows/depot-apt.yml` : job `installation-dnf`.
+- `scripts/signer-version.sh` contrôle aussi les RPM (présence, sommes, attestations), les refabrique depuis les
+  `.deb` qu'il vient de vérifier et les compare ; `SHA256SUMS` couvre six paquets.
 
 ## Emplacements sur disque
 

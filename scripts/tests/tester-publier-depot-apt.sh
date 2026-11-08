@@ -81,6 +81,8 @@ fabriquer_deb() {
 }
 
 # artefacts <vX.Y.Z-sans-v> <clé de signature> : dossier de faux artefacts (3 .deb, SHA256SUMS signé) ; rend son chemin.
+# Comme dans une vraie Release, SHA256SUMS liste SIX paquets (3 .deb et 3 .rpm) alors que le script APT ne
+# télécharge que les .deb : les trois .rpm sont donc listés mais absents du dossier.
 artefacts() {
     local v="$1" cle="$2" d="$temporaire/artefacts-$1"
     rm -rf "$d"
@@ -88,7 +90,11 @@ artefacts() {
     for nom in wimao wimao-bridge wimao-wine; do
         fabriquer_deb "$nom" "$v-1" "$d"
     done
-    (cd "$d" && LC_ALL=C sha256sum -- *.deb > SHA256SUMS)
+    for nom in wimao wimao-bridge wimao-wine; do
+        echo "rpm de $nom $v" > "$d/$nom-$v-1.x86_64.rpm"
+    done
+    (cd "$d" && LC_ALL=C sha256sum -- *.deb *.rpm | LC_ALL=C sort -k2 > SHA256SUMS)
+    rm -f "$d"/*.rpm
     gpg --batch --armor --detach-sign --local-user "$cle" --output "$d/SHA256SUMS.asc" "$d/SHA256SUMS" 2> /dev/null
     printf '%s' "$d"
 }
@@ -224,6 +230,16 @@ sed -i 's/  / */' "$art_e/SHA256SUMS"
 gpg --batch --yes --armor --detach-sign --local-user a@example.invalid --output "$art_e/SHA256SUMS.asc" "$art_e/SHA256SUMS" 2> /dev/null
 lancer v9.9.15 --a-blanc --racine "$fausse_racine" --cle "$empreinte_a" --sortie "$temporaire/depot-etoile" --dossier "$art_e"
 attendre_code 0 "SHA256SUMS en mode binaire"
+
+# Moins de trois .deb dans SHA256SUMS (signé correctement, avec ses trois .rpm) : refus, sortie intacte
+art_2d="$(artefacts 9.9.16 a@example.invalid)"
+rm "$art_2d/wimao-wine_9.9.16-1_amd64.deb"
+sed -i '/wimao-wine_9.9.16-1_amd64\.deb/d' "$art_2d/SHA256SUMS"
+gpg --batch --yes --armor --detach-sign --local-user a@example.invalid --output "$art_2d/SHA256SUMS.asc" "$art_2d/SHA256SUMS" 2> /dev/null
+lancer v9.9.16 "${a_blanc[@]}" --dossier "$art_2d"
+attendre_code 1 "moins de trois .deb"
+grep -q 'trois' "$temporaire/sortie.log" || echec "le refus pour moins de trois .deb ne le dit pas"
+[ "$(empreinte_depot)" = "$avant" ] || echec "le refus pour moins de trois .deb a modifié le dépôt"
 
 # --- Usage ---
 lancer v9.9.9 "${a_blanc[@]}" --dossier "$art_1" --inconnue

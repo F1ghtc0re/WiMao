@@ -159,8 +159,14 @@ jobs:
           scripts/tests/tester-publier-depot-apt.sh
       # Assemblage du site APT : dépôt d'essai produit par publier-depot-apt.sh à blanc, faux téléchargements
       # (aucun accès réseau ni clé réelle ; apt-utils est déjà installé par l'étape précédente).
+      # Ce test couvre aussi le dépôt dnf : il fabrique de faux RPM et un index dnf dans un conteneur Fedora 45
+      # (podman, zstd et python3 sont présents sur l'image du runner ; accès au réseau pour dnf).
       - name: Test de l'assemblage du site APT
         run: scripts/tests/tester-assembler-site-apt.sh
+      # Script de publication dans le dépôt dnf (index createrepo_c, signature, contrôles), à blanc : clé jetable,
+      # faux RPM, faux gh et git. Les refus du mode réel (dépôt non propre, Release brouillon) sont simulés.
+      - name: Test de la publication dans le dépôt dnf (à blanc)
+        run: scripts/tests/tester-publier-depot-dnf.sh
       # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
       - name: Données personnelles (test du contrôle)
         run: scripts/tests/tester-verifier-donnees-perso.sh

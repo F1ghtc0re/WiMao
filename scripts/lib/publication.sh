@@ -10,7 +10,13 @@
 #   empreinte_publiee <racine du dépôt>
 #   trousseau_cle_publiee <racine du dépôt> <empreinte> <fichier trousseau à créer>
 #   verifier_signature <trousseau> <empreinte> <signature> [<fichier signé>]
-# Dépend de : gpg, gpgv, awk, tr, grep, mktemp.
+#   lire_index_dnf <dossier repodata>
+# Dépend de : gpg, gpgv, awk, tr, grep, mktemp ; lire_index_dnf : python3 et l'outil de décompression de
+# l'extension du fichier primary (zstd, gzip...).
+
+# Dossier de cette bibliothèque, retenu au moment où elle est sourcée (BASH_SOURCE ne désigne plus le bon
+# fichier une fois dans une fonction appelée de l'extérieur). Sert à trouver lire-index-dnf.py.
+DOSSIER_LIB_PUBLICATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # empreinte_publiee : affiche l'empreinte (40 chiffres hexadécimaux, majuscules) de la clé de signature publiée
 # dans <racine>/SECURITY.md, ligne « Empreinte de la clé de signature : XXXX XXXX … » (espaces admis). Rend 1
@@ -95,4 +101,14 @@ verifier_signature() {
         echo "ERREUR : $signature est signée par la clé « ${signataire:-inconnue} », pas par la clé publiée ($attendue)." >&2
         return 1
     fi
+}
+
+# lire_index_dnf : contrôle la COHÉRENCE d'un dossier repodata (repomd.xml, fichiers décrits, tailles et
+# SHA-256) et affiche les RPM que le fichier primary décrit, une ligne « href<TAB>taille<TAB>sha256 » par
+# paquet (voir scripts/lib/lire-index-dnf.py). Ne vérifie PAS la signature de repomd.xml (verifier_signature
+# s'en charge) ni l'adresse des paquets : à l'appelant d'exiger l'adresse qu'il attend. Rend 1, avec le
+# message du programme, au moindre écart. python3 -I : ni variables PYTHON*, ni dossier courant dans le chemin
+# des modules, puisque le dossier lu peut venir d'une demande de fusion.
+lire_index_dnf() {
+    python3 -I "$DOSSIER_LIB_PUBLICATION/lire-index-dnf.py" "$1"
 }
