@@ -51,8 +51,10 @@ Depuis la page de la Release, téléchargez les paquets, `SHA256SUMS` et `SHA256
 # 1. La signature de la liste d'empreintes (clé publique publiée dans le dépôt).
 gpg --verify SHA256SUMS.asc SHA256SUMS
 
-# 2. Les empreintes des fichiers téléchargés.
-sha256sum -c SHA256SUMS
+# 2. Les empreintes des fichiers téléchargés. La liste couvre six paquets (3 .deb, 3 .rpm) :
+#    --ignore-missing passe sur ceux que vous n'avez pas téléchargés, donc vérifiez que
+#    les trois paquets voulus sont bien marqués « OK ».
+sha256sum -c --ignore-missing SHA256SUMS
 
 # 3. L'attestation de fabrication (provenance GitHub), pour chaque paquet.
 gh attestation verify <paquet>.deb --repo F1ghtc0re/WiMao

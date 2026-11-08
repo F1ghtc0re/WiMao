@@ -2,9 +2,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <!--
     Icône de WiMao : une onde sonore sur un carré arrondi violet, coupée en deux par une fente
-    horizontale à mi-hauteur. Les deux barres extérieures sont noires, les trois du centre blanches.
-    Pour changer la largeur de la fente, ajuster ensemble les deux rectangles de découpe
-    (« moitie-haute » s'arrête à y=60, « moitie-basse » commence à y=68).
+    horizontale à mi-hauteur (y=60 à y=68). Les deux barres extérieures sont noires, les trois du centre
+    blanches. Chaque barre est dessinée en deux demi-barres pleines (aucun clipPath, que Qt ignore) :
+    un bout arrondi à l'extérieur (arc de rayon 4) et un bord droit le long de la fente. Pour changer la
+    largeur de la fente, déplacer ensemble les bords y=60 (moitiés hautes) et y=68 (moitiés basses).
   -->
   <!-- Ce commentaire reste APRÈS la balise svg : GdkPixbuf ne reconnaît le format que sur les premiers octets. -->
   <defs>
@@ -12,26 +13,22 @@
       <stop offset="0" stop-color="#a56de2"/>
       <stop offset="1" stop-color="#6d3bbf"/>
     </linearGradient>
-    <!-- La découpe garde les bouts arrondis à l'extérieur et des bords droits le long de la fente. -->
-    <clipPath id="moitie-haute"><rect x="0" y="0" width="128" height="60"/></clipPath>
-    <clipPath id="moitie-basse"><rect x="0" y="68" width="128" height="60"/></clipPath>
-    <g id="barres-exterieures" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round">
-      <path d="M28 50v28"/>
-      <path d="M92 50v28"/>
-    </g>
-    <g id="barres-centrales" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round">
-      <path d="M44 42v44"/>
-      <path d="M60 26v76"/>
-      <path d="M76 38v52"/>
-    </g>
   </defs>
   <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#fond)"/>
-  <g clip-path="url(#moitie-haute)">
-    <use href="#barres-exterieures"/>
-    <use href="#barres-centrales"/>
+  <!-- Barres extérieures (noires), x=28 et x=92, de y=46 à y=82 -->
+  <g fill="#000000">
+    <path d="M24 60V50a4 4 0 0 1 8 0V60Z"/>
+    <path d="M24 68V78a4 4 0 0 0 8 0V68Z"/>
+    <path d="M88 60V50a4 4 0 0 1 8 0V60Z"/>
+    <path d="M88 68V78a4 4 0 0 0 8 0V68Z"/>
   </g>
-  <g clip-path="url(#moitie-basse)">
-    <use href="#barres-exterieures"/>
-    <use href="#barres-centrales"/>
+  <!-- Barres centrales (blanches), x=44, 60 et 76 -->
+  <g fill="#ffffff">
+    <path d="M40 60V42a4 4 0 0 1 8 0V60Z"/>
+    <path d="M40 68V86a4 4 0 0 0 8 0V68Z"/>
+    <path d="M56 60V26a4 4 0 0 1 8 0V60Z"/>
+    <path d="M56 68V102a4 4 0 0 0 8 0V68Z"/>
+    <path d="M72 60V38a4 4 0 0 1 8 0V60Z"/>
+    <path d="M72 68V90a4 4 0 0 0 8 0V68Z"/>
   </g>
 </svg>

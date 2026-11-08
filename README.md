@@ -103,8 +103,11 @@ Pour qui préfère tout contrôler à la main, sans ajouter de dépôt (pas de m
    ```sh
    gpg --import docs/cle-publique.asc         # une seule fois
    gpg --verify SHA256SUMS.asc SHA256SUMS     # la liste d'empreintes est bien signée
-   sha256sum -c SHA256SUMS                    # les .deb correspondent à cette liste
+   sha256sum -c --ignore-missing SHA256SUMS  # les paquets téléchargés correspondent à cette liste
    ```
+
+   La liste couvre six paquets (trois `.deb`, trois `.rpm`) et `--ignore-missing` passe sur ceux que vous n'avez
+   pas téléchargés : vérifiez que les trois `.deb` voulus sont bien marqués « OK ».
 
    Le détail, y compris la vérification de la provenance (`gh attestation verify`), est dans
    `SECURITY.md`, « Vérifier une version ».
@@ -171,7 +174,7 @@ d'importer la clé `https://f1ghtc0re.github.io/WiMao/wimao.asc` et affiche son 
 exactement celle donnée plus haut (et dans `SECURITY.md`) ; refusez sinon.
 
 **Vérifier un RPM à la main.** Téléchargez les RPM, `SHA256SUMS` et `SHA256SUMS.asc` depuis la page de la
-Release, puis suivez la méthode 2 ci-dessus (`gpg --verify`, `sha256sum -c`) : `SHA256SUMS` couvre les
+Release, puis suivez la méthode 2 ci-dessus (`gpg --verify`, `sha256sum -c --ignore-missing`, qui laisse passer les `.deb` que vous n'avez pas téléchargés : vérifiez que vos trois RPM sont bien marqués « OK ») : `SHA256SUMS` couvre les
 trois `.deb` et les trois `.rpm`. Installez ensuite avec `sudo dnf install ./wimao*.rpm`.
 
 **Retirer le dépôt** : `sudo rm /etc/yum.repos.d/wimao.repo`. Pour désinstaller WiMao :
