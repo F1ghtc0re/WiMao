@@ -1,13 +1,14 @@
 wimao (0.5.0-1) unstable; urgency=medium
 
-  * Test d'ouverture : le verdict s'appuie sur le journal de yabridge ; un plugin
-    chargé dont l'interface n'a pas pu être vue n'est plus signalé à tort, et un
-    plantage de l'hôte de test n'est plus imputé au plugin.
-  * « Réparer » montre l'avertissement sur le lien yabridge, avec la commande à copier.
+  * Test d'ouverture : le verdict s'appuie sur le journal de yabridge.
+    Un plugin chargé sans interface visible n'est plus signalé à tort,
+    et un plantage de l'hôte de test n'est plus imputé au plugin.
+  * « Réparer » montre l'avertissement sur le lien yabridge, avec la
+    commande à copier.
   * L'historique s'affiche dans la langue choisie.
-  * Finitions : Ctrl+H sans doublon, tailles arrondies, couleurs des icônes de
-    l'assistant, marque « Mis à jour » gardée, bilan « à vérifier », reprise d'un
-    environnement à moitié créé.
+  * Finitions : Ctrl+H sans doublon, tailles arrondies, couleurs des
+    icônes de l'assistant, marque « Mis à jour » gardée, bilan « à
+    vérifier », reprise d'un environnement à moitié créé.
 
  -- F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>  Sun, 08 Nov 2026 16:43:01 +0100
 
