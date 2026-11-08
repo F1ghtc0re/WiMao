@@ -8,7 +8,7 @@ station audio (DAW) et vérifie qu'ils fonctionnent.
 **État du projet : en développement.** Le noyau (environnement Wine, installation
 avec recettes, pontage yabridge, test d'ouverture, sauvegarde, diagnostic, historique des
 actions, import d'un environnement existant), la ligne de commande `wimao-cli` et une interface
-graphique (GTK4 + libadwaita) existent, et trois paquets Debian sont publiés (version 0.4.0, avec un
+graphique (GTK4 + libadwaita) existent, et trois paquets Debian sont publiés (version 0.5.0, avec un
 dépôt `apt` signé : voir « Installation »). Le journal des essais est dans `NOTES.md`, la
 conception dans `docs/superpowers/specs/`.
 

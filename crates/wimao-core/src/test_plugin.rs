@@ -685,7 +685,10 @@ mod tests {
 
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn hote_arrete() {
+        crate::i18n::init_langue(Some("en"));
         let o = dossier_outils("exit 0", SANS_FENETRE);
         assert_eq!(
             tester(&o),
@@ -697,7 +700,10 @@ mod tests {
     /// du sous-projet 3) : le plugin n'y est pour rien, c'est une remarque et non un problème.
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn serveur_audio_absent_donne_une_remarque() {
+        crate::i18n::init_langue(Some("en"));
         let o = dossier_outils(
             "echo '[carla] Failed to init engine, error was:'; \
              echo 'Failed to init temporary jack client'; exit 1",
@@ -918,7 +924,10 @@ mod tests {
 
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn xvfb_absent() {
+        crate::i18n::init_langue(Some("en"));
         let o = dossier_outils_complet("exit 0", Some(SANS_FENETRE), None);
         assert_eq!(
             tester(&o),
@@ -928,7 +937,10 @@ mod tests {
 
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn xwininfo_absent() {
+        crate::i18n::init_langue(Some("en"));
         let o = dossier_outils_complet("exit 0", None, Some(XVFB_FACTICE));
         assert_eq!(
             tester(&o),
@@ -938,7 +950,10 @@ mod tests {
 
     #[test]
     #[serial_test::serial(faux_carla)]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn xvfb_mort_apres_le_socket() {
+        crate::i18n::init_langue(Some("en"));
         let o = dossier_outils_complet(
             "exit 0",
             Some(SANS_FENETRE),
@@ -951,7 +966,10 @@ mod tests {
     }
 
     #[test]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn clap_non_teste_sans_lancer_carla() {
+        crate::i18n::init_langue(Some("en"));
         let racine = tempfile::tempdir().unwrap();
         let c = Chemins::pour_test(racine.path());
         let r = tester_plugin(&c, Path::new("/faux/P.clap"), Format::Clap);

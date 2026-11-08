@@ -61,6 +61,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.5.0" date="2026-11-08">
+      <description>
+        <p>More reliable plugin test, visible yabridge link warning, history in the chosen language.</p>
+        <p xml:lang="fr">Test des plugins plus fiable, avertissement du lien yabridge visible, historique dans la langue choisie.</p>
+        <p xml:lang="es">Prueba de plugins más fiable, aviso del enlace de yabridge visible, historial en el idioma elegido.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-02">
       <description>
         <p>Debian packages (.deb) and a hardened build chain.</p>
