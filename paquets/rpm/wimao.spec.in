@@ -1,0 +1,52 @@
+# Modèle du fichier .spec des RPM de WiMao. paquets/fabriquer-rpm.sh remplace chaque marqueur
+# @…@ par sa valeur puis lance `rpmbuild -bb`. Les RPM ne recompilent rien : ils réemballent
+# l'arborescence extraite d'un .deb déjà fabriqué (copiée telle quelle dans le buildroot).
+
+# --- Réglages de reproductibilité : deux fabrications donnent le même RPM, octet pour octet ---
+# Date de fabrication et dates des fichiers = SOURCE_DATE_EPOCH (variable d'environnement).
+%global use_source_date_epoch_as_buildtime 1
+%global clamp_mtime_to_source_date_epoch 1
+# Nom de la machine de fabrication, fixe (sinon le RPM porterait celui du conteneur).
+%global _buildhost wimao.invalid
+# Compression zstd niveau 19 sur UN seul fil (« T1 ») : le résultat ne dépend pas du nombre de cœurs.
+%global _binary_payload w19T1.zstdio
+# Pas de liens « build-id » : ils dépendent du contenu des binaires et n'apportent rien ici.
+%global _build_id_links none
+
+# --- Ce que rpmbuild ne doit PAS faire : le contenu est déjà celui du .deb ---
+# Pas de détection automatique des dépendances : elle ajouterait des dépendances internes à Wine
+# qu'aucun paquet ne fournit. Les dépendances sont celles des fichiers paquets/rpm/*.deps.
+AutoReqProv: no
+# Pas de paquet de débogage.
+%global debug_package %{nil}
+# Aucun traitement après installation (strip, compression des pages man, bytecode…) : il
+# modifierait les fichiers par rapport au .deb.
+%global __os_install_post %{nil}
+# Nom du fichier produit : <nom>-<version>-<release>.<arch>.rpm, directement dans le dossier de sortie.
+%define _build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm
+
+Name:       @NOM@
+Version:    @VERSION@
+Release:    1
+Summary:    @RESUME@
+License:    @LICENCE@
+URL:        @URL@
+BuildArch:  x86_64
+@DEPENDANCES@
+@RECOMMANDES@
+
+%description
+@DESCRIPTION@
+
+# Pas de %prep ni de %build (rien à compiler) et pas de %post/%pre : aucun script d'installation.
+
+%install
+# Copie exacte de l'arborescence extraite du .deb (droits, liens symboliques, chemins).
+# Le dossier source est passé par l'environnement par fabriquer-rpm.sh.
+mkdir -p "%{buildroot}"
+cp -a "$WIMAO_ARBORESCENCE/." "%{buildroot}/"
+
+%files
+# Propriétaire root:root partout ; les droits (« - ») restent ceux de l'arborescence.
+%defattr(-,root,root,-)
+@FICHIERS@

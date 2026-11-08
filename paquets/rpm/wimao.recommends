@@ -1,0 +1,5 @@
+# Dépendances facultatives (Recommends) du RPM wimao : dnf les installe par défaut mais l'installation
+# réussit sans elles. Même format que le fichier .deps voisin ; ce fichier peut ne contenir que des
+# commentaires (aucune dépendance facultative).
+Carla
+xwininfo
