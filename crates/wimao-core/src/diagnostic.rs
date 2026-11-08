@@ -166,7 +166,7 @@ pub fn message_probleme(p: &Probleme) -> String {
 /// l'exécute jamais.
 ///
 /// - lien vers un autre yabridge ou cassé : `ln -sfn` remplace le lien ;
-/// - vrai dossier : `ln -s`, à lancer une fois le dossier déplacé (voir [`message_lien_yabridge`]).
+/// - vrai dossier : `ln -s`, à lancer une fois le dossier déplacé (voir le message de `message_lien_yabridge`, privé).
 pub fn commande_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -> String {
     let (lien_sh, attendu_sh) = (pour_shell(lien), pour_shell(attendu));
     match etat {
