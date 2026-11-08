@@ -47,6 +47,9 @@ mkdir -p "%{buildroot}"
 cp -a "$WIMAO_ARBORESCENCE/." "%{buildroot}/"
 
 %files
-# Propriétaire root:root partout ; les droits (« - ») restent ceux de l'arborescence.
+# Propriétaire root:root partout (l'arborescence appartient à l'utilisateur qui fabrique, pas à root) ;
+# les droits des fichiers et dossiers (« - ») restent ceux de l'arborescence extraite du .deb.
+# Le dossier /opt/wimao est déclaré (%dir) par wimao-wine ET wimao-bridge : rpm l'autorise quand les
+# attributs sont identiques, et chacun le retire à la désinstallation s'il est le dernier à l'occuper.
 %defattr(-,root,root,-)
 @FICHIERS@

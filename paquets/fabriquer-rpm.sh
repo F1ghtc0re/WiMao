@@ -16,6 +16,9 @@
 # Version   : celle du .deb sans son éventuel suffixe « -1 » (révision Debian) : 0.5.0-1 -> 0.5.0,
 #             5.1.1+dxvk3.1.1-1 -> 5.1.1+dxvk3.1.1, 11.20+wimao1 -> 11.20+wimao1. La « Release » RPM est 1.
 # Dépend de : dpkg-deb (dpkg), rpmbuild (rpm-build) et zstd, ainsi que des outils habituels (find, sort).
+# Limite    : l'image Fedora est figée par empreinte, mais rpm-build et zstd y sont installés depuis les dépôts
+#             vivants. Une mise à jour entre la CI et la refabrication locale peut donc changer les octets du
+#             RPM : il faut alors relancer la CI, puis signer peu après.
 #
 # Choix : on réemballe les .deb déjà publiés plutôt que de recompiler, de sorte que le logiciel installé
 # soit rigoureusement le même sous Debian/Ubuntu et sous Fedora. Les réglages qui rendent le RPM
@@ -29,12 +32,17 @@ if [ "$#" -ne 2 ]; then
     echo "Usage : $0 <paquet.deb> <dossier de sortie>" >&2
     exit 2
 fi
-fichier_deb="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+fichier_deb="$(cd -- "$(dirname -- "$1")" && pwd)/$(basename -- "$1")"
 if [ ! -f "$fichier_deb" ]; then
     echo "ERREUR : $1 introuvable" >&2
     exit 1
 fi
-sortie="$(mkdir -p "$2" && cd "$2" && pwd)"
+sortie="$(mkdir -p -- "$2" && cd -- "$2" && pwd)"
+# Le dossier de sortie est transmis à rpmbuild par « --define » : un « % » y serait pris pour une macro.
+if [[ "$sortie" == *%* ]]; then
+    echo "ERREUR : le chemin du dossier de sortie ne doit pas contenir « % » : $sortie" >&2
+    exit 1
+fi
 dossier_rpm="$RACINE_DEPOT/paquets/rpm"
 
 # La date de fabrication est exigée explicitement (pas de repli sur le dernier commit, contrairement

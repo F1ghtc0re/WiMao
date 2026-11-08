@@ -30,7 +30,10 @@ echec() { echo "ÉCHEC : $*" >&2; exit 1; }
 fabriquer_faux_deb() {
     local nom="$1" version="$2" deb="$3" r="$t/faux-$1"
     rm -rf "$r"
-    mkdir -p "$r/DEBIAN" "$r/opt/wimao/$nom/sous dossier" "$r/usr/bin"
+    mkdir -p "$r/DEBIAN" "$r/opt/wimao/$nom/sous dossier" "$r/usr/bin" "$r/usr/share/doc/$nom" "$r/usr/share/wimao"
+    chmod 0750 "$r/opt/wimao/$nom/sous dossier"
+    echo "doc" > "$r/usr/share/doc/$nom/copyright"
+    echo "donnee" > "$r/usr/share/wimao/essai.txt"
     printf '#!/bin/sh\necho bonjour\n' > "$r/usr/bin/essai-$nom"
     chmod 0755 "$r/usr/bin/essai-$nom"
     echo "donnees" > "$r/opt/wimao/$nom/donnees.txt"
@@ -48,6 +51,11 @@ Description: faux paquet d'essai
  Description de plusieurs lignes avec un pour cent : 100%.
 CTL
     dpkg-deb --root-owner-group -Zxz --build "$r" "$deb" >/dev/null
+}
+
+# inventaire_dossiers <dossier> : droits des dossiers que le RPM possède (propres au paquet).
+inventaire_dossiers() {
+    (cd "$1" && find opt/wimao usr/share/wimao usr/share/doc -type d -printf '%p %m\n' | LC_ALL=C sort)
 }
 
 # inventaire <dossier> : un inventaire des fichiers et liens (chemin, droits, type, cible), dossiers exclus.
@@ -90,16 +98,23 @@ tester_paquet() {
         echec "$nom (c) : droits, types ou liens différents"
     }
 
+    [ "$(inventaire_dossiers "$t/ref-$nom")" = "$(inventaire_dossiers "$t/rpm-$nom")" ] || {
+        diff <(inventaire_dossiers "$t/ref-$nom") <(inventaire_dossiers "$t/rpm-$nom") >&2 || true
+        echec "$nom (c) : droits des dossiers possédés différents"
+    }
+    grep -qxF -- "/usr/share/wimao/essai.txt" "$t/liste-rpm" || echec "$nom (a) : /usr/share/wimao/essai.txt absent"
+
     # (d) deux fabrications identiques octet pour octet
     bash "$script" "$deb" "$s2" >/dev/null 2>&1 || echec "$nom (d) : seconde fabrication échouée"
     cmp "$rpm" "$s2/$nom-$attendu.x86_64.rpm" || echec "$nom (d) : deux fabrications différentes"
 
     # (e) SOURCE_DATE_EPOCH absent : refus
-    if (unset SOURCE_DATE_EPOCH; bash "$script" "$deb" "$t/s3-$nom" >/dev/null 2>&1); then
+    if (unset SOURCE_DATE_EPOCH; bash "$script" "$deb" "$t/s3-$nom" >/dev/null 2>"$t/err-e"); then
         echec "$nom (e) : fabrication acceptée sans SOURCE_DATE_EPOCH"
     fi
+    grep -q 'SOURCE_DATE_EPOCH doit être défini' "$t/err-e" || echec "$nom (e) : message d'erreur attendu absent : $(cat "$t/err-e")"
 
-    # (g) aucun script d'installation (rpm affiche « (aucun) » ou rien selon la langue)
+    # (g) aucun script d'installation : `rpm --scripts` n'affiche alors strictement rien
     if rpm -qp --scripts "$rpm" | grep -q .; then
         echec "$nom (g) : le RPM contient des scripts : $(rpm -qp --scripts "$rpm")"
     fi
@@ -108,6 +123,10 @@ tester_paquet() {
     grep -v -e '^[[:space:]]*#' -e '^[[:space:]]*$' "$racine/paquets/rpm/$nom.deps" | LC_ALL=C sort > "$t/deps-attendues"
     rpm -qp --requires "$rpm" | grep -v '^rpmlib(' | LC_ALL=C sort > "$t/deps-reelles"
     diff "$t/deps-attendues" "$t/deps-reelles" >&2 || echec "$nom (h) : dépendances différentes de $nom.deps"
+    # (h bis) dépendances facultatives : exactement celles de .recommends (le fichier peut en être dépourvu)
+    { grep -v -e '^[[:space:]]*#' -e '^[[:space:]]*$' "$racine/paquets/rpm/$nom.recommends" || true; } | LC_ALL=C sort > "$t/rec-attendues"
+    rpm -qp --recommends "$rpm" | LC_ALL=C sort > "$t/rec-reelles"
+    diff "$t/rec-attendues" "$t/rec-reelles" >&2 || echec "$nom (h) : recommandations différentes de $nom.recommends"
     echo "  ok : $nom ($attendu)"
 }
 
@@ -118,8 +137,9 @@ tester_paquet wimao-bridge 5.1.1+dxvk3.1.1-1 5.1.1+dxvk3.1.1-1
 
 # (f) .deb inconnu (aucun fichier .deps) : refus
 fabriquer_faux_deb inconnu 1.0-1 "$t/inconnu.deb"
-if bash "$script" "$t/inconnu.deb" "$t/s-inconnu" >/dev/null 2>&1; then
+if bash "$script" "$t/inconnu.deb" "$t/s-inconnu" >/dev/null 2>"$t/err-f"; then
     echec "(f) : un .deb inconnu a été accepté"
 fi
+grep -q 'paquet « inconnu » inconnu' "$t/err-f" || echec "(f) : message d'erreur attendu absent : $(cat "$t/err-f")"
 echo "  ok : refus du .deb inconnu et de l'absence de SOURCE_DATE_EPOCH"
 echo "OK"
