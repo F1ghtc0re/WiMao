@@ -6,7 +6,7 @@
 #
 # Usage     : paquets/ecrire-notes-release.sh <version> <SHA256SUMS>
 #             <version> : numéro sans « v » (ex. 0.4.0), ou « a-blanc » pour un essai.
-#             <SHA256SUMS> : fichier au format de `sha256sum` (« somme  nom »), un .deb par ligne.
+#             <SHA256SUMS> : fichier au format de `sha256sum` (« somme  nom »), un paquet (.deb ou .rpm) par ligne.
 # Écrit     : uniquement sur la sortie standard (le workflow la range dans notes.md).
 # Code      : 0 ; 1 si le fichier de sommes manque ; 2 si l'usage est mauvais.
 set -euo pipefail
@@ -21,10 +21,17 @@ sommes="$2"
 
 echo "# WiMao ${version}"
 echo
+# Les six paquets : les .deb d'abord, puis les RPM (SHA256SUMS est trié par nom, les deux sortes y sont mêlées).
 echo "Paquets Debian (Ubuntu 24.04+ et Debian 13+, amd64) :"
 echo
 while read -r somme nom; do
-    echo "- \`${nom}\` : sha256 \`${somme}\`"
+    case "$nom" in *.deb) echo "- \`${nom}\` : sha256 \`${somme}\`" ;; esac
+done < "$sommes"
+echo
+echo "Paquets RPM (Fedora 44+, x86_64) :"
+echo
+while read -r somme nom; do
+    case "$nom" in *.rpm) echo "- \`${nom}\` : sha256 \`${somme}\`" ;; esac
 done < "$sommes"
 echo
 echo "Provenance : attestation GitHub (fichier \`.intoto.jsonl\`, vérifiable avec \`gh attestation verify\`)."

@@ -6,7 +6,9 @@
 #   bridge, wimao       : yabridge + DXVK, et l'application (Rust figé ici, voir « Rust » plus bas).
 #   reproductible       : refabrique bridge et wimao dans un second conteneur, compare les sha256.
 #   reproductible-wine  : idem pour wimao-wine, SANS cache ; seulement sur étiquette `v*` ou lancement manuel.
-#   sommes              : réunit les trois .deb et écrit SHA256SUMS (artefact `paquets-<sha court>`).
+#   rpm                 : réemballe les trois .deb en RPM dans un conteneur Fedora 45 figé (paquets/fabriquer-rpm.sh),
+#                         fabrique chaque RPM deux fois et exige des fichiers identiques octet pour octet.
+#   sommes              : réunit les trois .deb et les trois RPM, écrit SHA256SUMS (artefact `paquets-<sha court>`).
 #   installation        : installe les trois .deb dans un système vierge (Ubuntu 24.04 et Debian 13),
 #                         les contrôle et les retire (paquets/tester-installation.sh).
 #   signature-a-blanc   : rejoue scripts/signer-version.sh --a-blanc : refabrique wimao et wimao-bridge avec podman
@@ -17,6 +19,8 @@
 #                         manuel par défaut.
 #
 # Choix communs :
+#   - Le job `rpm` tourne dans Fedora 45 (image figée par empreinte, vérifiée comme les autres). Les conteneurs
+#     Fedora n'ont ni git ni tar : ils sont installés AVANT actions/checkout (même raison que pour Ubuntu).
 #   - Conteneur `ubuntu:24.04@sha256:…` : la machine de fabrication est la même d'un lancement à l'autre.
 #     `container.image` n'accepte pas le contexte `env` : l'image est donc répétée à chaque job, et
 #     paquets/verifier-workflows.sh (job `chaine` de la CI) contrôle chacune des occurrences.
@@ -288,13 +292,83 @@ jobs:
           echo "$(basename "$premier") : $a / $b"
           [ "$a" = "$b" ] || { echo "ERREUR : wimao-wine n'est pas reproductible" >&2; exit 1; }
 
-  # Réunit les trois .deb, écrit SHA256SUMS (trié, noms de fichiers seuls) et publie le tout.
+  # Réemballe les trois .deb (artefacts des jobs `wine`, `bridge`, `wimao`) en RPM pour Fedora, sans rien
+  # recompiler : le logiciel installé est donc le même que sous Debian/Ubuntu. Chaque RPM est fabriqué DEUX fois
+  # et les deux fichiers doivent être identiques octet pour octet. Seuls les .deb sont téléchargés ici
+  # (noms d'artefact explicites, pas de motif) : l'artefact `wimao-rpm` n'existe pas encore à ce stade.
+  rpm:
+    needs: [wine, bridge, wimao]
+    runs-on: ubuntu-24.04
+    container:
+      image: registry.fedoraproject.org/fedora:45@sha256:4a8a63ec2df9f26a96c35ff380237ad578cf42e326b979d9b5801c31c6daf2e8
+    timeout-minutes: 30
+    steps:
+      # git-core avant checkout : sans git, actions/checkout ne télécharge qu'une archive, et la date du
+      # dernier commit (SOURCE_DATE_EPOCH, plus bas) serait illisible. tar : requis par rpmbuild/cpio et
+      # par plusieurs actions. rpm-build, dpkg et zstd : les outils de paquets/fabriquer-rpm.sh.
+      - name: Paquets de base (git avant checkout) et outils RPM
+        run: dnf install -y --setopt=install_weak_deps=False git-core tar rpm-build dpkg zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Dépôt git de confiance
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wimao-wine
+          path: debs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wimao-bridge
+          path: debs
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wimao
+          path: debs
+      - name: Fabrication des RPM (deux fois) et comparaison
+        run: |
+          debs=(debs/*.deb)
+          [ "${#debs[@]}" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l debs; exit 1; }
+          # Même date source que pour les .deb : celle du dernier commit (paquets/commun.sh fait pareil).
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          export SOURCE_DATE_EPOCH
+          differences=0
+          for deb in "${debs[@]}"; do
+            paquets/fabriquer-rpm.sh "$deb" rpm-1
+            paquets/fabriquer-rpm.sh "$deb" rpm-2
+          done
+          premiers=(rpm-1/*.rpm)
+          [ "${#premiers[@]}" -eq 3 ] || { echo "ERREUR : trois RPM attendus" >&2; ls -l rpm-1; exit 1; }
+          for premier in "${premiers[@]}"; do
+            second="rpm-2/$(basename "$premier")"
+            if ! cmp -- "$premier" "$second"; then
+              echo "ERREUR : $(basename "$premier") n'est pas reproductible" >&2
+              differences=1
+            fi
+            sha256sum -- "$premier"
+          done
+          exit "$differences"
+      - name: Dossier de livraison
+        run: |
+          mkdir -p livraison
+          cp rpm-1/*.rpm livraison/
+          ls -l livraison
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wimao-rpm
+          path: livraison/*.rpm
+          if-no-files-found: error
+          retention-days: 14
+
+  # Réunit les trois .deb et les trois RPM, écrit SHA256SUMS (trié, noms de fichiers seuls) et publie le tout.
   sommes:
-    needs: [wine, bridge, wimao, reproductible, reproductible-wine]
+    needs: [wine, bridge, wimao, rpm, reproductible, reproductible-wine]
     # reproductible-wine est sauté hors étiquette et lancement manuel : sauté = accepté, échoué = bloquant.
-    if: ${{ !cancelled() && needs.wine.result == 'success' && needs.bridge.result == 'success' && needs.wimao.result == 'success' && needs.reproductible.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') }}
+    if: ${{ !cancelled() && needs.wine.result == 'success' && needs.bridge.result == 'success' && needs.wimao.result == 'success' && needs.rpm.result == 'success' && needs.reproductible.result == 'success' && (needs.reproductible-wine.result == 'success' || needs.reproductible-wine.result == 'skipped') }}
     runs-on: ubuntu-24.04
     steps:
+      # Le motif `wimao*` couvre les quatre artefacts wimao, wimao-wine, wimao-bridge (les .deb) et
+      # wimao-rpm (les RPM) : les noms de fichiers sont tous distincts, la fusion ne peut rien écraser.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: wimao*
@@ -303,10 +377,15 @@ jobs:
       - name: SHA256SUMS et sha court
         id: sommes
         run: |
-          [ "$(ls paquets/*.deb | wc -l)" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l paquets; exit 1; }
           cd paquets
+          # Contrôle exact : trois .deb ET trois RPM, ni plus ni moins (un artefact manquant ou en double
+          # fausserait SHA256SUMS et l'attestation).
+          debs=(./*.deb)
+          rpms=(./*.rpm)
+          [ "${#debs[@]}" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l; exit 1; }
+          [ "${#rpms[@]}" -eq 3 ] || { echo "ERREUR : trois .rpm attendus" >&2; ls -l; exit 1; }
           # LC_ALL=C : tri identique partout ; basenames seuls puisque l'on est dans le dossier.
-          LC_ALL=C sha256sum -- *.deb | LC_ALL=C sort -k2 > SHA256SUMS
+          LC_ALL=C sha256sum -- *.deb *.rpm | LC_ALL=C sort -k2 > SHA256SUMS
           cat SHA256SUMS
           echo "court=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -314,6 +393,7 @@ jobs:
           name: paquets-${{ steps.sommes.outputs.court }}
           path: |
             paquets/*.deb
+            paquets/*.rpm
             paquets/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
@@ -424,7 +504,9 @@ jobs:
         working-directory: paquets
         run: |
           debs=(./*.deb)
+          rpms=(./*.rpm)
           [ "${#debs[@]}" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l; exit 1; }
+          [ "${#rpms[@]}" -eq 3 ] || { echo "ERREUR : trois .rpm attendus" >&2; ls -l; exit 1; }
           sha256sum -c SHA256SUMS
       - name: Notes de la Release (à blanc)
         env:
@@ -490,18 +572,23 @@ jobs:
         working-directory: paquets
         run: |
           debs=(./*.deb)
+          rpms=(./*.rpm)
           [ "${#debs[@]}" -eq 3 ] || { echo "ERREUR : trois .deb attendus" >&2; ls -l; exit 1; }
+          [ "${#rpms[@]}" -eq 3 ] || { echo "ERREUR : trois .rpm attendus" >&2; ls -l; exit 1; }
           sha256sum -c SHA256SUMS
       - name: Notes de la Release
         env:
           VERSION: ${{ steps.mode.outputs.version }}
         run: paquets/ecrire-notes-release.sh "$VERSION" paquets/SHA256SUMS | tee notes.md
-      # Une seule attestation couvre les trois .deb (un sujet par fichier) ; son fichier est joint à la Release.
-      - name: Attestation de provenance des .deb
+      # Une seule attestation couvre les trois .deb et les trois RPM (un sujet par fichier) ; son fichier est
+      # joint à la Release.
+      - name: Attestation de provenance des .deb et des RPM
         id: attestation
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: paquets/*.deb
+          subject-path: |
+            paquets/*.deb
+            paquets/*.rpm
       - name: Release brouillon
         env:
           ETIQUETTE: ${{ steps.mode.outputs.etiquette }}
@@ -513,7 +600,7 @@ jobs:
           # pas de --latest : le propriétaire décidera à la publication.
           gh release create "$ETIQUETTE" --draft --verify-tag \
             --title "WiMao ${VERSION}" --notes-file notes.md \
-            paquets/*.deb paquets/SHA256SUMS "paquets/wimao-${VERSION}.intoto.jsonl"
+            paquets/*.deb paquets/*.rpm paquets/SHA256SUMS "paquets/wimao-${VERSION}.intoto.jsonl"
 
   # Essai à blanc de la signature : prouve de bout en bout que la refabrication locale de
   # scripts/signer-version.sh (podman sans racine, image et Rust lus dans ce fichier, paquets de
