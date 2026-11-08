@@ -161,7 +161,10 @@ mod tests {
     }
 
     #[test]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn charge_donne_bon_avec_le_detail() {
+        crate::i18n::init_langue(Some("en"));
         assert_eq!(
             brut_depuis_test(&ResultatTest::Charge),
             (Statut::Bon, DetailBrut::Cle(DETAIL_CHARGE))

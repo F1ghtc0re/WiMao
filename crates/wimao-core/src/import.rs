@@ -1540,7 +1540,10 @@ mod tests {
     }
 
     #[test]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn annuler_avec_avertissement_ecrit_des_details_neutres() {
+        crate::i18n::init_langue(Some("en"));
         let d = tempfile::tempdir().unwrap();
         let c = banc(d.path());
         importer(&c, &ProgressionMuette).unwrap();
@@ -1686,7 +1689,10 @@ mod tests {
     }
 
     #[test]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn reprise_annulation_coupee_apres_le_deplacement() {
+        crate::i18n::init_langue(Some("en"));
         let d = tempfile::tempdir().unwrap();
         let c = banc(d.path());
         interruption(&c, false, false, EtatImport::AnnulationEnCours);

@@ -1003,7 +1003,10 @@ exit 0
     }
 
     #[test]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn revenir_ajoute_une_entree_retour() {
+        crate::i18n::init_langue(Some("en"));
         use crate::historique::{lire, Action, ResultatAction};
         let d = tempfile::tempdir().unwrap();
         let c = faux_environnement(d.path());
@@ -1023,7 +1026,10 @@ exit 0
     }
 
     #[test]
+    // Exclusif des tests de langue (clé par défaut) : ce test lit la langue globale deux fois.
+    #[serial_test::serial]
     fn revenir_ecrit_un_sujet_et_des_details_neutres() {
+        crate::i18n::init_langue(Some("en"));
         use crate::historique::{lire, CLES_CONNUES};
         let d = tempfile::tempdir().unwrap();
         let c = faux_environnement(d.path());
