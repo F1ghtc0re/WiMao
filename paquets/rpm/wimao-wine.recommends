@@ -8,4 +8,3 @@ libXxf86vm
 cups-libs
 SDL2
 dbus-libs
-ocl-icd

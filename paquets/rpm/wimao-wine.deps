@@ -16,3 +16,4 @@ vulkan-loader
 gnutls
 pulseaudio-libs
 alsa-lib
+libOpenCL.so.1()(64bit)

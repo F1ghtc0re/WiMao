@@ -42,7 +42,7 @@ pas.
 
 | RPM | Version | Release | Dépendances obligatoires | Facultatives (`Recommends`) |
 |---|---|---|---|---|
-| `wimao-wine` | celle du `.deb` (`11.20+wimao1`) | `1` | `freetype`, `fontconfig`, `libX11`, `libXext`, `libXrender`, `libXrandr`, `libXi`, `libXcursor`, `libXcomposite`, `libXfixes`, `vulkan-loader`, `gnutls`, `pulseaudio-libs`, `alsa-lib` | `mesa-libGL`, `mesa-libEGL`, `libXinerama`, `libXxf86vm`, `cups-libs`, `SDL2`, `dbus-libs`, `ocl-icd` |
+| `wimao-wine` | celle du `.deb` (`11.20+wimao1`) | `1` | `freetype`, `fontconfig`, `libX11`, `libXext`, `libXrender`, `libXrandr`, `libXi`, `libXcursor`, `libXcomposite`, `libXfixes`, `vulkan-loader`, `gnutls`, `pulseaudio-libs`, `alsa-lib`, `libOpenCL.so.1()(64bit)` (fourni par `ocl-icd` ou par `OpenCL-ICD-Loader`, qui s'excluent) | `mesa-libGL`, `mesa-libEGL`, `libXinerama`, `libXxf86vm`, `cups-libs`, `SDL2`, `dbus-libs` |
 | `wimao-bridge` | `5.1.1+dxvk3.1.1` | `1` | `wimao-wine >= 11.20+wimao1` | — |
 | `wimao` | celle du workspace, sans le `-1` Debian | `1` | `wimao-wine >= 11.20+wimao1`, `wimao-bridge >= 5.1.1+dxvk3.1.1`, `libadwaita >= 1.5`, `gtk4`, `xorg-x11-server-Xvfb`, `7zip`, `cabextract`, `zstd`, `tar` | `Carla`, `xwininfo` |
 

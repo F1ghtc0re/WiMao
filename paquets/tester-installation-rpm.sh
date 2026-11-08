@@ -11,7 +11,14 @@
 # donc PAS testées ici.
 #
 # Usage     : paquets/tester-installation-rpm.sh <dossier des .rpm et de SHA256SUMS> <dossier des journaux>
-# Variables : DEXED_ZIP  chemin de Dexed-1.1.0-win.zip, si on l'a déjà (sinon le script le télécharge
+# Variables : WIMAO_ESSAI_WINE_SYSTEME  OBLIGATOIRE, « oui » ou « non » (refus clair sinon).
+#               oui : le paquet `wine` de Fedora est installé AVANT les RPM et l'absence de conflit est
+#                     contrôlée (Review Focus 4). Il tire freetype, libX*, gnutls… : une dépendance
+#                     manquante dans paquets/rpm/wimao-wine.deps y serait MASQUÉE.
+#               non : `wine` de Fedora n'est pas installé, les contrôles côte à côte sont sautés, et seul le
+#                     strict nécessaire au test s'ajoute (jack_lsp, après les RPM) : c'est ce mode qui prouve
+#                     que les .deps de wimao-wine suffisent. La CI lance les deux.
+#             DEXED_ZIP  chemin de Dexed-1.1.0-win.zip, si on l'a déjà (sinon le script le télécharge
 #                        et vérifie son empreinte, comme le job de la CI pour les .deb) ;
 #                        l'empreinte est vérifiée dans les deux cas.
 # Écrit     : <journaux>/{installation,verifier,diagnostiquer,pipewire}.log ; hors de là, ce que font
@@ -34,6 +41,13 @@ if [ "$#" -ne 2 ]; then
     echo "Usage : $0 <dossier des .rpm> <dossier des journaux>" >&2
     exit 2
 fi
+case "${WIMAO_ESSAI_WINE_SYSTEME:-}" in
+    oui | non) ;;
+    *)
+        echo "ERREUR : WIMAO_ESSAI_WINE_SYSTEME doit valoir « oui » ou « non » (reçu : « ${WIMAO_ESSAI_WINE_SYSTEME:-} »)" >&2
+        exit 2
+        ;;
+esac
 RPMS="$(cd "$1" && pwd)"
 mkdir -p "$2"
 JOURNAUX="$(cd "$2" && pwd)"
@@ -91,9 +105,13 @@ done
 etape "1. Installation des paquets"
 # Le Wine de Fedora d'abord (Review Focus 4) : wimao-wine doit s'installer à côté, sans conflit de fichiers
 # (il vit sous /opt/wimao/wine et ne pose rien dans /usr).
-dnf install -y wine
-wine_systeme_avant="$(command -v wine)" || echec "le paquet wine de Fedora ne fournit pas la commande wine"
-echo "Wine de Fedora : $wine_systeme_avant ($(wine --version))"
+if [ "$WIMAO_ESSAI_WINE_SYSTEME" = oui ]; then
+    dnf install -y wine
+    wine_systeme_avant="$(command -v wine)" || echec "le paquet wine de Fedora ne fournit pas la commande wine"
+    echo "Wine de Fedora : $wine_systeme_avant ($(wine --version))"
+else
+    echo "Mode sans le Wine de Fedora : seules les dépendances des RPM fournissent les bibliothèques de Wine"
+fi
 
 # Copie lisible par dnf (le dossier de la CI peut ne pas l'être) ; installation des trois RPM LOCAUX.
 # dnf résout leurs Requires et Recommends (Carla, xwininfo) dans les dépôts de Fedora.
@@ -102,28 +120,52 @@ rm -rf "$COPIE"
 mkdir -p "$COPIE"
 cp "$RPMS"/*.rpm "$COPIE/"
 chmod -R a+rX "$COPIE"
-dnf install -y "$COPIE"/wimao-wine-[0-9]*.rpm "$COPIE"/wimao-bridge-[0-9]*.rpm "$COPIE"/wimao-[0-9]*.rpm
+LOCAUX=("$COPIE"/wimao-wine-[0-9]*.rpm "$COPIE"/wimao-bridge-[0-9]*.rpm "$COPIE"/wimao-[0-9]*.rpm)
+if [ "$WIMAO_ESSAI_WINE_SYSTEME" = oui ]; then
+    dnf install -y "${LOCAUX[@]}"
+else
+    # Sans le Wine de Fedora : d'abord les seules dépendances OBLIGATOIRES (Requires), puis contrôle que
+    # chaque exécutable et bibliothèque de /opt/wimao a toutes ses bibliothèques liées (ldd) ; un « not found »
+    # prouve une dépendance manquante dans paquets/rpm/wimao-wine.deps. ntdll.so et win32u.so sont écartés : ce sont
+    # des bibliothèques de Wine lui-même, que ldd ne trouve pas hors du chargeur de Wine. Carla (Recommends de wimao, ses
+    # propres bibliothèques graphiques) n'arrive qu'ensuite, par la réinstallation normale ci-dessous.
+    dnf install -y --setopt=install_weak_deps=False "${LOCAUX[@]}"
+    manquantes="$(find /opt/wimao -type f \( -perm /111 -o -name '*.so*' \) -print0 \
+        | xargs -0 -n1 ldd 2> /dev/null | grep 'not found' | sort -u | grep -vE '^\s*(ntdll|win32u)\.so ' || true)"
+    [ -z "$manquantes" ] || echec "bibliothèques liées introuvables avec les seules dépendances obligatoires :
+$manquantes"
+    echo "ok : aucune bibliothèque liée manquante avec les seules dépendances obligatoires"
+    # Retrait des trois RPM (dnf retire aussi les dépendances devenues inutiles), puis installation NORMALE,
+    # avec les dépendances facultatives (Carla, xwininfo…) comme sur un poste. Un simple ajout des Recommends
+    # après coup ne conviendrait pas : il n'ajouterait pas les dépendances facultatives des dépendances (par
+    # exemple les polices de fontconfig), et Dexed ne s'ouvrirait pas (« Loads correctly » au lieu de « The plugin opens »).
+    dnf remove -y wimao wimao-bridge wimao-wine
+    dnf install -y "${LOCAUX[@]}"
+fi
 for paquet in "${PAQUETS[@]}"; do
     rpm -q "$paquet" || echec "$paquet non installé"
 done
 
-# Aucun conflit : le Wine de Fedora est toujours là, et c'est lui qui répond à `wine`.
-[ "$(command -v wine)" = "$wine_systeme_avant" ] || echec "la commande wine a changé après l'installation de WiMao"
-rpm -q wine > /dev/null || echec "le paquet wine de Fedora a disparu"
-rpm -V wine || echec "rpm -V wine signale des écarts : WiMao a modifié des fichiers du Wine de Fedora"
-echo "ok : wimao-wine cohabite avec le paquet wine de Fedora"
+if [ "$WIMAO_ESSAI_WINE_SYSTEME" = oui ]; then
+    # Aucun conflit : le Wine de Fedora est toujours là, et c'est lui qui répond à `wine`.
+    [ "$(command -v wine)" = "$wine_systeme_avant" ] || echec "la commande wine a changé après l'installation de WiMao"
+    rpm -q wine > /dev/null || echec "le paquet wine de Fedora a disparu"
+    rpm -V wine || echec "rpm -V wine signale des écarts : WiMao a modifié des fichiers du Wine de Fedora"
+    echo "ok : wimao-wine cohabite avec le paquet wine de Fedora"
+fi
 
 # Outils de test, après les paquets (voir l'en-tête). jack-tools (jack_lsp) : sert à savoir si le serveur audio
 # répond. Le serveur lui-même n'est PAS JACK : dans Fedora, Carla dépend de PipeWire (paquet
 # pipewire-jack-audio-connection-kit), dont la bibliothèque libjack remplace celle de JACK ; un vrai `jackd`
 # n'y démarre d'ailleurs pas (« not implemented », constaté en Fedora 45). On lance donc `pipewire` comme sur
 # un poste Fedora, ce qui donne à Carla un moteur audio dans le conteneur ; sans lui `verifier` ne teste rien.
-# Polices et fontconfig : une image vierge n'en a presque pas et Wine en a besoin pour créer son préfixe.
+# Rien d'autre : ni polices ni fontconfig, ni bibliothèques. Les installer ici masquerait une dépendance
+# manquante de wimao-wine ; si Wine en exige pour fonctionner, c'est paquets/rpm/wimao-wine.deps qui doit
+# les demander. curl, runuser et les outils habituels sont déjà dans l'image Fedora.
 # Carla n'est pas listé ici : c'est un Recommends de wimao, installé par dnf avec lui (et exigé plus bas).
 dnf install -y --setopt=install_weak_deps=False \
-    jack-tools \
-    dejavu-sans-fonts liberation-sans-fonts fontconfig curl unzip procps-ng util-linux
-for outil in carla-single Xvfb xvfb-run xwininfo pipewire jack_lsp runuser; do
+    jack-tools
+for outil in curl carla-single Xvfb xvfb-run xwininfo pipewire jack_lsp runuser; do
     command -v "$outil" > /dev/null || echec "outil absent après installation : $outil (Carla et xwininfo viennent des Recommends de wimao)"
 done
 
@@ -231,8 +273,10 @@ restes="$(find /usr/bin -maxdepth 1 -name 'wimao*')"
 installes="$(rpm -qa 'wimao*')"
 [ -z "$installes" ] || echec "paquets encore installés : $installes"
 # Le Wine de Fedora n'est pas touché par le retrait.
-rpm -q wine > /dev/null || echec "le paquet wine de Fedora a disparu au retrait"
-rpm -V wine || echec "rpm -V wine signale des écarts après le retrait"
+if [ "$WIMAO_ESSAI_WINE_SYSTEME" = oui ]; then
+    rpm -q wine > /dev/null || echec "le paquet wine de Fedora a disparu au retrait"
+    rpm -V wine || echec "rpm -V wine signale des écarts après le retrait"
+fi
 # Les données de l'utilisateur ne sont jamais touchées par le retrait.
 [ -d "$HOME_ESSAI/.local/share/wimao" ] || echec "le dossier de données de WiMao (.local/share/wimao) a disparu"
 { [ -e "$HOME_ESSAI/.vst3/yabridge/Dexed.vst3" ] || [ -L "$HOME_ESSAI/.vst3/yabridge/Dexed.vst3" ]; } \

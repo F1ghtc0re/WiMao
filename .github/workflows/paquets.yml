@@ -468,7 +468,7 @@ jobs:
           retention-days: 14
 
   # Pendant Fedora du job `installation` : installe les trois RPM de l'artefact `paquets-<sha court>` dans
-  # un Fedora vierge (44 et 45), à côté du paquet `wine` de Fedora, les utilise (Wine, yabridge, Carla,
+  # un Fedora vierge (45 avec et sans le paquet `wine` de Fedora, 44 sans), les utilise (Wine, yabridge, Carla,
   # Dexed) puis les retire : tout est dans paquets/tester-installation-rpm.sh. Un conteneur n'applique
   # pas SELinux : les étiquettes SELinux ne sont pas testées. fail-fast: false pour voir les deux résultats.
   installation-rpm:
@@ -486,10 +486,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - nom: fedora-44
-            image: registry.fedoraproject.org/fedora:44@sha256:4b39e947a92d0ac2df1db9ebbf7672256d828a73e6e0219f8a6e774f84f34d64
-          - nom: fedora-45
+          # « wine_systeme » : oui = le paquet `wine` de Fedora est installé avant les RPM (test de cohabitation) ;
+          # non = il ne l'est pas, pour qu'il ne masque aucune dépendance manquante de wimao-wine.
+          - nom: fedora-45-avec-wine
+            wine_systeme: oui
             image: registry.fedoraproject.org/fedora:45@sha256:4a8a63ec2df9f26a96c35ff380237ad578cf42e326b979d9b5801c31c6daf2e8
+          - nom: fedora-45-sans-wine
+            wine_systeme: non
+            image: registry.fedoraproject.org/fedora:45@sha256:4a8a63ec2df9f26a96c35ff380237ad578cf42e326b979d9b5801c31c6daf2e8
+          - nom: fedora-44-sans-wine
+            wine_systeme: non
+            image: registry.fedoraproject.org/fedora:44@sha256:4b39e947a92d0ac2df1db9ebbf7672256d828a73e6e0219f8a6e774f84f34d64
     steps:
       # tar : requis par les actions de téléchargement d'artefacts. Les autres outils de test sont installés
       # par le script, APRÈS les paquets de WiMao, pour ne pas masquer une dépendance manquante.
@@ -509,6 +516,8 @@ jobs:
       # L'empreinte des RPM est vérifiée par le script avant toute installation ; celle de Dexed aussi
       # (le script le télécharge : même version et même empreinte que pour les .deb).
       - name: Installation, contrôles et retrait
+        env:
+          WIMAO_ESSAI_WINE_SYSTEME: ${{ matrix.wine_systeme }}
         run: paquets/tester-installation-rpm.sh paquets-telecharges "$GITHUB_WORKSPACE/journaux"
       # Même en cas d'échec : les journaux servent à comprendre.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
