@@ -4,18 +4,18 @@ Hash: SHA512
 Architectures: amd64
 Codename: stable
 Components: main
-Date: Sun, 08 Nov 2026 18:49:51 +0000
+Date: Mon, 09 Nov 2026 00:51:21 +0000
 Description: WiMao — Wine pour la MAO (paquets signés)
 Label: WiMao
 Origin: WiMao
 Suite: stable
 SHA256:
- 2f407029ad209ed7650718714860a3c730c2025388d2856336ab7946fb9a8fd7             7244 main/binary-amd64/Packages
- f5302fe0b17304c1b3598223cd89675f39f5648a34e690e8d073013b25c7b143             1702 main/binary-amd64/Packages.gz
+ 778cff9f7a557632270f86339c3a3e1e9b526cdc545ff066777ef519bd5e9344            10866 main/binary-amd64/Packages
+ 25167db4b4bde5df8b3b01e87ed211ca402678140d2d8cb5a358519822386ca4             1854 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iHUEARYKAB0WIQRy2ppmrcZvcrnp+htfHU9gArgMgQUCavDETwAKCRBfHU9gArgM
-gb4cAP9fJqBGwRYvJf8va8j5szon00t9Dq8HRIYIo0utdU7+NQEAz4poZdRNSOi+
-bH0drr70O2hw831O80u6u2dlnicUmwc=
-=z8fT
+iHUEARYKAB0WIQRy2ppmrcZvcrnp+htfHU9gArgMgQUCavEZCQAKCRBfHU9gArgM
+gWcxAQDQYzzN9tXOo+YrTLTNNgJ0yWQNZlfyYx6h/xAIL0yCHwEAttV6kmwFaBaO
+WBOsNnYCEB4U/6FlgjqB0Cl4SXtKXQs=
+=BXzj
 -----END PGP SIGNATURE-----
