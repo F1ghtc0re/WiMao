@@ -2,8 +2,9 @@
 //!
 //! Utilise [`Chemins`] (le dossier personnel, le yabridge de WiMao), [`crate::pontage`]
 //! (`assurer_lien_yabridge_a`, qui pose un lien sans jamais rien remplacer) et [`lancer`]
-//! (pour interroger `flatpak`). Utilisé par `pontage::assurer_lien_et_noter`, donc à chaque
-//! pontage.
+//! (pour interroger `flatpak`) et `diagnostic::pour_shell` (citation des arguments).
+//! Utilisé par `pontage::assurer_lien_et_noter`, donc à chaque pontage, et par
+//! [`crate::diagnostic::diagnostiquer`] (permissions et lien de chaque logiciel).
 //!
 //! # Pourquoi
 //! Un logiciel en Flatpak est isolé : son `XDG_DATA_HOME` vaut `~/.var/app/<id>/data`, et non
@@ -17,9 +18,16 @@
 //! lui donne la commande). Ici, seul le lien est posé, dans le dossier de données du
 //! logiciel lui-même.
 //!
+//! # Permissions
+//! Un logiciel Flatpak ne voit que les dossiers que son manifeste ou un `flatpak override` lui
+//! ouvrent. [`systemes_de_fichiers`] lit ses permissions, [`chemins_invisibles`] dit lesquels
+//! des dossiers dont WiMao a besoin lui échappent, et [`commande_override`] écrit la commande que
+//! la personne peut lancer pour les lui ouvrir (le diagnostic l'affiche, WiMao ne la lance pas).
+//!
 //! `flatpak` absent ou en échec n'est jamais une erreur : il n'y a simplement aucun logiciel.
 
 use crate::chemins::Chemins;
+use crate::diagnostic::pour_shell;
 use crate::erreur::Resultat;
 use crate::outils::lancer;
 use crate::pontage::{assurer_lien_yabridge_a, LienYabridge};
@@ -42,6 +50,9 @@ pub const LOGICIELS_FLATPAK: [&str; 8] = [
 
 /// Délai de `flatpak list` : instantané en temps normal.
 const DELAI_FLATPAK: Duration = Duration::from_secs(20);
+
+/// Dossier d'installation de WiMao (Wine, yabridge), lu en lecture seule par les logiciels.
+pub const DOSSIER_WIMAO: &str = "/opt/wimao";
 
 /// Dossiers (sous le dossier personnel) où `yabridgectl sync` range les plugins pontés.
 const DOSSIERS_PONTES: [&str; 3] = [".vst3/yabridge", ".vst/yabridge", ".clap/yabridge"];
@@ -68,6 +79,104 @@ pub fn logiciels_installes() -> Vec<String> {
 /// Emplacement du lien yabridge d'un logiciel : `~/.var/app/<id>/data/yabridge`.
 pub fn emplacement_lien_flatpak(c: &Chemins, id: &str) -> PathBuf {
     c.home.join(".var/app").join(id).join("data/yabridge")
+}
+
+/// Ce que le logiciel `id` peut voir : les entrées de la ligne `filesystems=` de
+/// `flatpak info --show-permissions <id>` (séparées par `;`, entrées vides retirées).
+///
+/// `None` si `flatpak` échoue (absent, logiciel inconnu, délai dépassé) : on ne peut rien
+/// affirmer, donc le diagnostic ne signale rien. Sans ligne `filesystems=`, le logiciel n'a
+/// aucun accès particulier : liste vide.
+pub fn systemes_de_fichiers(id: &str) -> Option<Vec<String>> {
+    let mut cmd = Command::new("flatpak");
+    cmd.args(["info", "--show-permissions", id]);
+    let sortie = lancer(&mut cmd, DELAI_FLATPAK)
+        .ok()
+        .filter(|s| s.code == 0)?;
+    let entrees = sortie
+        .texte
+        .lines()
+        .find_map(|ligne| ligne.trim().strip_prefix("filesystems="))
+        .map(|valeur| {
+            valeur
+                .split(';')
+                .map(str::trim)
+                .filter(|e| !e.is_empty())
+                .map(str::to_owned)
+                .collect()
+        });
+    Some(entrees.unwrap_or_default())
+}
+
+/// Dossier qu'une entrée de `filesystems` ouvre, ou `None` si elle n'en désigne pas un qu'on
+/// sait comparer : `host` et `home` sont traités à part par l'appelant ; les entrées
+/// symboliques (`xdg-run/…`, `host-os`…) et les retraits (`!…`) ne comptent pas.
+fn dossier_ouvert(entree: &str, home: &Path) -> Option<PathBuf> {
+    // Le suffixe de mode (`:ro`, `:rw`, `:create`) ne change pas ce qui est visible.
+    let nom = entree.rsplit_once(':').map_or(entree, |(nom, _)| nom);
+    if let Some(reste) = nom.strip_prefix("~/") {
+        Some(home.join(reste))
+    } else if nom.starts_with('/') {
+        Some(PathBuf::from(nom))
+    } else {
+        None
+    }
+}
+
+/// Parmi `requis`, les chemins que le logiciel aux permissions `filesystems` ne voit pas.
+///
+/// - `host` couvre tout ; `home` couvre ce qui est sous `home` ;
+/// - une entrée explicite (`/opt/wimao`, `~/.vst3`) couvre son dossier et ses sous-dossiers
+///   (comparaison par composants : `/opt/wim` ne couvre pas `/opt/wimao`), `~/` étant développé
+///   avec `home` et le suffixe `:ro`/`:rw`/`:create` ignoré.
+pub fn chemins_invisibles(filesystems: &[String], home: &Path, requis: &[PathBuf]) -> Vec<PathBuf> {
+    let mode = |e: &str| e.rsplit_once(':').map_or(e, |(nom, _)| nom).to_owned();
+    let tout = filesystems.iter().any(|e| mode(e) == "host");
+    let maison = filesystems.iter().any(|e| mode(e) == "home");
+    let dossiers: Vec<PathBuf> = filesystems
+        .iter()
+        .filter_map(|e| dossier_ouvert(e, home))
+        .collect();
+    requis
+        .iter()
+        .filter(|chemin| {
+            let vu = tout
+                || (maison && chemin.starts_with(home))
+                || dossiers.iter().any(|d| chemin.starts_with(d));
+            !vu
+        })
+        .cloned()
+        .collect()
+}
+
+/// La commande `flatpak override --user --filesystem=… <id>` qui ouvre `invisibles` au logiciel
+/// `id`, déjà citée pour le shell (voir `diagnostic::pour_shell`) : c'est ce que
+/// l'interface met dans le presse-papiers. WiMao ne l'exécute jamais.
+///
+/// `:ro` (lecture seule) pour `/opt/wimao` et les dossiers de plugins ; les données de WiMao,
+/// que le logiciel doit pouvoir lire et écrire, sont sans suffixe. Les chemins sous `home`
+/// sont écrits `~/…` : le `~` reste littéral pour `sh` (il n'est développé qu'en début de mot)
+/// et flatpak le comprend.
+pub fn commande_override(id: &str, invisibles: &[PathBuf], home: &Path) -> String {
+    let mut commande = String::from("flatpak override --user");
+    for chemin in invisibles {
+        let ecrit = match chemin.strip_prefix(home) {
+            Ok(relatif) => format!("~/{}", relatif.display()),
+            Err(_) => chemin.display().to_string(),
+        };
+        // Seuls les dossiers de plugins et `/opt/wimao` sont en lecture seule.
+        let lecture_seule = chemin == Path::new(DOSSIER_WIMAO)
+            || [".vst3", ".vst", ".clap"]
+                .iter()
+                .any(|d| chemin == &home.join(d));
+        let suffixe = if lecture_seule { ":ro" } else { "" };
+        let argument = format!("--filesystem={ecrit}{suffixe}");
+        commande.push(' ');
+        commande.push_str(&pour_shell(Path::new(&argument)));
+    }
+    commande.push(' ');
+    commande.push_str(&pour_shell(Path::new(id)));
+    commande
 }
 
 /// Pose le lien yabridge de chacun des logiciels `ids` et rend, pour chacun, ce qui a été fait.
@@ -120,41 +229,9 @@ fn est_un_so(chemin: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::{faux_flatpak, PathTemporaire};
     use serial_test::serial;
-    use std::os::unix::fs::PermissionsExt;
     use std::time::UNIX_EPOCH;
-
-    /// Met `dossier` en tête du `PATH` le temps du test et le rétablit à la fin.
-    struct PathTemporaire(Option<std::ffi::OsString>);
-
-    impl PathTemporaire {
-        /// `seul` : le `PATH` devient exactement `dossier` (pour simuler un `flatpak` absent).
-        fn poser(dossier: &Path, seul: bool) -> Self {
-            let ancien = std::env::var_os("PATH");
-            let nouveau = match (&ancien, seul) {
-                (Some(a), false) => format!("{}:{}", dossier.display(), a.to_string_lossy()),
-                _ => dossier.display().to_string(),
-            };
-            std::env::set_var("PATH", nouveau);
-            PathTemporaire(ancien)
-        }
-    }
-
-    impl Drop for PathTemporaire {
-        fn drop(&mut self) {
-            match &self.0 {
-                Some(a) => std::env::set_var("PATH", a),
-                None => std::env::remove_var("PATH"),
-            }
-        }
-    }
-
-    /// Écrit un faux `flatpak` (script shell) dans `dossier`.
-    fn faux_flatpak(dossier: &Path, corps: &str) {
-        let script = dossier.join("flatpak");
-        std::fs::write(&script, format!("#!/bin/sh\n{corps}\n")).unwrap();
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
-    }
 
     #[test]
     #[serial]
@@ -164,7 +241,7 @@ mod tests {
             t.path(),
             "printf 'com.bitwig.BitwigStudio\\norg.gimp.GIMP\\nfm.reaper.Reaper\\n'",
         );
-        let _path = PathTemporaire::poser(t.path(), false);
+        let _path = PathTemporaire::poser(t.path());
         assert_eq!(
             logiciels_installes(),
             ["com.bitwig.BitwigStudio", "fm.reaper.Reaper"]
@@ -175,15 +252,102 @@ mod tests {
     #[serial]
     fn logiciels_installes_sans_flatpak_est_vide() {
         let t = tempfile::tempdir().unwrap();
-        // `PATH` réduit à un dossier vide : aucun `flatpak`.
-        {
-            let _path = PathTemporaire::poser(t.path(), true);
-            assert!(logiciels_installes().is_empty());
-        }
         // Un `flatpak` qui échoue, même s'il affiche un logiciel connu.
         faux_flatpak(t.path(), "echo fm.reaper.Reaper\nexit 1");
-        let _path = PathTemporaire::poser(t.path(), false);
+        let _path = PathTemporaire::poser(t.path());
         assert!(logiciels_installes().is_empty());
+    }
+
+    // --- Permissions ---
+
+    /// Les trois chemins requis des tests, avec `/home/u` pour dossier personnel.
+    fn requis_test() -> (PathBuf, Vec<PathBuf>) {
+        (
+            PathBuf::from("/home/u"),
+            vec![
+                PathBuf::from("/opt/wimao"),
+                PathBuf::from("/home/u/.local/share/wimao"),
+                PathBuf::from("/home/u/.vst3"),
+            ],
+        )
+    }
+
+    /// `chemins_invisibles` avec les entrées `e` et les chemins requis de [`requis_test`].
+    fn invisibles(e: &[&str]) -> Vec<PathBuf> {
+        let (home, requis) = requis_test();
+        let e: Vec<String> = e.iter().map(|s| s.to_string()).collect();
+        chemins_invisibles(&e, &home, &requis)
+    }
+
+    #[test]
+    fn invisibles_host_home_et_entrees_explicites() {
+        assert!(invisibles(&["host"]).is_empty());
+        assert_eq!(invisibles(&["home"]), [PathBuf::from("/opt/wimao")]);
+        assert_eq!(
+            invisibles(&[
+                "/opt/wimao:ro",
+                "~/.local/share/wimao",
+                "xdg-run/pipewire-0"
+            ]),
+            [PathBuf::from("/home/u/.vst3")]
+        );
+        // Un dossier parent couvre ses sous-dossiers, pas un nom qui lui ressemble.
+        assert!(!invisibles(&["/opt"]).contains(&PathBuf::from("/opt/wimao")));
+        assert!(invisibles(&["/opt/wim"]).contains(&PathBuf::from("/opt/wimao")));
+        assert_eq!(invisibles(&[]).len(), 3);
+    }
+
+    #[test]
+    fn commande_override_ne_cite_que_les_invisibles() {
+        let invisibles = [
+            PathBuf::from("/opt/wimao"),
+            PathBuf::from("/home/u/.local/share/wimao"),
+            PathBuf::from("/home/u/.vst3"),
+        ];
+        let commande =
+            commande_override("com.bitwig.BitwigStudio", &invisibles, Path::new("/home/u"));
+        assert_eq!(
+            commande,
+            "flatpak override --user --filesystem=/opt/wimao:ro \
+             --filesystem=~/.local/share/wimao --filesystem=~/.vst3:ro com.bitwig.BitwigStudio"
+        );
+        // Le shell laisse le `~` tel quel : flatpak le reçoit littéralement.
+        let sortie = Command::new("sh")
+            .args([
+                "-c",
+                &commande.replace("flatpak override", "printf '%s\\n'"),
+            ])
+            .output()
+            .unwrap();
+        let texte = String::from_utf8_lossy(&sortie.stdout);
+        assert!(
+            texte.contains("--filesystem=~/.local/share/wimao\n"),
+            "{texte}"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn systemes_de_fichiers_lit_la_ligne() {
+        let t = tempfile::tempdir().unwrap();
+        faux_flatpak(
+            t.path(),
+            "printf '[Context]\\nshared=network;\\nfilesystems=home;/opt/wimao:ro;;\\n'",
+        );
+        let _path = PathTemporaire::poser(t.path());
+        assert_eq!(
+            systemes_de_fichiers("fm.reaper.Reaper").unwrap(),
+            ["home", "/opt/wimao:ro"]
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn systemes_de_fichiers_en_echec_est_none() {
+        let t = tempfile::tempdir().unwrap();
+        faux_flatpak(t.path(), "echo 'filesystems=host;'\nexit 1");
+        let _path = PathTemporaire::poser(t.path());
+        assert_eq!(systemes_de_fichiers("fm.reaper.Reaper"), None);
     }
 
     #[test]

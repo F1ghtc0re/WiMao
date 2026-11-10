@@ -72,7 +72,12 @@ impl Fenetre {
         let reparables = problemes.iter().any(Probleme::est_reparable);
         let lien = problemes
             .iter()
-            .find(|p| matches!(p, Probleme::LienYabridge { .. }))
+            .find(|p| {
+                matches!(
+                    p,
+                    Probleme::LienYabridge { .. } | Probleme::FlatpakSansAcces { .. }
+                )
+            })
             .cloned();
         let (toast, boite) = issue_reparation(reparables, lien.is_some());
         self.lancer(
@@ -99,18 +104,19 @@ impl Fenetre {
         );
     }
 
-    /// Boîte « Information » du lien yabridge : message du diagnostic, bouton qui copie la
-    /// commande (toast « Command copied »). WiMao ne touche jamais au lien lui-même.
+    /// Boîte « Information » d'un avertissement (lien yabridge ou permissions Flatpak) : message du diagnostic, bouton qui copie la
+    /// commande (toast « Command copied »). WiMao ne lance jamais cette commande.
     fn informer_lien(&self, probleme: &Probleme) {
-        let Probleme::LienYabridge {
-            lien,
-            attendu,
-            etat,
-        } = probleme
-        else {
-            return;
+        // La commande à copier : celle du lien, ou celle de `flatpak override`.
+        let commande = match probleme {
+            Probleme::LienYabridge {
+                lien,
+                attendu,
+                etat,
+            } => commande_lien_yabridge(lien, attendu, etat),
+            Probleme::FlatpakSansAcces { commande, .. } => commande.clone(),
+            _ => return,
         };
-        let commande = commande_lien_yabridge(lien, attendu, etat);
         let moi = self.clone();
         dialogues::informer_lien_yabridge(&self.fenetre, &message_probleme(probleme), move || {
             dialogues::copier(&moi.fenetre, &commande);

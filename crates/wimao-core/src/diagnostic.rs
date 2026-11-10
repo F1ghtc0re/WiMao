@@ -10,7 +10,8 @@
 //!   pendant une installation, pour que le diagnostic ne prenne pas le `wineserver`
 //!   de l'installeur pour un Wine bloqué.
 //!
-//! Utilise [`crate::correctifs`] (vérifier, retirer, appliquer), [`crate::pontage`],
+//! Utilise [`crate::flatpak`] (logiciels de musique Flatpak : lien et permissions),
+//! [`crate::correctifs`] (vérifier, retirer, appliquer), [`crate::pontage`],
 //! [`crate::inventaire`], [`crate::restauration`] (point avant réparation, détection des
 //! processus dans `/proc`) et [`crate::wine`]. Les textes d'erreur bruts, eux, sont
 //! expliqués par [`crate::regles`], qui désigne le [`Probleme`] à réparer.
@@ -19,12 +20,16 @@ use crate::chemins::Chemins;
 use crate::correctifs::{dxvk::Dxvk, mono::Mono, msvcp::Msvcp140, Correctif};
 use crate::environnement::{creer_environnement, dossiers_relies, remplacer_dossiers_relies};
 use crate::erreur::{Erreur, Resultat};
+use crate::flatpak::{
+    chemins_invisibles, commande_override, emplacement_lien_flatpak, logiciels_installes,
+    systemes_de_fichiers, DOSSIER_WIMAO,
+};
 use crate::historique::{self, Action, ResultatAction, TexteNeutre};
 use crate::i18n::{tr, trf, trn};
 use crate::inventaire::Inventaire;
 use crate::pontage::{
-    bundle_linux, configuration, emplacement_lien_yabridge, etat_lien_yabridge, ponter,
-    EtatLienYabridge,
+    bundle_linux, configuration, emplacement_lien_yabridge, etat_lien_yabridge,
+    etat_lien_yabridge_a, ponter, EtatLienYabridge,
 };
 use crate::progression::Progression;
 use crate::restauration::{self, plugins_en_cours, wineserver_actif, MOTIF_REPARATION};
@@ -78,14 +83,32 @@ pub enum Probleme {
         /// Ce qu'on a trouvé à la place.
         etat: EtatLienYabridge,
     },
+    /// Un logiciel de musique installé en Flatpak (`id`) ne voit pas des dossiers dont WiMao a
+    /// besoin (`invisibles` : `/opt/wimao`, les données de WiMao, les dossiers de plugins) : ses
+    /// plugins pontés ne se chargeraient pas.
+    ///
+    /// **Simple avertissement**, comme [`Probleme::LienYabridge`] : modifier les permissions d'une
+    /// autre application est le choix de la personne, WiMao ne lance jamais `flatpak override`.
+    /// `commande` (déjà citée pour le shell) est celle à lancer soi-même.
+    FlatpakSansAcces {
+        /// Identifiant Flatpak du logiciel (`com.bitwig.BitwigStudio`).
+        id: String,
+        /// Les dossiers requis que ses permissions ne couvrent pas.
+        invisibles: Vec<PathBuf>,
+        /// `flatpak override --user --filesystem=… <id>`.
+        commande: String,
+    },
 }
 
 impl Probleme {
     /// Vrai si [`reparer`] sait corriger ce problème. Faux pour un simple avertissement
-    /// ([`Probleme::LienYabridge`]) : il est montré, mais ni la réparation, ni le point de
+    /// ([`Probleme::LienYabridge`], [`Probleme::FlatpakSansAcces`]) : il est montré, mais ni la réparation, ni le point de
     /// restauration, ni l'arrêt de Wine, ni la question sur les programmes ouverts ne le concernent.
     pub fn est_reparable(&self) -> bool {
-        !matches!(self, Probleme::LienYabridge { .. })
+        !matches!(
+            self,
+            Probleme::LienYabridge { .. } | Probleme::FlatpakSansAcces { .. }
+        )
     }
 
     /// Le problème de ce nom (celui du fichier `regles.toml`), sinon `None`.
@@ -123,7 +146,7 @@ impl Probleme {
             Probleme::MonoAbsent | Probleme::DxvkAbsent | Probleme::Msvcp140Absent => 3,
             Probleme::PontageIncomplet(_) => 4,
             // Jamais réparé : `reparer` l'écarte avant de trier. Le rang n'a pas d'effet.
-            Probleme::LienYabridge { .. } => 5,
+            Probleme::LienYabridge { .. } | Probleme::FlatpakSansAcces { .. } => 5,
         }
     }
 
@@ -158,6 +181,25 @@ pub fn message_probleme(p: &Probleme) -> String {
             attendu,
             etat,
         } => message_lien_yabridge(lien, attendu, etat),
+        Probleme::FlatpakSansAcces {
+            id,
+            invisibles,
+            commande,
+        } => trf(
+            "{app} (Flatpak) cannot see {folders}, so your bridged plugins will not load in it. To let it, run: {command}",
+            &[
+                ("app", id),
+                (
+                    "folders",
+                    &invisibles
+                        .iter()
+                        .map(|d| d.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+                ("command", commande),
+            ],
+        ),
     }
 }
 
@@ -221,7 +263,7 @@ fn message_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -
 
 /// Chemin écrit pour être collé tel quel dans un terminal : tel quel s'il ne contient que des
 /// caractères sans effet pour le shell, sinon entre apostrophes (`'` interne : `'\''`).
-fn pour_shell(chemin: &Path) -> String {
+pub(crate) fn pour_shell(chemin: &Path) -> String {
     let texte = chemin.display().to_string();
     let sur = !texte.is_empty()
         && texte
@@ -367,7 +409,10 @@ fn lier_verrou(temporaire: &Path, chemin: &Path) -> Resultat<()> {
 ///   `blacklist` (doublons VST2, plugins pontés ailleurs) ;
 /// - [`Probleme::LienYabridge`] : `~/.local/share/yabridge` vise un autre yabridge que celui de WiMao,
 ///   un dossier disparu, ou est un vrai dossier. Absent, ce n'est **pas** un problème (WiMao crée le
-///   lien au prochain pontage). Avertissement seulement : jamais réparé automatiquement.
+///   lien au prochain pontage). Avertissement seulement : jamais réparé automatiquement ;
+/// - pour chaque logiciel de musique Flatpak installé : le même [`Probleme::LienYabridge`] pour son
+///   lien, et [`Probleme::FlatpakSansAcces`] si ses permissions ne couvrent pas les dossiers
+///   de WiMao (avertissement lui aussi). Sans `flatpak`, rien.
 ///
 /// Limite : le `wineserver` n'écrit les `.reg` qu'à son arrêt, donc une valeur ajoutée
 /// pendant qu'il tourne n'est vue qu'après son arrêt (voir NOTES.md).
@@ -410,6 +455,45 @@ pub fn diagnostiquer(c: &Chemins) -> Resultat<Vec<Probleme>> {
             attendu: c.yabridge_dir.clone(),
             etat,
         }),
+    }
+    problemes.extend(problemes_flatpak(c, &logiciels_installes())?);
+    Ok(problemes)
+}
+
+/// Les avertissements des logiciels Flatpak `ids` : un lien yabridge qui mène ailleurs
+/// ([`Probleme::LienYabridge`]) et des dossiers invisibles ([`Probleme::FlatpakSansAcces`]).
+/// Un lien absent ou bon, ou des permissions illisibles, ne donnent rien.
+fn problemes_flatpak(c: &Chemins, ids: &[String]) -> Resultat<Vec<Probleme>> {
+    let requis = [
+        PathBuf::from(DOSSIER_WIMAO),
+        c.donnees.clone(),
+        c.home.join(".vst3"),
+        c.home.join(".vst"),
+        c.home.join(".clap"),
+    ];
+    let mut problemes = Vec::new();
+    for id in ids {
+        let lien = emplacement_lien_flatpak(c, id);
+        match etat_lien_yabridge_a(c, &lien)? {
+            EtatLienYabridge::Absent | EtatLienYabridge::Bon => {}
+            etat => problemes.push(Probleme::LienYabridge {
+                lien,
+                attendu: c.yabridge_dir.clone(),
+                etat,
+            }),
+        }
+        let Some(permissions) = systemes_de_fichiers(id) else {
+            continue;
+        };
+        let invisibles = chemins_invisibles(&permissions, &c.home, &requis);
+        if !invisibles.is_empty() {
+            let commande = commande_override(id, &invisibles, &c.home);
+            problemes.push(Probleme::FlatpakSansAcces {
+                id: id.clone(),
+                invisibles,
+                commande,
+            });
+        }
     }
     Ok(problemes)
 }
@@ -567,7 +651,7 @@ fn reparer_un(c: &Chemins, probleme: &Probleme, p: &dyn Progression) -> Resultat
         Probleme::WineBloque => Wine::nouveau(c).arreter(),
         Probleme::DossiersRelies => remplacer_dossiers_relies(c).map(|_| ()),
         // Écarté par `reparer` (avertissement) : WiMao ne modifie jamais un lien existant (voir `pontage::assurer_lien_yabridge`).
-        Probleme::LienYabridge { .. } => Ok(()),
+        Probleme::LienYabridge { .. } | Probleme::FlatpakSansAcces { .. } => Ok(()),
         // Traités plus haut (correctifs) : ce bras rend le `match` exhaustif sans joker.
         Probleme::MonoAbsent | Probleme::DxvkAbsent | Probleme::Msvcp140Absent => Ok(()),
     }
@@ -727,6 +811,100 @@ mod tests {
         let lien = emplacement_lien_yabridge(&banc.c);
         std::fs::create_dir_all(lien.parent().unwrap()).unwrap();
         lien
+    }
+
+    // --- Logiciels Flatpak : lien et permissions ---
+
+    /// Faux `flatpak` : liste Bitwig, et pour `info --show-permissions` la ligne `perms`.
+    fn faux_flatpak_bitwig(dossier: &Path, perms: &str) {
+        crate::test_utils::faux_flatpak(
+            dossier,
+            &format!(
+                "case \"$1\" in\n  list) echo com.bitwig.BitwigStudio ;;\n  info) echo '[Context]'; echo '{perms}' ;;\nesac"
+            ),
+        );
+    }
+
+    /// Le `FlatpakSansAcces` du diagnostic, s'il y en a un.
+    fn sans_acces(banc: &Banc) -> Option<Probleme> {
+        diagnostiquer(&banc.c)
+            .unwrap()
+            .into_iter()
+            .find(|p| matches!(p, Probleme::FlatpakSansAcces { .. }))
+    }
+
+    #[test]
+    #[serial]
+    fn flatpak_avec_acces_home_signale_opt_wimao() {
+        let banc = Banc::nouveau();
+        let t = tempfile::tempdir().unwrap();
+        faux_flatpak_bitwig(t.path(), "filesystems=home;");
+        let _path = crate::test_utils::PathTemporaire::poser(t.path());
+        let Some(Probleme::FlatpakSansAcces {
+            id,
+            invisibles,
+            commande,
+        }) = sans_acces(&banc)
+        else {
+            panic!("FlatpakSansAcces attendu");
+        };
+        assert_eq!(id, "com.bitwig.BitwigStudio");
+        // `home` couvre ce qui est sous le dossier personnel : reste `/opt/wimao` (le banc met
+        // les données de WiMao hors du faux dossier personnel, elles sont donc invisibles aussi).
+        assert_eq!(invisibles[0], PathBuf::from("/opt/wimao"));
+        assert!(!invisibles.contains(&banc.c.home.join(".vst3")));
+        assert!(
+            commande.starts_with("flatpak override --user --filesystem=/opt/wimao:ro "),
+            "{commande}"
+        );
+        assert!(commande.ends_with(" com.bitwig.BitwigStudio"), "{commande}");
+        // Avertissement : ni réparé ni compté comme réparable.
+        let probleme = sans_acces(&banc).unwrap();
+        assert!(!probleme.est_reparable());
+        // Texte (anglais imposé) : l'identifiant et la commande y figurent.
+        crate::i18n::init_langue(Some("en"));
+        let texte = message_probleme(&probleme);
+        assert!(texte.contains("com.bitwig.BitwigStudio"), "{texte}");
+        assert!(texte.contains(&commande), "{texte}");
+    }
+
+    #[test]
+    #[serial]
+    fn flatpak_avec_acces_host_ne_signale_rien() {
+        let banc = Banc::nouveau();
+        let t = tempfile::tempdir().unwrap();
+        faux_flatpak_bitwig(t.path(), "filesystems=host;");
+        let _path = crate::test_utils::PathTemporaire::poser(t.path());
+        assert_eq!(sans_acces(&banc), None);
+    }
+
+    #[test]
+    #[serial]
+    fn sans_flatpak_aucun_avertissement_flatpak() {
+        let banc = Banc::nouveau();
+        let t = tempfile::tempdir().unwrap();
+        // Un `flatpak` qui échoue vaut un `flatpak` absent : rien n'est signalé.
+        crate::test_utils::faux_flatpak(t.path(), "exit 127");
+        let _path = crate::test_utils::PathTemporaire::poser(t.path());
+        assert_eq!(sans_acces(&banc), None);
+    }
+
+    #[test]
+    #[serial]
+    fn lien_flatpak_vers_ailleurs_est_signale() {
+        let banc = Banc::nouveau();
+        let t = tempfile::tempdir().unwrap();
+        faux_flatpak_bitwig(t.path(), "filesystems=host;");
+        let _path = crate::test_utils::PathTemporaire::poser(t.path());
+        let lien = emplacement_lien_flatpak(&banc.c, "com.bitwig.BitwigStudio");
+        std::fs::create_dir_all(lien.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink("/autre", &lien).unwrap();
+        let problemes = diagnostiquer(&banc.c).unwrap();
+        assert!(
+            problemes.iter().any(|p| matches!(p,
+                Probleme::LienYabridge { lien: l, etat: EtatLienYabridge::Casse(_), .. } if *l == lien)),
+            "{problemes:?}"
+        );
     }
 
     #[test]

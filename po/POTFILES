@@ -22,6 +22,7 @@ crates/wimao-core/src/correctifs/msvcp.rs
 crates/wimao-core/src/diagnostic.rs
 crates/wimao-core/src/environnement.rs
 crates/wimao-core/src/erreur.rs
+crates/wimao-core/src/flatpak.rs
 crates/wimao-core/src/historique.rs
 crates/wimao-core/src/i18n.rs
 crates/wimao-core/src/import.rs
