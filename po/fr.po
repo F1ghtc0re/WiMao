@@ -154,7 +154,6 @@ msgstr "Liste les applications ajoutées dont le programme existe encore"
 #: crates/wimao-cli/src/cli.rs
 msgid "Open an application and watch its installations until it is closed"
 msgstr "Ouvre une application et surveille ses installations jusqu'à sa fermeture"
-"Ouvre le gestionnaire et surveille ses installations jusqu'à sa fermeture"
 
 #: crates/wimao-cli/src/cli.rs
 msgid "Application name (see \"application lister\")"
