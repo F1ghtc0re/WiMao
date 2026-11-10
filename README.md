@@ -14,11 +14,11 @@ musique.
 
 WiMao ne ferait rien sans le travail des autres. Un grand merci à :
 
-- **[yabridge](https://github.com/robbert-vdh/yabridge)**, de Robbert van der Helm (GPL-3.0) : c'est lui
+- **[yabridge](https://github.com/robbert-vdh/yabridge)**, de Robbert van der Helm (GPL-3.0 ou ultérieure) : c'est lui
   qui fait charger les plugins Windows par les logiciels Linux ;
-- **[Wine](https://www.winehq.org)** (LGPL-2.1) : il fait tourner les programmes Windows ;
+- **[Wine](https://www.winehq.org)** (LGPL-2.1 ou ultérieure) : il fait tourner les programmes Windows ;
 - **[DXVK](https://github.com/doitsujin/dxvk)** (licence zlib) : l'affichage des fenêtres de plugins ;
-- **[Carla](https://github.com/falkTX/Carla)**, de falkTX (GPL-2.0) : il sert à tester l'ouverture des plugins.
+- **[Carla](https://github.com/falkTX/Carla)**, de falkTX (GPL-2.0 ou ultérieure) : il sert à tester l'ouverture des plugins.
 
 WiMao lui-même est libre (GPL-3.0 ou ultérieure, voir `LICENSE`).
 

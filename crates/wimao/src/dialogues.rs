@@ -450,10 +450,11 @@ pub fn a_propos(parent: &adw::ApplicationWindow) {
     dialogue.present(Some(parent));
 }
 
-/// Information sur le lien `~/.local/share/yabridge` (avertissement, jamais réparé par WiMao) :
-/// `message` explique la situation, « Copy the command » appelle `copie` (qui place `commande`
-/// dans le presse-papiers) et « Close » ferme. WiMao ne lance jamais la commande.
-pub fn informer_lien_yabridge(
+/// Information sur les avertissements que WiMao ne répare jamais (liens yabridge, permissions
+/// Flatpak) : `message` explique la situation (tous les avertissements l'un sous l'autre),
+/// « Copy the command » appelle `copie` (qui place les commandes dans le presse-papiers) et
+/// « Close » ferme. WiMao ne lance jamais la commande.
+pub fn informer_avertissements(
     parent: &adw::ApplicationWindow,
     message: &str,
     copie: impl FnOnce() + 'static,

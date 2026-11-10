@@ -102,7 +102,7 @@ impl Fenetre {
     fn informer_avertissements(&self, avertis: &[(String, String)]) {
         let (message, commandes) = texte_des_avertissements(avertis);
         let moi = self.clone();
-        dialogues::informer_lien_yabridge(&self.fenetre, &message, move || {
+        dialogues::informer_avertissements(&self.fenetre, &message, move || {
             dialogues::copier(&moi.fenetre, &commandes);
             moi.toast(&tr("Command copied"));
         });

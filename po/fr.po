@@ -200,7 +200,8 @@ msgstr "Aucune application ajoutée"
 
 #: crates/wimao-cli/src/commandes/applications.rs
 msgid "{name} removed from the list; nothing was uninstalled"
-msgstr "{name} retirée de la liste ; rien n'a été désinstallé"
+msgstr ""
+"L'application {name} a été retirée de la liste ; rien n'a été désinstallé"
 
 #: crates/wimao-cli/src/commandes/entretien.rs
 #: crates/wimao-cli/src/commandes/import.rs
@@ -2013,7 +2014,7 @@ msgstr "Installation terminée"
 
 #: crates/wimao/src/fenetre/mod.rs
 msgid "{name} installed: open it from the Managers section"
-msgstr "{name} installé : ouvrez-le depuis la section Gestionnaires"
+msgstr "L'application {name} est installée : ouvrez-la depuis la section Gestionnaires"
 
 #: crates/wimao/src/fenetre/mod.rs
 msgid "Backing up…"
@@ -2088,7 +2089,7 @@ msgstr "Retrait de {name}…"
 
 #: crates/wimao/src/gestionnaires.rs
 msgid "{name} removed from the list"
-msgstr "{name} retirée de la liste"
+msgstr "L'application {name} a été retirée de la liste"
 
 #: crates/wimao/src/gestionnaires.rs
 msgid "Installing {name}…"
@@ -2315,7 +2316,7 @@ msgstr "L'import a été annulé : relancez WiMao."
 
 #: crates/wimao/src/session_fenetre.rs
 msgid "{name} is no longer in the list"
-msgstr "{name} n'est plus dans la liste"
+msgstr "L'application {name} n'est plus dans la liste"
 
 #: crates/wimao/src/session_fenetre.rs
 msgid "{name} is open — WiMao bridges new plugins"

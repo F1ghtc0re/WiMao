@@ -3,7 +3,7 @@
 //! Utilise [`Chemins`] (le dossier personnel, le yabridge de WiMao), [`crate::pontage`]
 //! (`assurer_lien_yabridge_a`, qui pose un lien sans jamais rien remplacer) et [`lancer`]
 //! (pour interroger `flatpak`) et [`pour_shell`] (citation des arguments).
-//! Utilisé par `pontage::assurer_lien_et_noter`, donc à chaque pontage, et par
+//! Utilisé par `pontage::assurer_liens` (pontage, démarrage de l'interface, « Réparer ») et par
 //! [`crate::diagnostic::diagnostiquer`] (permissions et lien de chaque logiciel).
 //!
 //! # Pourquoi
@@ -115,6 +115,8 @@ fn dossier_ouvert(entree: &str, home: &Path) -> Option<PathBuf> {
     let nom = entree.rsplit_once(':').map_or(entree, |(nom, _)| nom);
     if let Some(reste) = nom.strip_prefix("~/") {
         Some(home.join(reste))
+    } else if let Some(dossier) = dossier_xdg(nom, home) {
+        Some(dossier)
     } else if nom.starts_with('/') {
         Some(PathBuf::from(nom))
     } else {
@@ -122,9 +124,24 @@ fn dossier_ouvert(entree: &str, home: &Path) -> Option<PathBuf> {
     }
 }
 
+/// Dossier désigné par une entrée symbolique `xdg-data[/sous]`, `xdg-config[/sous]` ou
+/// `xdg-cache[/sous]` (valeurs par défaut des variables XDG : `~/.local/share`, `~/.config`,
+/// `~/.cache`). `None` pour tout autre nom (dont `xdg-run`, `xdg-documents`…).
+fn dossier_xdg(nom: &str, home: &Path) -> Option<PathBuf> {
+    let (base, sous) = nom.split_once('/').unwrap_or((nom, ""));
+    let racine = match base {
+        "xdg-data" => home.join(".local/share"),
+        "xdg-config" => home.join(".config"),
+        "xdg-cache" => home.join(".cache"),
+        _ => return None,
+    };
+    Some(racine.join(sous))
+}
+
 /// Parmi `requis`, les chemins que le logiciel aux permissions `filesystems` ne voit pas.
 ///
-/// - `host` couvre tout ; `home` couvre ce qui est sous `home` ;
+/// - `host` couvre tout ; `xdg-data[/sous]`, `xdg-config[/sous]` et `xdg-cache[/sous]` valent
+///   `~/.local/share`, `~/.config` et `~/.cache` (avec leur sous-dossier) ; `home` couvre ce qui est sous `home` ;
 /// - une entrée explicite (`/opt/wimao`, `~/.vst3`) couvre son dossier et ses sous-dossiers
 ///   (comparaison par composants : `/opt/wim` ne couvre pas `/opt/wimao`), `~/` étant développé
 ///   avec `home` et le suffixe `:ro`/`:rw`/`:create` ignoré.
@@ -294,6 +311,21 @@ mod tests {
         assert!(!invisibles(&["/opt"]).contains(&PathBuf::from("/opt/wimao")));
         assert!(invisibles(&["/opt/wim"]).contains(&PathBuf::from("/opt/wimao")));
         assert_eq!(invisibles(&[]).len(), 3);
+    }
+
+    #[test]
+    fn invisibles_entrees_symboliques_xdg() {
+        // `xdg-data/wimao` = ~/.local/share/wimao ; le suffixe de mode est ignoré.
+        assert_eq!(
+            invisibles(&["/opt/wimao", "xdg-data/wimao:ro"]),
+            [PathBuf::from("/home/u/.vst3")]
+        );
+        // `xdg-data` seul couvre tout ~/.local/share, pas ~/.vst3.
+        assert!(!invisibles(&["xdg-data"]).contains(&PathBuf::from("/home/u/.local/share/wimao")));
+        assert!(invisibles(&["xdg-data"]).contains(&PathBuf::from("/home/u/.vst3")));
+        // Un autre sous-dossier ne couvre pas wimao ; `xdg-config`/`xdg-cache` non plus.
+        assert!(invisibles(&["xdg-data/autre", "xdg-config", "xdg-cache"])
+            .contains(&PathBuf::from("/home/u/.local/share/wimao")));
     }
 
     #[test]

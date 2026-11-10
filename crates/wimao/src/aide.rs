@@ -423,7 +423,7 @@ mod tests {
     #[test]
     fn longueur_des_chapitres_en_francais() {
         // Le plan demande de 150 à 500 mots par chapitre en français (titres et marques
-        // Markdown compris : l'écart est de quelques mots, sans effet sur la limite). Le chapitre
+        // Markdown compris : l'écart est de quelques mots, sans effet sur la limite). Les chapitres
         // « gestionnaires » et « logiciel » ont gagné une section (sous-projet 9) : plafond
         // relevé à 700 mots.
         for chapitre in &CHAPITRES {

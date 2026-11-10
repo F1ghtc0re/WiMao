@@ -61,7 +61,7 @@ Un programa de música instalado como Flatpak (Bitwig desde Flathub, REAPER, Ard
 - crea por sí mismo el enlace `~/.var/app/<id>/data/yabridge` hacia el yabridge de WiMao, al arrancar, al puentear y con **Reparar**. Un enlace que ya existe nunca se sustituye;
 - actualiza las fechas de los plugins puenteados, para que el programa los vuelva a leer.
 
-El diagnóstico de WiMao (`wimao-cli diagnostiquer`, que también usa **Reparar**) le avisa si el Flatpak no ve `/opt/wimao`, la carpeta de datos de WiMao, `~/.vst3`, `~/.vst` o `~/.clap`. Entonces le da un comando `flatpak override --user --filesystem=…` para copiar. WiMao nunca lo ejecuta: la decisión es suya.
+Si el Flatpak no ve `/opt/wimao`, la carpeta de datos de WiMao, `~/.vst3`, `~/.vst` o `~/.clap`, sus plugins puenteados no se cargarán. Pulse **Reparar**: una ventana se lo explica y un botón copia el comando `flatpak override --user --filesystem=…` que debe ejecutar. WiMao nunca lo ejecuta: la decisión es suya. En la línea de comandos, `wimao-cli diagnostiquer` da el mismo aviso.
 
 **Bitwig** guarda en su caché un plugin que no se pudo cargar. Reinicie Bitwig: la actualización de fechas hace el resto.
 

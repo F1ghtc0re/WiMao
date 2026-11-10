@@ -64,6 +64,11 @@ const PREFIXES_DESINSTALLATION: [&str; 2] = ["uninstall", "désinstaller"];
 /// Préfixes (en minuscules) des noms d'exécutable qui désinstallent (`unins000.exe`, `uninstall.exe`).
 const PREFIXES_EXE_DESINSTALLATION: [&str; 2] = ["unins", "uninstall"];
 
+/// Dossier de Windows (en minuscules, séparateur `\\`) : ses programmes (`notepad.exe`,
+/// `explorer.exe`…) ne sont jamais des applications de la personne, et fermer `explorer.exe`
+/// arrêterait le bureau de Wine.
+const DOSSIER_WINDOWS: &str = "c:\\windows\\";
+
 // ───────────────────────── Lecture d'un raccourci `.lnk` ─────────────────────────
 
 /// Lit un entier little-endian de 16 bits à `decalage` ; `None` si le tampon est trop court.
@@ -280,7 +285,13 @@ fn application_du_raccourci(
     let desinstalleur = PREFIXES_EXE_DESINSTALLATION
         .iter()
         .any(|p| exe.starts_with(p));
-    if !exe.ends_with(".exe") || desinstalleur || connus.contains(&normaliser(&programme)) {
+    // Un programme livré avec Windows (sous `C:\\windows\\`) n'est pas une application.
+    let de_windows = normaliser(&programme).starts_with(DOSSIER_WINDOWS);
+    if !exe.ends_with(".exe")
+        || desinstalleur
+        || de_windows
+        || connus.contains(&normaliser(&programme))
+    {
         return None;
     }
     let existe = chemins_windows::vers_linux(&c.drive_c(), &programme)
@@ -740,6 +751,9 @@ pub(crate) mod tests {
             ("Absent/Absent.lnk", r"C:\Program Files\Absent\absent.exe"),
             ("Connu/Connu.lnk", r"C:\Program Files\Connu\connu.exe"),
             ("Doc/Doc.lnk", r"C:\Program Files\Doc\lisezmoi.txt"),
+            // Programmes de Windows : jamais des applications (casse et `/` indifférents).
+            ("Readme/Readme.lnk", r"C:\windows\notepad.exe"),
+            ("Bureau/Bureau.lnk", r"C:/WINDOWS/explorer.exe"),
         ] {
             let existe = !lnk.starts_with("Absent");
             apres.insert(raccourci(&c, lnk, cible, existe));

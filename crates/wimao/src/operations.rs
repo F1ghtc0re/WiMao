@@ -19,7 +19,7 @@ use wimao_core::historique::{self, Entree};
 use wimao_core::i18n::{tr, trf, trn};
 use wimao_core::import::annuler as annuler_l_import;
 use wimao_core::journal;
-use wimao_core::pontage::EtatPontage;
+use wimao_core::pontage::{self, EtatPontage};
 use wimao_core::rapport::rapport as construire_rapport;
 use wimao_core::restauration::{self, BilanRetour, ListePoints, PointRestauration};
 use wimao_core::sauvegarde::restaurer as restaurer_sauvegarde;
@@ -140,11 +140,15 @@ pub fn lignes_gestionnaires(c: &Chemins, catalogue: &Catalogue) -> Vec<LigneGest
 /// diagnostic (lecture seule, sans lancer Wine). `None` : rien à ponter.
 ///
 /// Sert au démarrage (spec 4.4) : si WiMao a été fermé pendant une session, ce que le
-/// gestionnaire a installé ensuite attend d'être ponté.
+/// gestionnaire a installé ensuite attend d'être ponté. Elle pose aussi, au passage, les liens
+/// yabridge manquants (dont ceux des logiciels Flatpak).
 ///
 /// # Erreurs
 /// Celles de `diagnostiquer`.
 pub fn plugins_non_pontes(c: &Chemins) -> Resultat<Option<usize>> {
+    // Au démarrage : pose les liens yabridge manquants (dont ceux des logiciels Flatpak
+    // installés depuis le dernier pontage). Ne peut pas échouer ; le journal garde la trace.
+    pontage::assurer_liens(c);
     Ok(diagnostiquer(c)?.into_iter().find_map(|p| match p {
         Probleme::PontageIncomplet(n) => Some(n),
         _ => None,
@@ -498,6 +502,7 @@ pub fn retour_en_arriere(c: &Chemins, apercu: &ApercuRetour) -> Resultat<BilanRe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use wimao_core::Format;
     use wimao_recettes::TypeInstalleur;
 
@@ -822,5 +827,56 @@ mod tests {
         let c = Chemins::pour_test(d.path());
         let erreur = apercu_du_retour(&c, "2026-01-01-00h00m00").err().unwrap();
         assert!(matches!(erreur, Erreur::Introuvable(id) if id == "2026-01-01-00h00m00"));
+    }
+
+    /// Au démarrage, `plugins_non_pontes` pose le lien du logiciel Flatpak déjà installé, même
+    /// quand tous les plugins sont pontés, et rafraîchit les dates des `.so`.
+    #[test]
+    #[serial]
+    fn plugins_non_pontes_pose_le_lien_flatpak() {
+        let t = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(t.path());
+        // Faux `flatpak` : liste Bitwig, ignore le reste. Écrit hors du fil qui l'exécute
+        // (copie par `install`) pour éviter « Text file busy ».
+        let bin = t.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let source = t.path().join("flatpak.source");
+        std::fs::write(
+            &source,
+            "#!/bin/sh\ncase \"$1\" in\n  list) echo com.bitwig.BitwigStudio ;;\n  *) exit 1 ;;\nesac\n",
+        )
+        .unwrap();
+        let statut = std::process::Command::new("install")
+            .args(["-m", "755"])
+            .arg(&source)
+            .arg(bin.join("flatpak"))
+            .status()
+            .unwrap();
+        assert!(statut.success());
+        let ancien = std::env::var_os("PATH").unwrap_or_default();
+        let mut chemins = vec![bin];
+        chemins.extend(std::env::split_paths(&ancien));
+        std::env::set_var("PATH", std::env::join_paths(chemins).unwrap());
+
+        let so = c
+            .home
+            .join(".vst3/yabridge/X.vst3/Contents/x86_64-linux/X.so");
+        std::fs::create_dir_all(so.parent().unwrap()).unwrap();
+        std::fs::write(&so, "a").unwrap();
+        let ancienne = std::time::UNIX_EPOCH + std::time::Duration::from_secs(978_307_200);
+        std::fs::File::options()
+            .write(true)
+            .open(&so)
+            .unwrap()
+            .set_modified(ancienne)
+            .unwrap();
+
+        let resultat = plugins_non_pontes(&c);
+        std::env::set_var("PATH", ancien);
+        resultat.unwrap();
+
+        let lien = wimao_core::flatpak::emplacement_lien_flatpak(&c, "com.bitwig.BitwigStudio");
+        assert_eq!(std::fs::read_link(&lien).unwrap(), c.yabridge_dir);
+        assert!(std::fs::metadata(&so).unwrap().modified().unwrap() > ancienne);
     }
 }

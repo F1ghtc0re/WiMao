@@ -29,7 +29,7 @@ use crate::i18n::{tr, trf, trn};
 use crate::inventaire::Inventaire;
 use crate::outils::pour_shell;
 use crate::pontage::{
-    bundle_linux, configuration, emplacement_lien_yabridge, etat_lien_yabridge,
+    assurer_liens, bundle_linux, configuration, emplacement_lien_yabridge, etat_lien_yabridge,
     etat_lien_yabridge_a, ponter, EtatLienYabridge,
 };
 use crate::progression::Progression;
@@ -535,6 +535,10 @@ fn plugins_non_pontes(c: &Chemins) -> Resultat<usize> {
 /// Le `wineserver` est arrêté en fin de réparation (les modifications du registre ne
 /// sont écrites qu'à son arrêt, voir NOTES.md).
 pub fn reparer(c: &Chemins, problemes: &[Probleme], p: &dyn Progression) -> Resultat<()> {
+    // Les liens yabridge manquants (dont ceux des logiciels Flatpak) sont posés d'abord, même
+    // quand rien d'autre n'est à réparer : ce ne sont pas des « problèmes réparables » (WiMao
+    // ne remplace jamais un lien existant) mais un simple geste sans risque.
+    assurer_liens(c);
     // Les simples avertissements (lien yabridge) ne se réparent pas : sans autre problème, il n'y a
     // rien à faire (ni point de restauration, ni arrêt de Wine, ni historique).
     let reparables: Vec<Probleme> = problemes
@@ -1329,6 +1333,37 @@ mod tests {
         let pendant = std::fs::read_to_string(journal).unwrap();
         assert!(pendant.contains("installation.lock"), "{pendant}");
         assert!(!installation_en_cours(&banc.c));
+    }
+
+    /// « Réparer » sans rien de réparable pose quand même le lien du logiciel Flatpak et
+    /// rafraîchit les dates des `.so` pontés (promesse de l'aide), sans point de restauration.
+    #[test]
+    #[serial]
+    fn reparer_sans_probleme_pose_le_lien_flatpak() {
+        let banc = Banc::nouveau();
+        let t = tempfile::tempdir().unwrap();
+        faux_flatpak_bitwig(t.path(), "filesystems=home;");
+        let _path = crate::test_utils::PathTemporaire::poser(t.path());
+        let so = banc
+            .c
+            .home
+            .join(".vst3/yabridge/X.vst3/Contents/x86_64-linux/X.so");
+        std::fs::create_dir_all(so.parent().unwrap()).unwrap();
+        std::fs::write(&so, "a").unwrap();
+        let ancienne = std::time::UNIX_EPOCH + std::time::Duration::from_secs(978_307_200);
+        std::fs::File::options()
+            .write(true)
+            .open(&so)
+            .unwrap()
+            .set_modified(ancienne)
+            .unwrap();
+
+        reparer(&banc.c, &[], &ProgressionMuette).unwrap();
+
+        let lien = crate::flatpak::emplacement_lien_flatpak(&banc.c, "com.bitwig.BitwigStudio");
+        assert_eq!(std::fs::read_link(&lien).unwrap(), banc.c.yabridge_dir);
+        assert!(std::fs::metadata(&so).unwrap().modified().unwrap() > ancienne);
+        assert!(restauration::lister(&banc.c).unwrap().points.is_empty());
     }
 
     #[test]

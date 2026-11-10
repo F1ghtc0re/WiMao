@@ -126,7 +126,7 @@ Nouveau module `wimao-core/src/flatpak.rs`.
 - Quand au moins un lien vient d'être **créé**, WiMao met à la date du jour les fichiers `.so` des plugins
   pontés (`~/.vst3/yabridge`, `~/.vst/yabridge`, `~/.clap/yabridge`) : le logiciel de musique les relit au
   prochain démarrage. Rien d'autre n'est modifié.
-- Appelé là où l'est déjà le lien `~/.local/share/yabridge` (démarrage, pontage) et par « Réparer ».
+- Appelé par `pontage::assurer_liens` : au pontage (`ponter`), au démarrage de l'interface (`operations::plugins_non_pontes`, en fond) et au début de `diagnostic::reparer` (« Réparer » et `wimao-cli reparer`), avant le retour « rien à réparer ».
 
 ### 4.2 Diagnostic
 

@@ -282,6 +282,17 @@ fn assurer_lien_et_noter(c: &Chemins) {
     assurer_liens_flatpak_et_noter(c);
 }
 
+/// Pose les liens yabridge manquants (le principal et ceux des logiciels Flatpak), sans jamais
+/// échouer ni rien remplacer ; ce qui mérite d'être su va au journal.
+///
+/// C'est le point d'entrée des appels « hors pontage » : au démarrage de l'interface (un
+/// logiciel Flatpak installé après le pontage des plugins n'aurait sinon jamais son lien), et au
+/// début de [`crate::diagnostic::reparer`] (« Réparer » / `wimao-cli reparer`), même quand rien
+/// n'est à réparer. Si un lien Flatpak est créé, les dates des `.so` pontés sont rafraîchies.
+pub fn assurer_liens(c: &Chemins) {
+    assurer_lien_et_noter(c);
+}
+
 /// Pose le lien yabridge des logiciels de musique installés en Flatpak ([`crate::flatpak`]) et
 /// note au journal ce qui mérite d'être su, comme pour le lien principal.
 ///
