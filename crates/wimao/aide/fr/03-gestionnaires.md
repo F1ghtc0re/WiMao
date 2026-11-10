@@ -35,3 +35,16 @@ Pendant une session, les autres actions (installer, réparer, sauvegarder) sont 
 - **Plugin Alliance** : l'Installation Manager peut se figer à 98 % sur le dernier produit. Attendez que tous les produits soient indiqués comme installés, puis fermez-le. Le fermer plus tôt fait perdre les paquets téléchargés.
 
 Un gestionnaire ne s'ouvre pas, ou la connexion ne revient pas ? Voir [Problèmes fréquents](aide:problemes).
+
+## Autres applications
+
+Certains installeurs ajoutés avec **Ajouter un installeur** n'installent aucun plugin : ils posent le lanceur de l'éditeur (par exemple BLEASS Plugins Installer). WiMao repère le nouveau raccourci du menu Démarrer et range ce lanceur dans la section **Gestionnaires**, sous les gestionnaires connus. Sa ligne indique « Application ajoutée · Installé ».
+
+- **Ouvrir** lance une session exactement comme pour un gestionnaire : point de restauration, plugins pontés au fur et à mesure, puis **J'ai fini**.
+- Le menu « ⋯ » propose **Retirer de la liste**, après confirmation. Cela n'enlève que la ligne : rien n'est désinstallé.
+
+À la fin de l'installation, WiMao affiche « {nom} installé : ouvrez-le depuis la section Gestionnaires ».
+
+Limite : un lanceur sans raccourci dans le menu Démarrer n'est pas détecté.
+
+En ligne de commande : `wimao-cli application lister`, `wimao-cli application ouvrir <nom>` et `wimao-cli application retirer <nom>`.

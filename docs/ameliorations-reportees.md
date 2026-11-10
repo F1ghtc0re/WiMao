@@ -335,3 +335,13 @@ Décisions et limites connues (conception : `docs/superpowers/specs/2026-11-08-w
   installés depuis les dépôts vivants : une mise à jour entre la CI et la signature locale peut changer les octets
   d'un RPM. Il faut alors relancer la CI, puis signer peu après.
 - **Autres distributions RPM** (openSUSE…) : hors périmètre, non essayées. Le README ne promet que Fedora.
+
+## Après le sous-projet 9 (Flatpak, applications ajoutées, README)
+
+- **Lanceur sans raccourci non détecté.** Une application n'est reconnue que par un raccourci du menu Démarrer
+  de Wine ; un lanceur qui n'en pose pas n'est pas ajouté à « Gestionnaires ».
+- **Flatpak : seul Bitwig est prouvé.** Le chargement dans un vrai Flatpak n'a été vu que par le testeur (Bitwig) ;
+  les autres logiciels de la liste ne sont pas essayés. Le runtime d'un Flatpak doit fournir les bibliothèques dont
+  Wine a besoin (c'est le cas du runtime freedesktop de Bitwig).
+- **Logiciel Flatpak hors liste.** Un logiciel de musique Flatpak absent de la liste n'est pas pris en charge
+  automatiquement ; le mode d'emploi donne le lien à créer (`ln -s /opt/wimao/yabridge ~/.var/app/<id>/data/yabridge`).

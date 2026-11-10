@@ -35,3 +35,16 @@ Durante una sesión, las demás acciones (instalar, reparar, guardar copia) apar
 - **Plugin Alliance**: el Installation Manager puede quedarse bloqueado al 98 % en el último producto. Espere a que todos los productos aparezcan como instalados y ciérrelo entonces. Si lo cierra antes, se pierden los paquetes descargados.
 
 ¿Un gestor no se abre o el inicio de sesión no vuelve? Vea [Problemas frecuentes](aide:problemes).
+
+## Otras aplicaciones
+
+Algunos instaladores añadidos con **Añadir un instalador** no instalan ningún plugin: dejan el lanzador del editor (por ejemplo BLEASS Plugins Installer). WiMao detecta el nuevo acceso directo del menú Inicio y coloca el lanzador en la sección **Gestores**, debajo de los gestores conocidos. Su fila dice «Aplicación añadida · Instalado».
+
+- **Abrir** inicia una sesión exactamente como con un gestor: punto de restauración, plugins puenteados a medida que aparecen y, al final, **He terminado**.
+- El menú «⋯» ofrece **Quitar de la lista**, tras una confirmación. Solo quita la fila: no se desinstala nada.
+
+Al terminar la instalación, WiMao muestra «{nombre} instalado: ábrelo desde la sección Gestores».
+
+Límite: un lanzador sin acceso directo en el menú Inicio no se detecta.
+
+En la línea de comandos: `wimao-cli application lister`, `wimao-cli application ouvrir <nombre>` y `wimao-cli application retirer <nombre>`.

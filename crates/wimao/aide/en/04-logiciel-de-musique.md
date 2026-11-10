@@ -53,3 +53,16 @@ If you forget, WiMao shows "Close your music software before continuing: a plugi
 - After a rollback, the removed plugins disappear from these folders. Run the plugin scan again so that your software forgets them.
 
 A plugin refuses to open? See [Common problems](aide:problemes).
+
+## Music software installed as a Flatpak
+
+Music software installed as a Flatpak (Bitwig from Flathub, REAPER, Ardour, Carla, LMMS, Zrythm, Qtractor, Renoise) is isolated from the rest of the system. WiMao takes care of it:
+
+- it creates the link `~/.var/app/<id>/data/yabridge` to WiMao's yabridge by itself, at startup, when bridging and with **Repair**. An existing link is never replaced;
+- it refreshes the dates of the bridged plugins, so the software reads them again.
+
+WiMao's diagnosis (`wimao-cli diagnostiquer`, also used by **Repair**) warns you if the Flatpak cannot see `/opt/wimao`, WiMao's data folder, `~/.vst3`, `~/.vst` or `~/.clap`. It then gives you a `flatpak override --user --filesystem=…` command to copy. WiMao never runs it: the decision is yours.
+
+**Bitwig** keeps a plugin that failed to load in its cache. Restart Bitwig: the date refresh does the rest.
+
+A Flatpak program that is not in the list? Create the link yourself: `ln -s /opt/wimao/yabridge ~/.var/app/<id>/data/yabridge`.
