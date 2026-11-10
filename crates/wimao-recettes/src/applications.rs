@@ -30,7 +30,7 @@ use wimao_core::restauration::ecrire_atomique;
 use wimao_core::{journal, Chemins, Erreur, Resultat};
 
 use crate::chemins_windows::{self, utilisateur_windows};
-use crate::recette::Recette;
+use crate::recette::{Recette, TypeRecette};
 
 /// Taille maximale d'un `.lnk` lu (1 Mo) : un vrai raccourci pèse quelques centaines d'octets.
 pub(crate) const TAILLE_MAX_RACCOURCI: usize = 1 << 20;
@@ -315,6 +315,47 @@ pub fn nouvelles_applications(
         .collect()
 }
 
+/// Programmes (chemins Windows) des recettes de gestionnaire de `recettes`, **résolus** dans le
+/// préfixe : à passer à [`nouvelles_applications`] comme `programmes_connus`, pour qu'un
+/// raccourci vers un gestionnaire déjà installé ne devienne jamais une application.
+///
+/// Les `programme` des recettes contiennent des variables (`{appdata-local}`) et des jokers
+/// (`app-*`, dossier de version) alors que la cible d'un raccourci est un chemin précis :
+/// les variables sont remplacées, puis le joker est résolu sur le disque (la version la plus
+/// haute). Le texte non résolu est gardé aussi (gestionnaire pas encore installé : inoffensif).
+/// Les recettes qui ne sont pas des gestionnaires sont ignorées.
+pub fn programmes_des_gestionnaires<'a>(
+    c: &Chemins,
+    recettes: impl IntoIterator<Item = &'a Recette>,
+) -> Vec<String> {
+    let drive_c = c.drive_c();
+    let utilisateur = utilisateur_windows(c);
+    let mut programmes = Vec::new();
+    for g in recettes
+        .into_iter()
+        .filter(|r| r.type_ == TypeRecette::Gestionnaire)
+        .filter_map(|r| r.gestionnaire.as_ref())
+    {
+        let texte = chemins_windows::remplacer_variables(&g.programme, &utilisateur);
+        // Chemin réel (casse du disque, joker remplacé), reconverti en chemin Windows.
+        let resolu = chemins_windows::resoudre_motif(&drive_c, &texte)
+            .ok()
+            .and_then(|p| p.strip_prefix(&drive_c).ok().map(chemin_windows_depuis));
+        programmes.push(texte);
+        programmes.extend(resolu);
+    }
+    programmes
+}
+
+/// `C:\a\b.exe` pour le chemin relatif `a/b.exe` de `drive_c`.
+fn chemin_windows_depuis(relatif: &Path) -> String {
+    let composants: Vec<String> = relatif
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .collect();
+    format!("C:\\{}", composants.join("\\"))
+}
+
 // ───────────────────────── Liste enregistrée ─────────────────────────
 
 /// Contenu du fichier `applications.toml` : la table `[[application]]`.
@@ -438,9 +479,8 @@ pub fn applications_presentes(c: &Chemins) -> Vec<Application> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
-    use crate::recette::TypeRecette;
 
     /// Dossier des vrais raccourcis faits par Wine (sans donnée personnelle).
     fn dossier_raccourcis() -> PathBuf {
@@ -461,7 +501,7 @@ mod tests {
 
     /// Construit un `.lnk` minimal sans `LinkTargetIDList`, avec un `LinkInfo` qui porte le
     /// chemin en ANSI et, si `unicode` est donné, en Unicode (en-tête de 0x24 octets).
-    fn fabriquer_lnk(ansi: &[u8], unicode: Option<&str>) -> Vec<u8> {
+    pub(crate) fn fabriquer_lnk(ansi: &[u8], unicode: Option<&str>) -> Vec<u8> {
         let mut lnk = vec![0u8; 76];
         lnk[0..4].copy_from_slice(&0x4Cu32.to_le_bytes());
         lnk[4..20].copy_from_slice(&CLSID_LIEN);
@@ -621,6 +661,49 @@ mod tests {
         let releve = releve_raccourcis(&c);
         let attendu: BTreeSet<PathBuf> = [a, b, PathBuf::from("drive_c").join(perso)].into();
         assert_eq!(releve, attendu);
+    }
+
+    #[test]
+    fn raccourci_d_un_gestionnaire_installe_n_est_pas_une_application() {
+        let d = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(d.path());
+        let u = utilisateur_windows(&c);
+        // Recette comme celle d'inMusic : variable et dossier de version à joker.
+        let r = Recette::gestionnaire_minimal(
+            "inMusic",
+            r"{appdata-local}\inmusic_software_center\app-*\inMusic Software Center.exe",
+            vec![],
+        );
+        // Deux versions installées : la plus haute est la cible du raccourci.
+        let exe = |v: &str| {
+            let rel = format!(
+                "users/{u}/AppData/Local/inmusic_software_center/app-{v}/inMusic Software Center.exe"
+            );
+            poser(&c, &rel, b"MZ");
+        };
+        exe("1.9.0");
+        exe("1.10.0");
+        let cible = format!(
+            r"C:\users\{u}\AppData\Local\inmusic_software_center\app-1.10.0\inMusic Software Center.exe"
+        );
+        let lien = raccourci(&c, "inMusic/inMusic Software Center.lnk", &cible, false);
+        let connus = programmes_des_gestionnaires(&c, [&r]);
+        let apres: BTreeSet<PathBuf> = [lien].into();
+        assert!(nouvelles_applications(&c, &BTreeSet::new(), &apres, &connus).is_empty());
+        // Sans cette résolution, le raccourci serait pris pour une application.
+        assert_eq!(
+            nouvelles_applications(&c, &BTreeSet::new(), &apres, &[]).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn programmes_ignore_les_recettes_qui_ne_sont_pas_des_gestionnaires() {
+        let d = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(d.path());
+        let mut r = Recette::gestionnaire_minimal("X", r"C:\X\x.exe", vec![]);
+        r.type_ = TypeRecette::Installeur;
+        assert!(programmes_des_gestionnaires(&c, [&r]).is_empty());
     }
 
     #[test]

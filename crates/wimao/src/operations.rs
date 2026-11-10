@@ -512,6 +512,7 @@ mod tests {
             gestionnaire: false,
             lien_a_declarer: None,
             consigne_activation: None,
+            applications: Vec::new(),
         }
     }
 
