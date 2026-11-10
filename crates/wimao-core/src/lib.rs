@@ -10,6 +10,7 @@
 //! - [`environnement`] : création de l'environnement Wine ;
 //! - [`i18n`] : traductions (`tr`, `trf`, `init_langue`) ;
 //! - [`inventaire`] : relevé des plugins Windows d'un préfixe ;
+//! - [`flatpak`] : logiciels de musique en Flatpak (lien yabridge dans `~/.var/app/<id>/data`) ;
 //! - [`pontage`] : pontage yabridge isolé (doublons VST2, plugins déjà pontés) ;
 //! - [`processus`] : processus d'un environnement Wine (lecture de `/proc`, arrêt) ;
 //! - [`regles`] : règles d'erreurs (texte d'erreur brut vers message compréhensible) ;
@@ -33,6 +34,7 @@ pub mod correctifs;
 pub mod diagnostic;
 pub mod environnement;
 pub mod erreur;
+pub mod flatpak;
 pub mod historique;
 pub mod i18n;
 pub mod import;
