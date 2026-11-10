@@ -27,6 +27,7 @@ use crate::flatpak::{
 use crate::historique::{self, Action, ResultatAction, TexteNeutre};
 use crate::i18n::{tr, trf, trn};
 use crate::inventaire::Inventaire;
+use crate::outils::pour_shell;
 use crate::pontage::{
     bundle_linux, configuration, emplacement_lien_yabridge, etat_lien_yabridge,
     etat_lien_yabridge_a, ponter, EtatLienYabridge,
@@ -88,7 +89,8 @@ pub enum Probleme {
     /// plugins pontés ne se chargeraient pas.
     ///
     /// **Simple avertissement**, comme [`Probleme::LienYabridge`] : modifier les permissions d'une
-    /// autre application est le choix de la personne, WiMao ne lance jamais `flatpak override`.
+    /// autre application est le choix de la personne, WiMao ne lance jamais
+    /// `flatpak override`.
     /// `commande` (déjà citée pour le shell) est celle à lancer soi-même.
     FlatpakSansAcces {
         /// Identifiant Flatpak du logiciel (`com.bitwig.BitwigStudio`).
@@ -258,21 +260,6 @@ fn message_lien_yabridge(lien: &Path, attendu: &Path, etat: &EtatLienYabridge) -
                 ("command", &commande),
             ],
         ),
-    }
-}
-
-/// Chemin écrit pour être collé tel quel dans un terminal : tel quel s'il ne contient que des
-/// caractères sans effet pour le shell, sinon entre apostrophes (`'` interne : `'\''`).
-pub(crate) fn pour_shell(chemin: &Path) -> String {
-    let texte = chemin.display().to_string();
-    let sur = !texte.is_empty()
-        && texte
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || "/._-+@:,=~".contains(c));
-    if sur {
-        texte
-    } else {
-        format!("'{}'", texte.replace('\'', "'\\''"))
     }
 }
 
@@ -1092,16 +1079,6 @@ mod tests {
         assert!(programmes_a_nommer_dans(&proc, &banc.c, &[probleme])
             .unwrap()
             .is_empty());
-    }
-
-    #[test]
-    fn les_chemins_sont_ecrits_pour_le_shell() {
-        assert_eq!(
-            pour_shell(Path::new("/opt/wimao/yabridge")),
-            "/opt/wimao/yabridge"
-        );
-        assert_eq!(pour_shell(Path::new("/home/a b/x")), "'/home/a b/x'");
-        assert_eq!(pour_shell(Path::new("/home/l'un")), "'/home/l'\\''un'");
     }
 
     #[test]

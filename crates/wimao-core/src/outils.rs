@@ -4,7 +4,7 @@
 //! règles d'erreurs, et garantie qu'un installeur bloqué ne bloque pas WiMao.
 //! Utilisé par les modules d'installation, de pontage et de vérification.
 //! Écrit dans le [`journal`] chaque commande lancée. Contient aussi [`taille_lisible`], partagée
-//! par la CLI et l'interface.
+//! par la CLI et l'interface, et [`pour_shell`] (citation d'un argument pour le shell).
 
 use crate::erreur::{Erreur, Resultat};
 use crate::i18n::{langue_courante, tr, trf};
@@ -250,12 +250,37 @@ pub fn taille_lisible(octets: u64) -> String {
     modele.replace("{value}", &texte)
 }
 
+/// Chemin écrit pour être collé tel quel dans un terminal : tel quel s'il ne contient que des
+/// caractères sans effet pour le shell, sinon entre apostrophes (`'` interne : `'\''`).
+pub fn pour_shell(chemin: &Path) -> String {
+    let texte = chemin.display().to_string();
+    let sur = !texte.is_empty()
+        && texte
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "/._-+@:,=~".contains(c));
+    if sur {
+        texte
+    } else {
+        format!("'{}'", texte.replace('\'', "'\\''"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Erreur;
     use std::process::Command;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn les_chemins_sont_ecrits_pour_le_shell() {
+        assert_eq!(
+            pour_shell(Path::new("/opt/wimao/yabridge")),
+            "/opt/wimao/yabridge"
+        );
+        assert_eq!(pour_shell(Path::new("/home/a b/x")), "'/home/a b/x'");
+        assert_eq!(pour_shell(Path::new("/home/l'un")), "'/home/l'\\''un'");
+    }
 
     #[test]
     #[serial_test::serial]

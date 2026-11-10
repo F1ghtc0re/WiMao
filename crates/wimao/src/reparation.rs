@@ -70,16 +70,8 @@ impl Fenetre {
         // Un simple avertissement (lien yabridge) ne se répare pas : il ne compte pas comme un
         // problème réparé. Son information (message + commande à copier) vient dans une boîte.
         let reparables = problemes.iter().any(Probleme::est_reparable);
-        let lien = problemes
-            .iter()
-            .find(|p| {
-                matches!(
-                    p,
-                    Probleme::LienYabridge { .. } | Probleme::FlatpakSansAcces { .. }
-                )
-            })
-            .cloned();
-        let (toast, boite) = issue_reparation(reparables, lien.is_some());
+        let avertis = avertissements(&problemes);
+        let (toast, boite) = issue_reparation(reparables, !avertis.is_empty());
         self.lancer(
             &tr("Repairing…"),
             move |p| operations::reparer(&c, &problemes, p),
@@ -94,8 +86,8 @@ impl Fenetre {
                         });
                     }
                     moi.avertir(&avertissements);
-                    if let (true, Some(lien)) = (boite, lien) {
-                        moi.informer_lien(&lien);
+                    if boite {
+                        moi.informer_avertissements(&avertis);
                     }
                     // Une réparation du pontage ajoute des plugins à la liste.
                     moi.rafraichir();
@@ -104,22 +96,14 @@ impl Fenetre {
         );
     }
 
-    /// Boîte « Information » d'un avertissement (lien yabridge ou permissions Flatpak) : message du diagnostic, bouton qui copie la
-    /// commande (toast « Command copied »). WiMao ne lance jamais cette commande.
-    fn informer_lien(&self, probleme: &Probleme) {
-        // La commande à copier : celle du lien, ou celle de `flatpak override`.
-        let commande = match probleme {
-            Probleme::LienYabridge {
-                lien,
-                attendu,
-                etat,
-            } => commande_lien_yabridge(lien, attendu, etat),
-            Probleme::FlatpakSansAcces { commande, .. } => commande.clone(),
-            _ => return,
-        };
+    /// Boîte « Information » de tous les avertissements (liens yabridge, permissions Flatpak) :
+    /// leurs messages l'un sous l'autre, et un bouton qui copie toutes les commandes (une par
+    /// ligne, toast « Command copied »). WiMao ne lance jamais ces commandes.
+    fn informer_avertissements(&self, avertis: &[(String, String)]) {
+        let (message, commandes) = texte_des_avertissements(avertis);
         let moi = self.clone();
-        dialogues::informer_lien_yabridge(&self.fenetre, &message_probleme(probleme), move || {
-            dialogues::copier(&moi.fenetre, &commande);
+        dialogues::informer_lien_yabridge(&self.fenetre, &message, move || {
+            dialogues::copier(&moi.fenetre, &commandes);
             moi.toast(&tr("Command copied"));
         });
     }
@@ -197,9 +181,64 @@ fn issue_reparation(reparables: bool, avertissement_lien: bool) -> (bool, bool) 
     (reparables || !avertissement_lien, avertissement_lien)
 }
 
+/// Les avertissements de `problemes` (lien yabridge principal ou Flatpak, permissions Flatpak),
+/// tous, dans l'ordre du diagnostic : pour chacun, son message et la commande qui y remédie.
+fn avertissements(problemes: &[Probleme]) -> Vec<(String, String)> {
+    problemes
+        .iter()
+        .filter_map(|p| {
+            let commande = match p {
+                Probleme::LienYabridge {
+                    lien,
+                    attendu,
+                    etat,
+                } => commande_lien_yabridge(lien, attendu, etat),
+                Probleme::FlatpakSansAcces { commande, .. } => commande.clone(),
+                _ => return None,
+            };
+            Some((message_probleme(p), commande))
+        })
+        .collect()
+}
+
+/// Le texte de la boîte (messages séparés par une ligne vide) et celui du presse-papiers
+/// (une commande par ligne), pour des avertissements de [`avertissements`].
+fn texte_des_avertissements(avertis: &[(String, String)]) -> (String, String) {
+    let messages: Vec<&str> = avertis.iter().map(|(m, _)| m.as_str()).collect();
+    let commandes: Vec<&str> = avertis.iter().map(|(_, c)| c.as_str()).collect();
+    (messages.join("\n\n"), commandes.join("\n"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tous_les_avertissements_sont_montres_et_copies() {
+        let flatpak = |id: &str| Probleme::FlatpakSansAcces {
+            id: id.to_string(),
+            invisibles: vec![],
+            commande: format!("cmd {id}"),
+        };
+        let problemes = [
+            Probleme::MonoAbsent,
+            flatpak("a.A"),
+            Probleme::LienYabridge {
+                lien: "/l".into(),
+                attendu: "/a".into(),
+                etat: wimao_core::pontage::EtatLienYabridge::Dossier,
+            },
+            flatpak("b.B"),
+        ];
+        let avertis = avertissements(&problemes);
+        // Les trois avertissements, pas le problème réparable, dans l'ordre.
+        assert_eq!(avertis.len(), 3);
+        let commandes: Vec<&str> = avertis.iter().map(|(_, c)| c.as_str()).collect();
+        assert_eq!(commandes, ["cmd a.A", "ln -s /a /l", "cmd b.B"]);
+        let (message, copie) = texte_des_avertissements(&avertis);
+        assert_eq!(copie, "cmd a.A\nln -s /a /l\ncmd b.B");
+        assert_eq!(message.matches("\n\n").count(), 2);
+    }
 
     #[test]
     fn les_quatre_issues_de_la_reparation() {

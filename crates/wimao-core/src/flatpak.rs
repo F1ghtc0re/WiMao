@@ -2,7 +2,7 @@
 //!
 //! Utilise [`Chemins`] (le dossier personnel, le yabridge de WiMao), [`crate::pontage`]
 //! (`assurer_lien_yabridge_a`, qui pose un lien sans jamais rien remplacer) et [`lancer`]
-//! (pour interroger `flatpak`) et `diagnostic::pour_shell` (citation des arguments).
+//! (pour interroger `flatpak`) et [`pour_shell`] (citation des arguments).
 //! Utilisé par `pontage::assurer_lien_et_noter`, donc à chaque pontage, et par
 //! [`crate::diagnostic::diagnostiquer`] (permissions et lien de chaque logiciel).
 //!
@@ -27,9 +27,8 @@
 //! `flatpak` absent ou en échec n'est jamais une erreur : il n'y a simplement aucun logiciel.
 
 use crate::chemins::Chemins;
-use crate::diagnostic::pour_shell;
 use crate::erreur::Resultat;
-use crate::outils::lancer;
+use crate::outils::{lancer, pour_shell};
 use crate::pontage::{assurer_lien_yabridge_a, LienYabridge};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -150,7 +149,7 @@ pub fn chemins_invisibles(filesystems: &[String], home: &Path, requis: &[PathBuf
 }
 
 /// La commande `flatpak override --user --filesystem=… <id>` qui ouvre `invisibles` au logiciel
-/// `id`, déjà citée pour le shell (voir `diagnostic::pour_shell`) : c'est ce que
+/// `id`, déjà citée pour le shell (voir [`pour_shell`]) : c'est ce que
 /// l'interface met dans le presse-papiers. WiMao ne l'exécute jamais.
 ///
 /// `:ro` (lecture seule) pour `/opt/wimao` et les dossiers de plugins ; les données de WiMao,
