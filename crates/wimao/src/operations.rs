@@ -29,6 +29,7 @@ use wimao_core::{
     diagnostiquer, reparer as reparer_probleme, Chemins, Erreur, Inventaire, PluginWindows,
     Probleme, Progression, Resultat, ResultatTest,
 };
+use wimao_recettes::applications::applications_presentes;
 use wimao_recettes::traiter_le_lien;
 use wimao_recettes::{
     dossiers_recettes, est_installe, installer as installer_plugin, installer_recette,
@@ -103,7 +104,8 @@ pub fn lister(c: &Chemins, mis_a_jour: &BTreeSet<PathBuf>) -> Resultat<(Releve, 
     Ok((releve, avertissements))
 }
 
-/// Une ligne par recette `type = "gestionnaire"` du catalogue, triée par nom (sans casse).
+/// Une ligne par recette `type = "gestionnaire"` du catalogue, triée par nom (sans casse),
+/// puis une par application ajoutée dont le programme existe ([`applications_presentes`]).
 /// « Installé » quand son `programme` existe dans l'environnement ([`est_installe`]).
 pub fn lignes_gestionnaires(c: &Chemins, catalogue: &Catalogue) -> Vec<LigneGestionnaire> {
     let mut lignes: Vec<LigneGestionnaire> = catalogue
@@ -115,9 +117,22 @@ pub fn lignes_gestionnaires(c: &Chemins, catalogue: &Catalogue) -> Vec<LigneGest
             editeur: r.editeur.clone(),
             installe: est_installe(c, r),
             telechargeable: r.telecharger.is_some(),
+            application: false,
         })
         .collect();
     lignes.sort_by_key(|l| l.nom.to_lowercase());
+    // Puis les applications ajoutées par un installeur (déjà triées, programme présent).
+    lignes.extend(
+        applications_presentes(c)
+            .into_iter()
+            .map(|a| LigneGestionnaire {
+                nom: a.nom,
+                editeur: String::new(),
+                installe: true,
+                telechargeable: false,
+                application: true,
+            }),
+    );
     lignes
 }
 
@@ -694,6 +709,80 @@ mod tests {
         assert_eq!(lignes[1].sous_titre(false), "Not installed");
         wimao_core::i18n::init_langue(Some("fr"));
         assert_eq!(lignes[0].sous_titre(false), "Alpha Inc. · Installé");
+        wimao_core::i18n::init_langue(Some("en"));
+    }
+
+    /// Enregistre une application de test (`applications.toml`) ; son programme existe si
+    /// `present` (fichier factice dans `drive_c`).
+    fn poser_application(c: &Chemins, nom: &str, present: bool) {
+        use wimao_recettes::applications::{ajouter_applications, Application};
+        if present {
+            let exe = c.drive_c().join(format!("Apps/{nom}.exe"));
+            std::fs::create_dir_all(exe.parent().unwrap()).unwrap();
+            std::fs::write(exe, "MZ").unwrap();
+        }
+        ajouter_applications(
+            c,
+            vec![Application {
+                nom: nom.to_owned(),
+                programme: format!("C:\\Apps\\{nom}.exe"),
+                raccourci: format!("{nom}.lnk").into(),
+                ajoutee: "2026-11-10".to_owned(),
+            }],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn lignes_avec_applications_apres_les_recettes() {
+        wimao_core::i18n::init_langue(Some("en"));
+        let racine = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(racine.path());
+        let recettes = racine.path().join("recettes");
+        std::fs::create_dir_all(&recettes).unwrap();
+        recette_gestionnaire(&recettes, "Zeta", "Zeta Inc.");
+        // « Aardvark » précède « Zeta » par ordre alphabétique, mais une application vient
+        // toujours après les recettes.
+        poser_application(&c, "Aardvark", true);
+        let (catalogue, _) = Catalogue::charger(&[recettes]);
+
+        let lignes = lignes_gestionnaires(&c, &catalogue);
+        let resume: Vec<(&str, bool)> = lignes
+            .iter()
+            .map(|l| (l.nom.as_str(), l.application))
+            .collect();
+        assert_eq!(resume, [("Zeta", false), ("Aardvark", true)]);
+        let appli = &lignes[1];
+        assert!(appli.installe && !appli.telechargeable && appli.editeur.is_empty());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn application_absente_non_listee() {
+        let racine = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(racine.path());
+        // Dans la liste, mais son programme a disparu : pas de ligne.
+        poser_application(&c, "Fantome", false);
+        let lignes = lignes_gestionnaires(&c, &Catalogue::default());
+        assert!(lignes.is_empty(), "{lignes:?}");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn sous_titre_application() {
+        wimao_core::i18n::init_langue(Some("en"));
+        let ligne = LigneGestionnaire {
+            nom: "Appli".into(),
+            editeur: String::new(),
+            installe: true,
+            telechargeable: false,
+            application: true,
+        };
+        assert_eq!(ligne.sous_titre(false), "Added application · Installed");
+        assert_eq!(ligne.sous_titre(true), "Added application · In use");
+        wimao_core::i18n::init_langue(Some("fr"));
+        assert_eq!(ligne.sous_titre(false), "Application ajoutée · Installé");
         wimao_core::i18n::init_langue(Some("en"));
     }
 

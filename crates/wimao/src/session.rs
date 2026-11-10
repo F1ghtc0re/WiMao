@@ -38,8 +38,8 @@ use gtk4::glib;
 use wimao_core::i18n::langue_courante;
 use wimao_core::{journal, Chemins, Erreur, Progression, Resultat};
 use wimao_recettes::{
-    consigne, ouvrir, suite, BilanSession, Commande, EvenementSession, Phase, Session, Suite,
-    CONSIGNE_CONNEXION, INTERVALLE_PILOTE,
+    consigne, ouvrir, suite, BilanSession, Commande, EvenementSession, Phase, Recette, Session,
+    Suite, CONSIGNE_CONNEXION, INTERVALLE_PILOTE,
 };
 
 use crate::operations::{self, Avertissements};
@@ -166,13 +166,15 @@ impl MemoireTours {
     }
 }
 
-/// Démarre le fil de session du gestionnaire `nom` et rend sa télécommande.
+/// Démarre le fil de session du gestionnaire `nom` et rend sa télécommande. `recette` : la
+/// recette en mémoire d'une application ajoutée ; `None` pour un gestionnaire du catalogue.
 ///
 /// `recevoir` est appelé dans le fil de GTK pour chaque [`MessageSession`], dans l'ordre. Doit
 /// être appelée depuis le fil de GTK.
 pub fn demarrer(
     c: Chemins,
     nom: String,
+    recette: Option<Recette>,
     recevoir: impl Fn(MessageSession) + 'static,
 ) -> Telecommande {
     let (envoi, reception) = async_channel::unbounded();
@@ -184,7 +186,7 @@ pub fn demarrer(
         };
         // `AssertUnwindSafe` : après une panique, rien de la session n'est réutilisé.
         let issue = catch_unwind(AssertUnwindSafe(|| {
-            fil_de_session(&c, &nom, &ecoute, &progression)
+            fil_de_session(&c, &nom, recette, &ecoute, &progression)
         }));
         let dernier = match issue {
             Ok(Some(fin)) => MessageSession::Fin(fin),
@@ -205,12 +207,18 @@ pub fn demarrer(
 fn fil_de_session(
     c: &Chemins,
     nom: &str,
+    recette_fournie: Option<Recette>,
     ecoute: &mpsc::Receiver<Commande>,
     p: &ProgressionSession,
 ) -> Option<Resultat<(BilanSession, Avertissements)>> {
     let mut avertissements = Vec::new();
-    let ouverture = operations::recette_nommee(c, nom, &mut avertissements)
-        .and_then(|recette| Ok((ouvrir(c, &recette, p)?, recette)));
+    // Une application ajoutée arrive avec sa recette en mémoire ; un gestionnaire se cherche
+    // dans le catalogue.
+    let recette_cherchee = match recette_fournie {
+        Some(recette) => Ok(recette),
+        None => operations::recette_nommee(c, nom, &mut avertissements),
+    };
+    let ouverture = recette_cherchee.and_then(|recette| Ok((ouvrir(c, &recette, p)?, recette)));
     let (mut session, recette) = match ouverture {
         Ok(ouverte) => ouverte,
         Err(erreur) => return Some(Err(erreur)),

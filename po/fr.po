@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 23:36+0100\n"
+"POT-Creation-Date: 2026-11-10 23:40+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -153,7 +153,8 @@ msgstr "Liste les applications ajoutées dont le programme existe encore"
 
 #: crates/wimao-cli/src/cli.rs
 msgid "Open an application and watch its installations until it is closed"
-msgstr "Ouvre une application et surveille ses installations jusqu'à sa fermeture"
+msgstr ""
+"Ouvre une application et surveille ses installations jusqu'à sa fermeture"
 
 #: crates/wimao-cli/src/cli.rs
 msgid "Application name (see \"application lister\")"
@@ -1890,6 +1891,14 @@ msgid "Open installer"
 msgstr "Ouvrir l'installeur"
 
 #: crates/wimao/src/dialogues.rs
+msgid "Remove “{name}” from the list? The program stays installed."
+msgstr "Retirer « {name} » de la liste ? Le programme reste installé."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Remove"
+msgstr "Retirer"
+
+#: crates/wimao/src/dialogues.rs
 msgid "Installers and archives"
 msgstr "Installeurs et archives"
 
@@ -2003,6 +2012,10 @@ msgid "Installation finished"
 msgstr "Installation terminée"
 
 #: crates/wimao/src/fenetre/mod.rs
+msgid "{name} installed: open it from the Managers section"
+msgstr "{name} installé : ouvrez-le depuis la section Gestionnaires"
+
+#: crates/wimao/src/fenetre/mod.rs
 msgid "Backing up…"
 msgstr "Sauvegarde en cours…"
 
@@ -2027,6 +2040,10 @@ msgid "In use"
 msgstr "Ouvert"
 
 #: crates/wimao/src/gestionnaires.rs
+msgid "Added application"
+msgstr "Application ajoutée"
+
+#: crates/wimao/src/gestionnaires.rs
 msgid "Managers"
 msgstr "Gestionnaires"
 
@@ -2036,6 +2053,14 @@ msgid ""
 msgstr ""
 "Les applications des éditeurs qui téléchargent vos plugins. WiMao ponte ce "
 "qu'elles installent."
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Remove from the list"
+msgstr "Retirer de la liste"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Options for {name}"
+msgstr "Options pour {name}"
 
 #: crates/wimao/src/gestionnaires.rs
 msgid "Open"
@@ -2056,6 +2081,14 @@ msgstr "Ouvrir {name} : WiMao ponte les plugins qu'il installe"
 #: crates/wimao/src/gestionnaires.rs
 msgid "Install {name}"
 msgstr "Installer {name}"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Removing {name}…"
+msgstr "Retrait de {name}…"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "{name} removed from the list"
+msgstr "{name} retirée de la liste"
 
 #: crates/wimao/src/gestionnaires.rs
 msgid "Installing {name}…"
@@ -2279,6 +2312,10 @@ msgstr "Annulation de l'import…"
 #: crates/wimao/src/restaurer.rs
 msgid "The import was cancelled; restart WiMao."
 msgstr "L'import a été annulé : relancez WiMao."
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "{name} is no longer in the list"
+msgstr "{name} n'est plus dans la liste"
 
 #: crates/wimao/src/session_fenetre.rs
 msgid "{name} is open — WiMao bridges new plugins"

@@ -43,6 +43,8 @@ const REPONSE_CONTINUER: &str = "continuer";
 const REPONSE_QUITTER: &str = "quitter";
 /// Identifiant de la réponse « ouvrir l'installeur ».
 const REPONSE_OUVRIR: &str = "ouvrir";
+/// Identifiant de la réponse « retirer de la liste ».
+const REPONSE_RETIRER: &str = "retirer";
 /// Identifiant de la réponse « annuler ».
 const REPONSE_ANNULER: &str = "annuler";
 /// Identifiant de la réponse « remplacer le lien par WiMao ».
@@ -351,6 +353,33 @@ pub fn proposer_installation_normale(
     dialogue.choose(Some(parent), None::<&gio::Cancellable>, move |reponse| {
         if reponse == REPONSE_OUVRIR {
             ouvrir();
+        }
+    });
+}
+
+/// Demande confirmation de retirer l'application `nom` de la liste de la section Managers.
+/// Le programme reste installé : seule la ligne disparaît. `retirer` n'est appelé que sur
+/// « Remove » (style destructif) ; « Cancel » est le choix par défaut, comme Échap.
+pub fn confirmer_retrait_application(
+    parent: &adw::ApplicationWindow,
+    nom: &str,
+    retirer: impl FnOnce() + 'static,
+) {
+    let dialogue = adw::AlertDialog::new(
+        None,
+        Some(&trf(
+            "Remove “{name}” from the list? The program stays installed.",
+            &[("name", nom)],
+        )),
+    );
+    dialogue.add_response(REPONSE_ANNULER, &tr("Cancel"));
+    dialogue.add_response(REPONSE_RETIRER, &tr("Remove"));
+    dialogue.set_response_appearance(REPONSE_RETIRER, adw::ResponseAppearance::Destructive);
+    dialogue.set_default_response(Some(REPONSE_ANNULER));
+    dialogue.set_close_response(REPONSE_ANNULER);
+    dialogue.choose(Some(parent), None::<&gio::Cancellable>, move |reponse| {
+        if reponse == REPONSE_RETIRER {
+            retirer();
         }
     });
 }

@@ -29,7 +29,8 @@ use libadwaita as adw;
 use libadwaita::prelude::*;
 use wimao_core::i18n::{tr, trf};
 use wimao_core::Resultat;
-use wimao_recettes::{texte_evenement, BilanSession, EvenementSession};
+use wimao_recettes::applications::applications_presentes;
+use wimao_recettes::{texte_evenement, BilanSession, EvenementSession, Recette};
 
 use crate::dialogues;
 use crate::fenetre::Fenetre;
@@ -67,15 +68,40 @@ pub struct SessionEnCours {
 impl Fenetre {
     /// « Open » : ouvre une session du gestionnaire `nom` dans un fil dédié.
     pub(crate) fn ouvrir_gestionnaire(&self, nom: String) {
+        self.ouvrir_session(nom, None);
+    }
+
+    /// « Open » d'une application ajoutée : même session, avec la recette en mémoire que
+    /// fabrique l'application (`Application::vers_recette`). Si elle a quitté la liste entre
+    /// temps, un toast le dit.
+    pub(crate) fn ouvrir_application(&self, nom: String) {
+        let c = (*self.chemins).clone();
+        match applications_presentes(&c)
+            .into_iter()
+            .find(|a| a.nom == nom)
+        {
+            Some(appli) => self.ouvrir_session(nom, Some(appli.vers_recette())),
+            None => {
+                self.toast(&trf("{name} is no longer in the list", &[("name", &nom)]));
+                self.rafraichir();
+            }
+        }
+    }
+
+    /// Démarre la session `nom` (recette du catalogue si `recette` est `None`).
+    fn ouvrir_session(&self, nom: String, recette: Option<Recette>) {
         if self.occupe.replace(true) {
             return; // un travail est déjà en cours
         }
         self.retirer_toast_pontage();
         self.basculer_occupe(true, &trf("Opening {name}…", &[("name", &nom)]));
         let moi = self.clone();
-        let telecommande = demarrer((*self.chemins).clone(), nom.clone(), move |message| {
-            moi.sur_message_session(message)
-        });
+        let telecommande = demarrer(
+            (*self.chemins).clone(),
+            nom.clone(),
+            recette,
+            move |message| moi.sur_message_session(message),
+        );
         *self.session.borrow_mut() = Some(SessionEnCours {
             nom: nom.clone(),
             telecommande,
