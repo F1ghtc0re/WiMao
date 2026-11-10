@@ -45,6 +45,7 @@ crates/wimao-core/src/test_plugin.rs
 crates/wimao-core/src/test_utils.rs
 crates/wimao-core/src/wine.rs
 crates/wimao-recettes/build.rs
+crates/wimao-recettes/src/applications.rs
 crates/wimao-recettes/src/apres_installation.rs
 crates/wimao-recettes/src/archive.rs
 crates/wimao-recettes/src/catalogue.rs

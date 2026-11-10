@@ -193,6 +193,21 @@ pub(crate) fn heure_locale() -> std::io::Result<libc::tm> {
     }
 }
 
+/// Date du jour à l'heure locale, au format `AAAA-MM-JJ` ; vide si l'heure est illisible
+/// (une date d'information ne doit jamais faire échouer l'appelant). Sert à dater les
+/// applications ajoutées à la liste de WiMao.
+pub fn date_du_jour() -> String {
+    match heure_locale() {
+        Ok(tm) => format!(
+            "{:04}-{:02}-{:02}",
+            tm.tm_year + 1900,
+            tm.tm_mon + 1,
+            tm.tm_mday
+        ),
+        Err(_) => String::new(),
+    }
+}
+
 /// Date locale d'un jour voisin d'aujourd'hui (`jours` = -1 pour hier, 0 pour aujourd'hui).
 ///
 /// On ne retranche pas 86 400 secondes : un jour de changement d'heure dure 23 ou 25 h et

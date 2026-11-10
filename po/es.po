@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 23:21+0100\n"
+"POT-Creation-Date: 2026-11-10 23:29+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: Spanish\n"
@@ -552,8 +552,8 @@ msgid ""
 "{app} (Flatpak) cannot see {folders}, so your bridged plugins will not load "
 "in it. To let it, run: {command}"
 msgstr ""
-"{app} (Flatpak) no ve {folders}: sus plugins puenteados no se cargarán en él. "
-"Para permitírselo, ejecute: {command}"
+"{app} (Flatpak) no ve {folders}: sus plugins puenteados no se cargarán en "
+"él. Para permitírselo, ejecute: {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
@@ -1165,6 +1165,7 @@ msgid "Putting the restored environment in place…"
 msgstr "Colocando el entorno restaurado…"
 
 #: crates/wimao-core/src/sauvegarde.rs
+#: crates/wimao-recettes/src/applications.rs
 msgid "Cannot read {path}: {error}"
 msgstr "No se puede leer {path}: {error}"
 

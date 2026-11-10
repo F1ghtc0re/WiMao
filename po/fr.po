@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 23:21+0100\n"
+"POT-Creation-Date: 2026-11-10 23:29+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -1171,6 +1171,7 @@ msgid "Putting the restored environment in place…"
 msgstr "Mise en place de l'environnement restauré…"
 
 #: crates/wimao-core/src/sauvegarde.rs
+#: crates/wimao-recettes/src/applications.rs
 msgid "Cannot read {path}: {error}"
 msgstr "Impossible de lire {path} : {error}"
 

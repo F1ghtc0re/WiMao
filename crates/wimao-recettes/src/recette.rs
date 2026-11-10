@@ -204,6 +204,33 @@ pub struct Recette {
     pub fichier: Option<PathBuf>,
 }
 
+impl Recette {
+    /// Recette de gestionnaire construite en mémoire (sans fichier TOML) : sert aux
+    /// applications ajoutées par un installeur (`crate::applications`). Pas d'arguments, pas
+    /// de pilote, aucune consigne ; `fermer` liste les exécutables à arrêter à la fin.
+    pub(crate) fn gestionnaire_minimal(nom: &str, programme: &str, fermer: Vec<String>) -> Recette {
+        Recette {
+            nom: nom.to_string(),
+            editeur: String::new(),
+            telecharger: None,
+            empreinte: None,
+            type_: TypeRecette::Gestionnaire,
+            reconnaitre: Vec::new(),
+            installation: Installation::default(),
+            correctifs: Correctifs::default(),
+            dependances: Vec::new(),
+            gestionnaire: Some(Gestionnaire {
+                programme: programme.to_string(),
+                arguments: Vec::new(),
+                pilote: Vec::new(),
+                fermer,
+            }),
+            consignes: BTreeMap::new(),
+            fichier: None,
+        }
+    }
+}
+
 /// Consigne `nom` de la recette (section `[consignes]`) dans `langue` (code `fr`, `es`…), ou en
 /// anglais si cette langue manque ; `None` si la recette n'a pas cette consigne.
 ///
