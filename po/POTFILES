@@ -1,4 +1,5 @@
 crates/wimao-cli/src/cli.rs
+crates/wimao-cli/src/commandes/applications.rs
 crates/wimao-cli/src/commandes/entretien.rs
 crates/wimao-cli/src/commandes/gestionnaires.rs
 crates/wimao-cli/src/commandes/historique.rs

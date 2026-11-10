@@ -581,3 +581,80 @@ fn annuler_sans_import_est_une_erreur() {
         .assert()
         .code(1);
 }
+
+/// Écrit `applications.toml` avec une application dont le programme existe dans le préfixe
+/// isolé du test (`<donnees>/prefixe/drive_c`).
+fn declarer_application(racine: &TempDir, nom: &str) {
+    let donnees = racine.path().join("donnees");
+    let programme = donnees.join("prefixe/drive_c/Program Files/App/app.exe");
+    std::fs::create_dir_all(programme.parent().unwrap()).unwrap();
+    std::fs::write(&programme, b"MZ").unwrap();
+    std::fs::write(
+        donnees.join("applications.toml"),
+        format!(
+            "[[application]]\nnom = \"{nom}\"\nprogramme = 'C:\\Program Files\\App\\app.exe'\n\
+             raccourci = \"x.lnk\"\najoutee = \"2026-01-01\"\n"
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+fn application_lister_vide_puis_avec_une_application() {
+    let t = TempDir::new().unwrap();
+    let sortie = wimao(&t)
+        .args(["--langue", "fr", "application", "lister"])
+        .assert()
+        .success();
+    let texte = sortie_texte(&sortie.get_output().stdout);
+    assert!(texte.contains("Aucune application ajoutée"), "{texte}");
+
+    declarer_application(&t, "Mon Appli");
+    let sortie = wimao(&t)
+        .args(["--langue", "fr", "application", "lister"])
+        .assert()
+        .success();
+    let texte = sortie_texte(&sortie.get_output().stdout);
+    assert!(
+        texte.contains("Mon Appli — C:\\Program Files\\App\\app.exe"),
+        "{texte}"
+    );
+}
+
+#[test]
+fn application_inconnue_code_1() {
+    let t = TempDir::new().unwrap();
+    for sous_commande in ["ouvrir", "retirer"] {
+        let sortie = wimao(&t)
+            .args(["--langue", "fr", "application", sous_commande, "inconnue"])
+            .assert()
+            .code(1);
+        let erreur = sortie_texte(&sortie.get_output().stderr);
+        assert!(
+            erreur.contains("une application nommée inconnue"),
+            "{erreur}"
+        );
+    }
+}
+
+#[test]
+fn application_retirer_vide_la_liste_sans_rien_desinstaller() {
+    let t = TempDir::new().unwrap();
+    declarer_application(&t, "Mon Appli");
+    let sortie = wimao(&t)
+        .args(["--langue", "fr", "application", "retirer", "Mon Appli"])
+        .assert()
+        .success();
+    let texte = sortie_texte(&sortie.get_output().stdout);
+    assert!(texte.contains("rien n'a été désinstallé"), "{texte}");
+    // Le programme est toujours là, mais la liste est vide.
+    assert!(t
+        .path()
+        .join("donnees/prefixe/drive_c/Program Files/App/app.exe")
+        .exists());
+    let sortie = wimao(&t)
+        .args(["--langue", "fr", "application", "lister"])
+        .assert()
+        .success();
+    assert!(sortie_texte(&sortie.get_output().stdout).contains("Aucune application"));
+}

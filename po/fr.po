@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 23:29+0100\n"
+"POT-Creation-Date: 2026-11-10 23:36+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: French\n"
@@ -144,6 +144,27 @@ msgid "Do not test that the plugins installed in the session open"
 msgstr "Ne teste pas l'ouverture des plugins installés pendant la session"
 
 #: crates/wimao-cli/src/cli.rs
+msgid "List, open or remove the applications added with an installer"
+msgstr "Liste, ouvre ou retire les applications ajoutées avec un installeur"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "List the added applications whose program still exists"
+msgstr "Liste les applications ajoutées dont le programme existe encore"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Open an application and watch its installations until it is closed"
+msgstr "Ouvre une application et surveille ses installations jusqu'à sa fermeture"
+"Ouvre le gestionnaire et surveille ses installations jusqu'à sa fermeture"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Application name (see \"application lister\")"
+msgstr "Nom de l'application (voir « application lister »)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Remove an application from the list (nothing is uninstalled)"
+msgstr "Retire une application de la liste (rien n'est désinstallé)"
+
+#: crates/wimao-cli/src/cli.rs
 msgid "Show the latest actions (installations, repairs, backups…)"
 msgstr ""
 "Affiche les dernières actions (installations, réparations, sauvegardes…)"
@@ -168,6 +189,18 @@ msgstr ""
 #: crates/wimao-cli/src/cli.rs
 msgid "Link received from the browser"
 msgstr "Lien reçu du navigateur"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "an application named {name}"
+msgstr "une application nommée {name}"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "No application added"
+msgstr "Aucune application ajoutée"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "{name} removed from the list; nothing was uninstalled"
+msgstr "{name} retirée de la liste ; rien n'a été désinstallé"
 
 #: crates/wimao-cli/src/commandes/entretien.rs
 #: crates/wimao-cli/src/commandes/import.rs

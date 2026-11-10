@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 23:30+0100\n"
+"POT-Creation-Date: 2026-11-10 23:36+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -147,6 +147,26 @@ msgid "Do not test that the plugins installed in the session open"
 msgstr ""
 
 #: crates/wimao-cli/src/cli.rs
+msgid "List, open or remove the applications added with an installer"
+msgstr ""
+
+#: crates/wimao-cli/src/cli.rs
+msgid "List the added applications whose program still exists"
+msgstr ""
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Open an application and watch its installations until it is closed"
+msgstr ""
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Application name (see \"application lister\")"
+msgstr ""
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Remove an application from the list (nothing is uninstalled)"
+msgstr ""
+
+#: crates/wimao-cli/src/cli.rs
 msgid "Show the latest actions (installations, repairs, backups…)"
 msgstr ""
 
@@ -168,6 +188,18 @@ msgstr ""
 
 #: crates/wimao-cli/src/cli.rs
 msgid "Link received from the browser"
+msgstr ""
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "an application named {name}"
+msgstr ""
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "No application added"
+msgstr ""
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "{name} removed from the list; nothing was uninstalled"
 msgstr ""
 
 #: crates/wimao-cli/src/commandes/entretien.rs

@@ -11,6 +11,7 @@
 //! que l'interface (`wimao_recettes::suite`) : fin à la fermeture du gestionnaire quand aucun
 //! installeur ne tourne ; le premier Ctrl+C vaut « J'ai fini » (on attend les installeurs en
 //! cours), le second « Arrêter quand même » (voir [`ControleC`]).
+//! La boucle est aussi celle de `application ouvrir` (`ouvrir_recette`).
 
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -203,6 +204,18 @@ fn installer_gestionnaire(
 /// un refus (sauf `--oui`) termine la commande sans rien faire.
 fn ouvrir_gestionnaire(c: &Chemins, nom: &str, sans_test: bool, oui: bool) -> Resultat<Issue> {
     let recette = recette_nommee(c, nom)?;
+    ouvrir_recette(c, &recette, sans_test, oui)
+}
+
+/// Ouvre la session de `recette`, la surveille, puis la ferme et affiche le bilan. Commun à
+/// `gestionnaire ouvrir` et à `application ouvrir` (dont la recette vient de
+/// `Application::vers_recette`).
+pub(super) fn ouvrir_recette(
+    c: &Chemins,
+    recette: &Recette,
+    sans_test: bool,
+    oui: bool,
+) -> Resultat<Issue> {
     if !accord_avant_arret(c, oui)? {
         return Ok(Issue::Succes);
     }
@@ -211,7 +224,7 @@ fn ouvrir_gestionnaire(c: &Chemins, nom: &str, sans_test: bool, oui: bool) -> Re
         // (voir `ControleC`). Sur erreur d'`ouvrir`, `?` la relâche aussi. Un Ctrl+C reçu
         // pendant `ouvrir` est lu au premier tour (« J'ai fini »).
         let ctrl_c = ControleC::installer();
-        let mut session = ouvrir(c, &recette, &ProgressionTerminal)?;
+        let mut session = ouvrir(c, recette, &ProgressionTerminal)?;
         afficher!(
             "{}",
             trf(
@@ -221,7 +234,7 @@ fn ouvrir_gestionnaire(c: &Chemins, nom: &str, sans_test: bool, oui: bool) -> Re
         );
         // Consigne de connexion de la recette (spec 4.2, étape 6), comme le dialogue de
         // l'interface.
-        if let Some(texte) = consigne(&recette, CONSIGNE_CONNEXION, &langue_courante()) {
+        if let Some(texte) = consigne(recette, CONSIGNE_CONNEXION, &langue_courante()) {
             afficher!("{texte}");
         }
         surveiller(&mut session, &ctrl_c);

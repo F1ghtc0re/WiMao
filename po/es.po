@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 23:29+0100\n"
+"POT-Creation-Date: 2026-11-10 23:36+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: Spanish\n"
@@ -142,6 +142,26 @@ msgid "Do not test that the plugins installed in the session open"
 msgstr "No prueba que se abran los plugins instalados durante la sesión"
 
 #: crates/wimao-cli/src/cli.rs
+msgid "List, open or remove the applications added with an installer"
+msgstr "Lista, abre o quita las aplicaciones añadidas con un instalador"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "List the added applications whose program still exists"
+msgstr "Lista las aplicaciones añadidas cuyo programa sigue existiendo"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Open an application and watch its installations until it is closed"
+msgstr "Abre una aplicación y vigila sus instalaciones hasta que se cierre"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Application name (see \"application lister\")"
+msgstr "Nombre de la aplicación (véase «application lister»)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Remove an application from the list (nothing is uninstalled)"
+msgstr "Quita una aplicación de la lista (no se desinstala nada)"
+
+#: crates/wimao-cli/src/cli.rs
 msgid "Show the latest actions (installations, repairs, backups…)"
 msgstr ""
 "Muestra las últimas acciones (instalaciones, reparaciones, copias de "
@@ -167,6 +187,18 @@ msgstr ""
 #: crates/wimao-cli/src/cli.rs
 msgid "Link received from the browser"
 msgstr "Enlace recibido del navegador"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "an application named {name}"
+msgstr "una aplicación llamada {name}"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "No application added"
+msgstr "Ninguna aplicación añadida"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "{name} removed from the list; nothing was uninstalled"
+msgstr "{name} quitada de la lista; no se ha desinstalado nada"
 
 #: crates/wimao-cli/src/commandes/entretien.rs
 #: crates/wimao-cli/src/commandes/import.rs
