@@ -1,0 +1,57 @@
+# Recette AUR de WiMao (paquet wimao-bin) : preuve sur les demandes de fusion qui la touchent.
+#
+# La recette publiée dans paquets/aur/wimao-bin/ est essayée telle quelle, comme chez une personne sous Arch :
+# makepkg TÉLÉCHARGE les .deb sur la Release GitHub, vérifie leurs empreintes et la signature de SHA256SUMS
+# (la clé vient de docs/cle-publique.asc), pacman -U installe, WiMao s'utilise (Dexed s'ouvre) ; puis trois
+# sources trafiquées doivent être REFUSÉES par makepkg (.deb modifié, empreinte fausse, signature altérée).
+# Toute la logique est dans paquets/tester-recette-aur.sh (lançable en local). Si le dossier de la recette n'existe
+# pas encore (rien de publié), le script le note et réussit.
+#
+# Arch est « vivant » (rolling) : le script commence par `pacman -Syu`, la recette est donc éprouvée contre
+# l'Arch d'aujourd'hui. Image figée par empreinte (règle de paquets/verifier-workflows.sh).
+# Aucun secret, aucun droit d'écriture.
+name: Recette AUR
+
+on:
+  pull_request:
+    paths:
+      - "paquets/aur/**"
+      - "paquets/fabriquer-pkgbuild.sh"
+      - "paquets/tester-recette-aur.sh"
+      - "docs/cle-publique.asc"
+      - ".github/workflows/aur.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aur-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recette:
+    runs-on: ubuntu-24.04
+    container:
+      image: docker.io/library/archlinux:base-devel@sha256:97119fd9e21219b02b3c14ba256c9d3c0d031d07fc26c836c41ed793beeb5b74
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # tar : requis par les actions de téléchargement d'artefacts ; git : par l'action de récupération.
+      - name: Paquets de base
+        run: pacman -Syu --noconfirm --needed tar git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Recette réelle, installation, usage et refus attendus
+        run: paquets/tester-recette-aur.sh paquets/aur/wimao-bin "$GITHUB_WORKSPACE/journaux"
+      # Même en cas d'échec : les journaux (dont ceux des trois refus) servent à comprendre.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: recette-aur
+          path: journaux
+          if-no-files-found: ignore
+          retention-days: 14
