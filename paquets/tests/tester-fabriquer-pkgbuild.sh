@@ -123,6 +123,14 @@ attendu="source=(
 ! grep -q 'validpgpkeys' "$pkg" || echec "validpgpkeys en mode local"
 ! grep -q '^prepare()' "$pkg" || echec "prepare() en mode local"
 
+# --- Échec de makepkg : faux makepkg en tête du PATH (chemin « makepkg présent »), qui écrit un début de
+# sortie puis échoue. Le script doit échouer et ne laisser aucun .SRCINFO.
+mkdir "$temporaire/faux-bin"
+printf '#!/bin/sh\necho partiel\nexit 1\n' > "$temporaire/faux-bin/makepkg"
+chmod +x "$temporaire/faux-bin/makepkg"
+PATH="$temporaire/faux-bin:$PATH" attend_code 1 "makepkg en échec" "$fabriquer" "$sommes" "$temporaire/m" --cle "$cle"
+[ ! -e "$temporaire/m/.SRCINFO" ] || echec "un makepkg en échec a laissé un .SRCINFO"
+
 # --- Usage (code 2) ---
 attend_code 2 "sans argument" "$fabriquer"
 attend_code 2 "sortie manquante" "$fabriquer" "$sommes"

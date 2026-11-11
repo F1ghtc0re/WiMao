@@ -26,20 +26,28 @@ utilisateur_constructeur() {
 
 # srcinfo_ici : écrit <dossier>/.SRCINFO. makepkg lit le PKGBUILD dans un dossier de travail temporaire lisible
 # par « constructeur » (le dossier d'origine peut être privé : mktemp -d crée en 700), et le résultat est
-# écrit par l'appelant, pas par l'utilisateur non privilégié.
+# écrit par l'appelant, pas par l'utilisateur non privilégié. Le .SRCINFO n'est mis en place QUE si makepkg
+# réussit (sinon rien n'est laissé, pas de fichier partiel) ; le dossier temporaire est supprimé dans tous
+# les cas. Rend 1 avec un message si makepkg échoue.
 srcinfo_ici() {
-    local dossier="$1" travail
+    local dossier="$1" travail statut=0
     travail="$(mktemp -d)"
     cp -- "$dossier/PKGBUILD" "$travail/PKGBUILD"
     if [ "$(id -u)" -eq 0 ]; then
         utilisateur_constructeur
         chmod 755 "$travail"
         chown -R constructeur "$travail"
-        (cd "$travail" && runuser -u constructeur -- makepkg --printsrcinfo) > "$dossier/.SRCINFO"
+        (cd "$travail" && runuser -u constructeur -- makepkg --printsrcinfo) > "$travail/.SRCINFO.nouveau" || statut=$?
     else
-        (cd "$travail" && makepkg --printsrcinfo) > "$dossier/.SRCINFO"
+        (cd "$travail" && makepkg --printsrcinfo) > "$travail/.SRCINFO.nouveau" || statut=$?
+    fi
+    if [ "$statut" -eq 0 ]; then
+        mv -- "$travail/.SRCINFO.nouveau" "$dossier/.SRCINFO" || statut=$?
+    else
+        echo "ERREUR : makepkg --printsrcinfo a échoué (code $statut)." >&2
     fi
     rm -rf "$travail"
+    return "$statut"
 }
 
 # srcinfo : écrit <dossier>/.SRCINFO. Directement si makepkg est présent (conteneur Arch de la CI, machine
@@ -51,6 +59,6 @@ srcinfo() {
         srcinfo_ici "$dossier"
     else
         podman run --rm -v "$DOSSIER_LIB_AUR:/lib-aur:ro,Z" -v "$dossier:/sortie:Z" "$IMAGE_ARCH" \
-            bash -c 'source /lib-aur/commun-aur.sh && srcinfo_ici /sortie'
+            bash -euo pipefail -c 'source /lib-aur/commun-aur.sh && srcinfo_ici /sortie'
     fi
 }
