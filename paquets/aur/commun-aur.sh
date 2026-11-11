@@ -13,6 +13,7 @@
 #   srcinfo <dossier>                   écrit <dossier>/.SRCINFO à partir de <dossier>/PKGBUILD
 #   srcinfo_ici <dossier>               idem, mais directement (makepkg doit être présent : conteneur Arch)
 #   echec <message> / etape <titre>     message « ERREUR : … » puis exit 1 / titre d'étape « == … » (scripts d'essai)
+#   importer_cle_constructeur <fichier>  importe la clé publique <fichier> dans le trousseau de « constructeur »
 #   construire_installer_recette <dossier> <journaux>
 #                                       makepkg en « constructeur » dans <dossier>, puis pacman -U (en root)
 #   outils_de_test_arch                 installe APRÈS le paquet les outils du test (Carla, xwininfo, serveur audio)
@@ -107,6 +108,15 @@ etape() {
 # essai : lance une commande en tant que « essai », avec l'environnement ENV_ESSAI et rien d'autre.
 essai() {
     runuser -u essai -- env -i "${ENV_ESSAI[@]}" "$@"
+}
+
+# importer_cle_constructeur <fichier> : importe la clé publique <fichier> (docs/cle-publique.asc) dans le trousseau
+# de « constructeur » : makepkg y cherche la clé qui a signé SHA256SUMS (validpgpkeys), ce que toute personne
+# doit faire avant d'installer la recette. Le fichier est d'abord copié lisible par « constructeur » (l'original
+# peut être dans un dossier privé ou monté en lecture seule). À lancer en root, après utilisateur_constructeur.
+importer_cle_constructeur() {
+    install -m 644 -- "$1" /var/tmp/cle-publique.asc
+    runuser -u constructeur -- gpg --batch --quiet --import /var/tmp/cle-publique.asc
 }
 
 # construire_installer_recette <dossier> <journaux> : construit le paquet de la recette <dossier>/PKGBUILD

@@ -250,8 +250,7 @@ if [ "$a_blanc" -eq 0 ]; then
             source /lib-aur/commun-aur.sh
             pacman -Syu --noconfirm --needed > /journaux/pacman.log 2>&1 || { cat /journaux/pacman.log; echec "pacman -Syu a échoué"; }
             utilisateur_constructeur
-            install -m 644 /cle-publique.asc /var/tmp/cle-publique.asc
-            runuser -u constructeur -- gpg --batch --quiet --import /var/tmp/cle-publique.asc
+            importer_cle_constructeur /cle-publique.asc
             construire_installer_recette /recette /journaux
             attendu="wimao-cli $1"
             obtenu="$(env -i LANG=C.UTF-8 PATH=/usr/bin:/bin wimao-cli --version)"

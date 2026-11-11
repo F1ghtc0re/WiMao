@@ -126,8 +126,7 @@ cp -- "$RECETTE_SOURCE/.SRCINFO" "$TRAVAIL/"
 # --- 2. Clé de signature ---------------------------------------------------------------------------------
 etape "2. Clé de signature de WiMao importée pour « constructeur »"
 utilisateur_constructeur
-install -m 644 "$racine/docs/cle-publique.asc" /var/tmp/cle-publique.asc
-runuser -u constructeur -- gpg --batch --quiet --import /var/tmp/cle-publique.asc
+importer_cle_constructeur "$racine/docs/cle-publique.asc"
 runuser -u constructeur -- gpg --batch --list-keys --with-colons | grep -q '^fpr' || echec "clé non importée"
 echo "ok : clé importée"
 
