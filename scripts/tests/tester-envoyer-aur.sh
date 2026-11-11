@@ -236,6 +236,31 @@ attendre_code 1 "empreinte attendue différente"
 attendre_message "n'est pas l'empreinte publiée" "empreinte attendue différente"
 # (b) source hors de la Release de la version (adresse de la première source changée, dans le PKGBUILD)
 r="$(racine_modifiee source-etrangere 's#^  https://github.com/F1ghtc0re/WiMao/releases/download/\(.*\.deb\)$#  https://example.invalid/\1#')"
+lancer "$etiquette" --a-blanc --aur "$aur" --racine "$r"
+attendre_code 1 "source étrangère"
+attendre_message "source hors de la Release" "source étrangère"
+# (b) source qui remonte hors de la Release par « .. » tout en gardant le bon préfixe (modification directe du
+# .SRCINFO : la barrière passe avant la comparaison avec le .SRCINFO régénéré)
+r="$(nouvelle_racine source-remontee)"
+sed -i '0,/^\(\tsource = https:\/\/github.com\/F1ghtc0re\/WiMao\/releases\/download\/v[^/]*\/\)wimao_/s//\1..\/..\/..\/autre\/wimao_/' "$r/paquets/aur/wimao-bin/.SRCINFO"
+! git_essai "$r" diff --quiet || echec "source-remontee : l'expression sed n'a rien modifié (motif périmé)"
+git_essai "$r" commit --quiet -am "source remontée"
+lancer "$etiquette" --a-blanc --aur "$aur" --racine "$r"
+attendre_code 1 "source remontée"
+attendre_message "nom de source suspect" "source remontée"
+# (b) source propre à une architecture (source_x86_64), dans le .SRCINFO puis dans le PKGBUILD
+r="$(nouvelle_racine source-arch-srcinfo)"
+sed -i 's/^\tpkgdesc = .*/&\n\tsource_x86_64 = https:\/\/example.invalid\/piege.sh/' "$r/paquets/aur/wimao-bin/.SRCINFO"
+git_essai "$r" commit --quiet -am "source_x86_64 dans le .SRCINFO"
+lancer "$etiquette" --a-blanc --aur "$aur" --racine "$r"
+attendre_code 1 "source_x86_64 dans le .SRCINFO"
+attendre_message "propre à une architecture" "source_x86_64 dans le .SRCINFO"
+r="$(nouvelle_racine source-arch-pkgbuild)"
+sed -i 's/^pkgrel=1$/pkgrel=1\nsource_x86_64=(https:\/\/example.invalid\/piege.sh)/' "$r/paquets/aur/wimao-bin/PKGBUILD"
+git_essai "$r" commit --quiet -am "source_x86_64 dans le PKGBUILD"
+lancer "$etiquette" --a-blanc --aur "$aur" --racine "$r"
+attendre_code 1 "source_x86_64 dans le PKGBUILD"
+attendre_message "propre à une architecture" "source_x86_64 dans le PKGBUILD"
 # (b) une source de trop (6 au lieu de 5), à l'adresse pourtant correcte
 r="$(nouvelle_racine source-en-trop)"
 sed -i '0,/^\tsource = /s##\tsource = https://github.com/F1ghtc0re/WiMao/releases/download/v'"$version"'/en-trop.txt\n&#' "$r/paquets/aur/wimao-bin/.SRCINFO"
@@ -262,6 +287,11 @@ r="$(racine_modifiee sans-verification 's/sha256sum -c SHA256SUMS --ignore-missi
 lancer "$etiquette" --a-blanc --aur "$aur" --racine "$r"
 attendre_code 1 "prepare sans sha256sum"
 attendre_message "sha256sum -c SHA256SUMS" "prepare sans sha256sum"
+# (d) la commande ne figure plus que dans un commentaire : refusé aussi
+r="$(racine_modifiee verification-en-commentaire 's/^\( *\)sha256sum -c SHA256SUMS --ignore-missing/\1# sha256sum -c SHA256SUMS --ignore-missing\n\1true/')"
+lancer "$etiquette" --a-blanc --aur "$aur" --racine "$r"
+attendre_code 1 "vérification en commentaire"
+attendre_message "sha256sum -c SHA256SUMS" "vérification en commentaire"
 
 # recette absente
 r="$temporaire/racine-vide"

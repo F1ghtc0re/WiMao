@@ -24,7 +24,8 @@
 #   2. recette (lue dans le commit HEAD) : pkgver = la version demandée, aucune marque d'essai local, .SRCINFO
 #      identique à celui que produit makepkg --printsrcinfo ; dernière barrière, propriétés de sécurité :
 #      validpgpkeys = l'empreinte publiée dans SECURITY.md, exactement 5 sources (Release GitHub de la version,
-#      dont SHA256SUMS.asc), aucun `install=`, prepare() qui vérifie `sha256sum -c SHA256SUMS` ;
+#      dont SHA256SUMS.asc ; ni sous-dossier ni « .. » ; aucune source_<arch>), aucun `install=`, prepare() qui
+#      vérifie `sha256sum -c SHA256SUMS` (hors commentaire) ;
 #   3. clone du dépôt de l'AUR dans un dossier temporaire (réel : ssh://aur@aur.archlinux.org/wimao-bin.git avec
 #      la clé ~/.ssh/aur seule et la clé d'hôte figée de paquets/aur/aur.archlinux.org.known_hosts ; rien n'est
 #      écrit dans ~/.ssh) ; un dépôt vide (premier envoi) reçoit la branche master ;
@@ -210,19 +211,35 @@ cles_pkgbuild="$(sed -n 's/^validpgpkeys=(\(.*\))[[:space:]]*$/\1/p' "$recette/P
 prefixe_sources="https://github.com/F1ghtc0re/WiMao/releases/download/v$pkgver/"
 [ "$(grep -c '^[[:space:]]*source = ' "$recette/.SRCINFO")" -eq 5 ] \
     || arreter ".SRCINFO : il faut exactement 5 lignes « source = » (trois .deb, SHA256SUMS, SHA256SUMS.asc)"
+# Chaque source = le préfixe de la Release suivi d'un simple nom de fichier : ni « / » (sous-dossier), ni « .. »
+# (remonter hors de la Release : « v0.7.0/../../autre-depot/... » commencerait pourtant par le bon préfixe).
 while IFS= read -r ligne; do
     case "$ligne" in
         "source = $prefixe_sources"*) ;;
         *) arreter ".SRCINFO : source hors de la Release v$pkgver de F1ghtc0re/WiMao : $ligne" ;;
     esac
+    nom="${ligne#"source = $prefixe_sources"}"
+    if [[ ! "$nom" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]] || [[ "$nom" == *..* ]]; then
+        arreter ".SRCINFO : nom de source suspect (sous-dossier, « .. » ou caractère inattendu) : $ligne"
+    fi
 done < <(sed -n 's/^[[:space:]]*\(source = .*\)$/\1/p' "$recette/.SRCINFO")
+# Sources propres à une architecture (source_x86_64=…) : makepkg les télécharge AUSSI, en plus de source=.
+# La recette n'en a aucune ; en trouver une veut dire qu'on cherche à glisser un fichier hors du contrôle ci-dessus.
+! grep -Eq '^[[:space:]]*source_[A-Za-z0-9_]+ = ' "$recette/.SRCINFO" \
+    || arreter ".SRCINFO : source propre à une architecture (source_…) : refusée"
+! grep -Eq '^[[:space:]]*source_[A-Za-z0-9_]+=' "$recette/PKGBUILD" \
+    || arreter "le PKGBUILD déclare une source propre à une architecture (source_…=) : refusée"
 grep -q '^[[:space:]]*source = .*/SHA256SUMS\.asc$' "$recette/.SRCINFO" \
     || arreter ".SRCINFO : la source SHA256SUMS.asc (signature de la Release) manque"
 # (c) aucun script d'installation (il tournerait en root à pacman -U).
 ! grep -q '^[[:space:]]*install = ' "$recette/.SRCINFO" || arreter ".SRCINFO déclare un script install= : refusé"
 ! grep -Eq '^[[:space:]]*install=' "$recette/PKGBUILD" || arreter "le PKGBUILD déclare install= : refusé"
-# (d) prepare() vérifie les empreintes des sources.
-grep -q 'sha256sum -c SHA256SUMS' "$recette/PKGBUILD" \
+# (d) prepare() vérifie les empreintes des sources : on cherche la commande DANS le corps de prepare() (de la ligne
+# « prepare() { » à la première accolade fermante en début de ligne), lignes de commentaire exclues — un
+# commentaire ou une autre fonction qui contiendrait le texte ne compte pas.
+corps_prepare="$(awk '/^prepare\(\)[[:space:]]*\{/ {dedans = 1; next} dedans && /^\}/ {exit} dedans' "$recette/PKGBUILD" \
+    | grep -v '^[[:space:]]*#' || true)"
+grep -q '^[[:space:]]*sha256sum -c SHA256SUMS' <<< "$corps_prepare" \
     || arreter "le PKGBUILD ne vérifie pas les empreintes (sha256sum -c SHA256SUMS absent de prepare())"
 
 # Le .SRCINFO est ce que lit l'AUR : il doit être exactement celui que makepkg tire du PKGBUILD.
