@@ -345,3 +345,22 @@ Décisions et limites connues (conception : `docs/superpowers/specs/2026-11-08-w
   Wine a besoin (c'est le cas du runtime freedesktop de Bitwig).
 - **Logiciel Flatpak hors liste.** Un logiciel de musique Flatpak absent de la liste n'est pas pris en charge
   automatiquement ; le mode d'emploi donne le lien à créer (`ln -s /opt/wimao/yabridge ~/.var/app/<id>/data/yabridge`).
+
+## Après le sous-projet 10 (paquet AUR `wimao-bin`, Arch Linux)
+
+- **Compte AUR.** La sécurité de l'AUR repose sur le compte du mainteneur ; la surveillance détecte une modification,
+  elle ne l'empêche pas. Un utilisateur qui installe entre la modification et la correction serait exposé. `yay`
+  montre la recette avant de la lancer : le README invite à la lire.
+- **Surveillance partielle.** Elle ne compare que `PKGBUILD` et `.SRCINFO` : un fichier ajouté dans le dépôt AUR
+  (source supplémentaire, script) ne serait pas détecté.
+- **Clé OpenPGP.** Sans publication sur un serveur de clés, l'utilisateur importe la clé à la main une fois
+  (publication facultative, décision du propriétaire).
+- **Arch évolue chaque jour.** Une future version de glibc ou d'une bibliothèque peut casser les binaires compilés
+  pour Ubuntu 24.04. Le job `installation-aur` (image figée) ne le verra pas ; `aur.yml` met le conteneur à jour
+  (`pacman -Syu`) et ne le verra qu'à la prochaine recette. **Reporté : un essai régulier (périodique) contre
+  l'Arch du jour.**
+- **Taille.** Chaque mise à jour retélécharge 87 Mo (les trois `.deb`).
+- **Expiration de la clé.** Comme pour apt et dnf, la sous-clé expire le 2027-11-01 ; après prolongation, les
+  utilisateurs Arch doivent réimporter la clé.
+- **Paquet pas encore sur l'AUR.** Tant que le compte AUR n'est pas créé et le premier envoi fait, la note de
+  `docs/installation-detaillee.md` (« Installation sur Arch Linux ») le dit ; elle est à retirer ensuite.

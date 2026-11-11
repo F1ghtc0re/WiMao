@@ -4,7 +4,8 @@
 button (Security tab); we aim to answer within 7 days; only the latest release is supported.
 Releases are signed (`SHA256SUMS.asc`) and carry build attestations; see "Vérifier une version" below.
 The signed APT repository (https://f1ghtc0re.github.io/WiMao) is signed with the same key; see
-"Le dépôt APT" below. The same key signs the dnf repository for Fedora; see "Le dépôt dnf".*
+"Le dépôt APT" below. The same key signs the dnf repository for Fedora; see "Le dépôt dnf". The Arch Linux (AUR) recipe is covered in "Le paquet AUR" (account risk and what to do
+if the daily check fails).*
 
 ## Signaler une faille
 
@@ -118,3 +119,54 @@ Le dépôt `dnf` pour Fedora (`https://f1ghtc0re.github.io/WiMao/rpm`, fichier d
   dépôts.
 - **Limite connue** : l'installation et l'ouverture d'un plugin n'ont été prouvées que dans des conteneurs
   Fedora, qui n'appliquent pas SELinux ; l'ouverture des plugins sur un bureau Fedora réel n'est pas prouvée.
+
+## Le paquet AUR
+
+Le paquet `wimao-bin` de l'AUR (Arch Linux) n'est qu'une **recette** (`PKGBUILD` et `.SRCINFO`, quelques Ko) :
+elle télécharge les `.deb` de la Release GitHub, vérifie leurs empreintes SHA-256 et la signature de
+`SHA256SUMS.asc` (clé de `validpgpkeys` = l'empreinte de ce fichier), puis installe. Les binaires ne passent pas
+par l'AUR ; la chaîne de confiance est donc celle des Releases.
+
+- **Le risque propre à l'AUR.** L'AUR sert ce que le **compte** du mainteneur y envoie, sans relecture, et
+  `makepkg` exécute le `PKGBUILD`. Quiconque obtiendrait le mot de passe du compte AUR ou sa clé SSH pourrait y
+  mettre une recette piégée (par exemple sans contrôle de signature) que les utilisateurs exécuteraient.
+  Contrairement aux dépôts `apt` et `dnf`, aucune signature de WiMao ne couvre la recette elle-même.
+- **Protections.**
+  1. La recette fait foi dans ce dépôt : elle est relue par PR, essayée pour de vrai dans un Arch jetable
+     (`scripts/publier-aur.sh`) et éprouvée par la CI (`aur.yml`), qui prouve aussi que la recette *refuse* un
+     `.deb` modifié, une empreinte fausse et une signature altérée.
+  2. L'envoi se fait **uniquement depuis la machine du propriétaire** (`scripts/envoyer-aur.sh`), avec une clé SSH
+     **dédiée à l'AUR** (`~/.ssh/aur`, ed25519, protégée par une phrase de passe), qui ne va jamais sur GitHub ni
+     en CI. Le script n'envoie que `PKGBUILD` et `.SRCINFO` tels qu'ils sont sur `main`, puis relit l'AUR.
+  3. L'empreinte de la clé d'hôte de `aur.archlinux.org` est figée dans le dépôt
+     (`paquets/aur/aur.archlinux.org.known_hosts`) : pas de « confiance au premier contact ».
+  4. Une **surveillance quotidienne** (`.github/workflows/aur-surveillance.yml`) compare `PKGBUILD` et `.SRCINFO`
+     de l'AUR à ceux de `main` ; une différence fait échouer le job et GitHub prévient le propriétaire par e-mail.
+- **Ce que vous pouvez faire, côté utilisateur.** Lire le `PKGBUILD` avant de construire (`yay` le montre, ainsi que
+  les changements aux mises à jour). Il ne doit contenir que des téléchargements depuis
+  `https://github.com/F1ghtc0re/WiMao/releases/download/`, des empreintes, `validpgpkeys` égal à l'empreinte
+  ci-dessus, et l'extraction des `.deb`. Toute autre commande est suspecte : ne construisez pas et signalez-le.
+- **Limite.** La surveillance détecte une modification, elle ne l'empêche pas : une personne qui installerait entre
+  la modification et la correction serait exposée (au plus un jour environ). Elle ne compare que `PKGBUILD` et
+  `.SRCINFO`. Voir aussi `docs/ameliorations-reportees.md`.
+- **Expiration de la sous-clé** (2027-11-01) : comme pour apt et dnf, les utilisateurs Arch doivent réimporter la
+  clé après la prolongation.
+
+### Compromission de compte : que faire si la surveillance de l'AUR échoue
+
+Le job « Surveillance AUR » échoue dans deux cas : un envoi **oublié** (une nouvelle recette vient d'être fusionnée
+sur `main` et n'est pas encore partie ; c'est voulu, c'est un rappel), ou un envoi **non voulu**. Dans le premier
+cas, lancez `scripts/envoyer-aur.sh vX.Y.Z`. Dans le doute, ou si aucune recette n'a été fusionnée récemment :
+
+1. **ne fusionnez rien** de nouveau et n'envoyez rien tant que ce n'est pas clair ;
+2. regardez l'historique du paquet sur `https://aur.archlinux.org/packages/wimao-bin` (onglet « Git Commit
+   Log ») et comparez le `PKGBUILD` publié à celui de `main` ;
+3. **changez le mot de passe du compte AUR**, activez la double authentification si elle est proposée, et
+   **remplacez la clé SSH** : nouvelle clé `~/.ssh/aur` (`ssh-keygen -t ed25519 -f ~/.ssh/aur -C "wimao-aur"`),
+   ancienne clé retirée du profil AUR, nouvelle clé collée à la place ;
+4. **renvoyez la recette de `main`** avec `scripts/envoyer-aur.sh vX.Y.Z` : elle remplace le contenu piégé ;
+   la surveillance doit redevenir verte. Si le compte est perdu, demandez aux administrateurs de l'AUR de
+   reprendre ou supprimer le paquet (procédure « request » de l'AUR) ;
+5. si la recette piégée est restée en ligne, **prévenez les utilisateurs** (avis de sécurité GitHub, notes de
+   version) : toute personne ayant construit le paquet pendant ce temps doit considérer sa machine comme
+   suspecte. Signalez la faille comme indiqué en haut de ce fichier.

@@ -1,4 +1,4 @@
-# Les paquets Debian et RPM de WiMao
+# Les paquets Debian, RPM et AUR de WiMao
 
 Ce dossier contient tout ce qui fabrique, contrôle et teste les trois paquets `.deb` de WiMao, ainsi que les trois
 paquets `.rpm` (Fedora) qui en sont tirés (section « Les paquets RPM (Fedora) » plus bas).
@@ -11,6 +11,9 @@ se signe chez le propriétaire (`scripts/publier-depot-apt.sh`, dossier `depot-a
 CI (`scripts/assembler-site-apt.sh`, `.github/workflows/depot-apt.yml`). Voir `docs/publier-une-version.md`,
 étape 5, et `SECURITY.md`, « Le dépôt APT ». Fedora a son pendant, le **dépôt `dnf` signé** (`scripts/publier-depot-dnf.sh`,
 dossier `depot-dnf/`) : voir `docs/publier-une-version.md`, étape 6, et `SECURITY.md`, « Le dépôt dnf ».
+
+Arch Linux a son pendant, la **recette AUR** `wimao-bin` : voir la section « La recette AUR (Arch Linux) » plus bas,
+`docs/publier-une-version.md`, étape 7, et `SECURITY.md`, « Le paquet AUR ».
 
 ## Les trois paquets
 
@@ -71,6 +74,27 @@ son `-1` final, `Release` = `1`) et architecture `x86_64`. Cibles : **Fedora 44 
   `createrepo_c` dans le conteneur Fedora figé et signe `repomd.xml`. `scripts/lib/lire-index-dnf.py` relit et
   contrôle cet index (une adresse, une taille et une somme SHA-256 par RPM, aucun `xml:base`) ; il sert aussi à la
   CI. Le workflow `depot-apt.yml` ajoute le job `installation-dnf` (Fedora 44 et 45, index altéré refusé).
+
+## La recette AUR (Arch Linux)
+
+Sur l'AUR, `wimao-bin` n'est pas un paquet fabriqué mais une **recette** (`PKGBUILD` et `.SRCINFO`) : `makepkg`
+télécharge les trois `.deb` de la Release GitHub, vérifie leurs empreintes SHA-256 **et** la signature de `SHA256SUMS`,
+puis en tire un paquet Arch (mêmes fichiers que les `.deb`). Cible : **Arch Linux x86_64**. Le détail de chaque script
+est dans son en-tête.
+
+| Fichier | Rôle |
+|---|---|
+| `fabriquer-pkgbuild.sh` | `fabriquer-pkgbuild.sh <SHA256SUMS> <sortie/> [--local]` : écrit `PKGBUILD` et `.SRCINFO`. Exige exactement trois `.deb` dans `SHA256SUMS` (les `.rpm` sont ignorés) et la version de `Cargo.toml`. Même entrée, même sortie. `--local` marque la recette « ESSAI LOCAL, NE PAS PUBLIER ». |
+| `aur/PKGBUILD.in`, `aur/prepare.in`, `aur/dependances` | Modèle de la recette, étape `prepare` et dépendances en noms de paquets Arch. |
+| `aur/commun-aur.sh` | Bibliothèque sourcée : image Arch figée par empreinte (`IMAGE_ARCH`, seule définition), `makepkg` sous un utilisateur non privilégié, fonctions d'essai. |
+| `aur/aur.archlinux.org.known_hosts` | Clé d'hôte figée de l'AUR, utilisée par `scripts/envoyer-aur.sh`. |
+| `tester-installation-aur.sh` | Recette en mode `--local` puis installation réelle, Dexed, désinstallation, **dans un conteneur Arch jetable**. Job `installation-aur` de `paquets.yml`, avant l'étiquette. |
+| `tester-recette-aur.sh` | Éprouve la vraie recette (Release, signature) puis prouve que trois sources trafiquées sont refusées. Workflow `aur.yml`, sur les PR qui touchent `paquets/aur/`. |
+| `tests/tester-fabriquer-pkgbuild.sh` | Teste `fabriquer-pkgbuild.sh` (sortie stable, refus d'une liste incomplète ou d'une mauvaise version). |
+
+Publication : `scripts/publier-aur.sh vX.Y.Z` (essai dans Arch, branche, PR ; ne signe rien) puis, après fusion,
+`scripts/envoyer-aur.sh vX.Y.Z` (envoi à l'AUR depuis la machine du propriétaire). Le workflow
+`aur-surveillance.yml` compare chaque jour l'AUR à `main`.
 
 ## Rôle de chaque fichier
 
@@ -180,6 +204,7 @@ Ajouter un écart, c'est l'accepter : la justification est obligatoire.
 | `rpm` | Réemballe les trois `.deb` en RPM (conteneur Fedora 45 figé), deux fois, et compare octet pour octet. |
 | `sommes` | Réunit les trois `.deb` et les trois RPM, écrit `SHA256SUMS`. |
 | `installation` | Test d'installation décrit ci-dessus (Ubuntu 24.04 et Debian 13). |
+| `installation-aur` | Installation réelle de la recette AUR (`--local`) et ouverture d'un plugin, sur Arch Linux (image figée). |
 | `installation-rpm` | Installation réelle des RPM et ouverture d'un plugin, sur Fedora 45 (avec et sans le `wine` de Fedora) et Fedora 44. |
 | `signature-a-blanc` | Rejoue `scripts/signer-version.sh --a-blanc` avec une clé jetable (refabrique les `.deb`, puis les RPM). |
 | `brouillon` | Attestation de provenance et Release **brouillon** sur une étiquette `v*` (ou lancement manuel avec `a_blanc` faux). Seul job avec des droits d'écriture. |

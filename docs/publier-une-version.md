@@ -26,6 +26,12 @@ de `docs/superpowers/specs/2026-11-01-wimao-sous-projet-4-design.md`.
                                                           │
                                                           v
                                   vous fusionnez la PR ─> CI : vérifie, installe, déploie le site
+                                                          │
+                                                          v
+              vous : scripts/publier-aur.sh vX.Y.Z ─> essaie la recette dans Arch, ouvre une PR
+                                                          │
+                                                          v
+                      vous fusionnez la PR ─> vous : scripts/envoyer-aur.sh vX.Y.Z (envoi à l'AUR)
 ```
 
 - La **CI** fabrique les trois `.deb`, puis en tire trois `.rpm` pour Fedora (même contenu, réemballé), et GitHub *atteste* d'où ils viennent (provenance : tel
@@ -39,6 +45,9 @@ de `docs/superpowers/specs/2026-11-01-wimao-sous-projet-4-design.md`.
   la CI n'a aucune clé, elle ne fait que vérifier cette signature, contrôler chaque `.deb` et servir les
   fichiers sur GitHub Pages.
 - Le **dépôt dnf** (étape 6) suit la même règle : l'index (`repomd.xml`) est signé chez vous, la CI vérifie.
+- Le **paquet AUR** (étape 7, Arch Linux) est une simple recette (`PKGBUILD`) : rien n'est signé, la recette exige
+  la signature de la Release chez chaque utilisateur. Elle passe par une PR, puis **vous** l'envoyez à l'AUR avec
+  une clé SSH dédiée.
 
 ## Avant la toute première version (une seule fois)
 
@@ -86,6 +95,16 @@ contrôleur du projet ; ne transmettez jamais un mot de passe ni une phrase de p
 - [x] **Dépôt rendu public** (2026-11-01, dépôt neuf à commit unique ; l'ancien, renommé `WiMao-archive`, reste privé). Obligatoire *avant* la première étiquette : les attestations de
       provenance exigent un dépôt public (sur un dépôt privé, il faudrait GitHub Enterprise Cloud ;
       l'étape d'attestation du job `brouillon` échouerait).
+- [ ] **Compte AUR et clé SSH d'envoi** (guidé, sous-projet 10 ; une seule fois, avant le premier
+      `envoyer-aur.sh`) :
+      1. créer le compte sur <https://aur.archlinux.org> (pseudonyme `F1ghtc0re`, adresse non personnelle) ; activer
+         la double authentification si l'AUR la propose ; le mot de passe n'est jamais transmis ;
+      2. `ssh-keygen -t ed25519 -f ~/.ssh/aur -C "wimao-aur"` (la phrase de passe est tapée par vous), puis coller
+         le contenu de `~/.ssh/aur.pub` dans votre profil AUR (*My Account*, champ « SSH Public Key »). Cette clé
+         ne sert qu'à l'AUR : ne l'ajoutez jamais à GitHub, ni à la CI ;
+      3. (facultatif, **décision du propriétaire**) publier la clé OpenPGP de WiMao sur `keyserver.ubuntu.com`, pour
+         que `yay` la trouve seul. C'est une publication : à décider au moment venu. Sans cela, le `README.md`
+         donne la commande `curl … | gpg --import` et l'empreinte à comparer.
 - [x] **Outils sur votre machine** (voir « Ce qu'il faut sur votre machine »).
 
 ## Créer la clé de signature
@@ -196,6 +215,8 @@ principale ; l'identité de la clé reste.
   des dépôts d'Ubuntu (2.46) est **trop ancien** : installez-le depuis le dépôt officiel de GitHub
   (<https://github.com/cli/cli/blob/trunk/docs/install_linux.md>). Le script s'arrête avec ce conseil
   s'il détecte un `gh` trop ancien ;
+- pour l'AUR (étape 7) : `podman` (déjà demandé : l'essai se fait dans un conteneur Arch figé), `gpgv`, `ssh`
+  (OpenSSH) et la clé d'envoi `~/.ssh/aur` (voir « Avant la toute première version ») ;
 - votre sous-clé de signature dans le trousseau GnuPG.
 
 ## Publier, pas à pas
@@ -414,6 +435,56 @@ automatiquement : la fusion de cette PR sur main relance le workflow « Dépôt 
 Les utilisateurs ont une copie locale de la clé : annoncez la prolongation (notes de version) pour qu'ils
 la retéléchargent (README, « EXPKEYSIG ») avant l'ancienne date. Mettez-vous un rappel pour
 août 2027.
+
+### 7. Publier sur l'AUR (Arch Linux)
+
+Même principe que les étapes 5 et 6, mais sans rien signer : le paquet `wimao-bin` de l'AUR est une **recette**
+(`PKGBUILD` et `.SRCINFO`) qui télécharge les `.deb` de la Release et en vérifie les empreintes et la signature
+de `SHA256SUMS`. Cette étape se fait **après** la publication de la Release (le script refuse un brouillon). Les
+protections et la conduite à tenir en cas de problème sont dans `SECURITY.md`, « Le paquet AUR ». Conception :
+`docs/superpowers/specs/2026-11-11-wimao-sous-projet-10-design.md`, § 4.
+
+**À chaque version**, sur `main` à jour et propre :
+
+```sh
+git switch main && git pull
+scripts/publier-aur.sh vX.Y.Z
+```
+
+Le script, dans l'ordre : contrôle les outils, le dépôt et la Release ; télécharge `SHA256SUMS` et
+`SHA256SUMS.asc` et vérifie la signature (par la clé publiée, trousseau jetable tiré de `docs/cle-publique.asc`) ;
+écrit la recette avec `paquets/fabriquer-pkgbuild.sh` ; **l'essaie pour de vrai** dans le conteneur Arch figé
+(`makepkg` télécharge les `.deb`, vérifie empreintes et signature, `pacman -U`, `wimao-cli --version`) ; puis crée
+la branche `aur-vX.Y.Z` (seulement `paquets/aur/wimao-bin/`), envoie le commit et ouvre la PR. Il ne fusionne
+jamais et **ne demande aucune phrase de passe**.
+
+Ensuite :
+
+1. Attendez la CI de la PR : le workflow « Recette AUR » (`aur.yml`) refait l'essai avec la recette réelle et
+   prouve que `makepkg` refuse un `.deb` modifié, une empreinte fausse et une signature altérée.
+2. Fusionnez la PR (c'est vous qui fusionnez, jamais le script).
+3. **Tout de suite après la fusion**, sur `main` à jour et propre :
+
+   ```sh
+   git switch main && git pull
+   scripts/envoyer-aur.sh vX.Y.Z
+   ```
+
+   Le script refuse une recette qui n'annonce pas cette version, un essai local ou un `.SRCINFO` périmé ; clone
+   l'AUR avec la clé `~/.ssh/aur` et la clé d'hôte figée du dépôt (rien n'est écrit dans `~/.ssh`) ; affiche le
+   diff ; fait le `git push` ; puis relit l'AUR et la compare à `main`. **La fenêtre de phrase de passe de la clé
+   SSH peut s'ouvrir** (agent SSH) : le script prévient avant. Le premier envoi crée la branche `master` du dépôt
+   AUR, vide jusque-là.
+4. La **surveillance quotidienne** (`aur-surveillance.yml`) compare l'AUR à `main`. Entre la fusion et l'envoi,
+   elle échoue : c'est voulu (rappel d'envoyer) ; elle redevient verte après l'envoi (lancez-la à la main depuis
+   l'onglet *Actions* pour le constater). Si elle échoue sans fusion récente, lisez `SECURITY.md`,
+   « Compromission de compte ».
+5. Vérifiez comme un utilisateur, dans un Arch (conteneur) : les commandes du `README.md`, puis
+   `yay -S wimao-bin`.
+
+Si `publier-aur.sh` s'arrête (code 1), rien n'est publié : lisez le message, corrigez, relancez (si la branche
+`aur-vX.Y.Z` existe déjà, supprimez-la d'abord). `--aide` décrit l'option `--a-blanc` (essai local sans réseau) des
+deux scripts.
 
 ## Révocation et clé perdue
 
