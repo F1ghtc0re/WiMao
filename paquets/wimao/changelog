@@ -1,3 +1,16 @@
+wimao (0.7.0-1) unstable; urgency=medium
+
+  * Logiciels de musique en Flatpak (Bitwig de Flathub…) : WiMao pose tout
+    seul le lien yabridge qui leur manquait, rafraîchit les dates des plugins
+    pontés, et « Réparer » signale les dossiers que le Flatpak ne voit pas,
+    avec la commande à copier.
+  * Lanceurs d'éditeurs inconnus (BLEASS…) installés par « Ajouter un
+    installeur » : ils apparaissent dans Gestionnaires et s'ouvrent depuis
+    WiMao (commande « wimao-cli application »).
+  * README plus court, avec une section Crédits.
+
+ -- F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>  Wed, 11 Nov 2026 02:45:00 +0100
+
 wimao (0.6.0-1) unstable; urgency=medium
 
   * Nouveaux paquets RPM pour Fedora, avec un dépôt dnf signé.

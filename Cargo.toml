@@ -5,7 +5,7 @@ members = ["crates/wimao-core", "crates/wimao-recettes", "crates/wimao-cli", "cr
 
 # Métadonnées partagées par toutes les crates (héritées avec `workspace = true`).
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/F1ghtc0re/WiMao"
