@@ -33,6 +33,10 @@
 //!     dès que le point existe (étapes 6 à 10 comprises) : `Reussi`, ou `Echec` avec la cause.
 //!     Une erreur avant le point (fichier absent, verrou pris, plugin en cours) n'écrit rien.
 //!
+//! Sans plugin mais avec un nouveau raccourci du menu Démarrer vers un programme (lanceur
+//! d'éditeur), le programme est enregistré comme application
+//! ([`RapportInstallation::applications`], `crate::applications`) et ce n'est pas un échec.
+//!
 //! Quand rien de nouveau ni de modifié n'apparaît après une installation silencieuse
 //! (installeur qui a échoué, qui ignore les options, ou délai dépassé), ce n'est pas une
 //! erreur : [`RapportInstallation::interactif_necessaire`] vaut `true` et l'interface
@@ -53,12 +57,15 @@ use wimao_core::processus::programmes_ouverts;
 use wimao_core::restauration::{self, PointRestauration};
 use wimao_core::wine::SURCHARGE_SANS_DEBOGUEUR;
 use wimao_core::{
-    creer_environnement, lancer, mettre_a_jour, tester_plugin, Chemins, Erreur, Inventaire,
-    PluginWindows, Probleme, Progression, Resultat, ResultatTest, Sortie, Wine,
+    creer_environnement, journal, lancer, mettre_a_jour, tester_plugin, Chemins, Erreur,
+    Inventaire, PluginWindows, Probleme, Progression, Resultat, ResultatTest, Sortie, Wine,
 };
 
+use crate::applications::{
+    ajouter_applications, nouvelles_applications, programmes_des_gestionnaires, releve_raccourcis,
+};
 use crate::archive::{installer_archive, ContenuArchive};
-use crate::catalogue::Catalogue;
+use crate::catalogue::{dossiers_recettes, Catalogue};
 use crate::chemins_windows::{
     remplacer_variables, resoudre_motif, utilisateur_windows, vers_linux,
 };
@@ -126,6 +133,11 @@ pub struct RapportInstallation {
     /// entrer un numéro de série…), à afficher après l'installation ; `None` s'il n'y en a
     /// pas ou si rien n'a été installé.
     pub consigne_activation: Option<String>,
+    /// Noms des applications enregistrées dans `applications.toml` par cette installation :
+    /// l'installeur n'a ajouté **aucun plugin** mais un programme avec un raccourci du menu
+    /// Démarrer (BLEASS Plugins Installer, par exemple). Vide dans tous les autres cas ;
+    /// quand elle est remplie, `interactif_necessaire` vaut `false`.
+    pub applications: Vec<String>,
 }
 
 impl RapportInstallation {
@@ -231,6 +243,9 @@ pub(crate) fn installer_avec_delai(
         p.etape(&tr("Updating the Wine environment…"));
         mettre_a_jour(c, p)?;
         let avant = Inventaire::relever(&c.drive_c())?;
+        // Raccourcis du menu Démarrer juste avant l'installeur : la différence avec le relevé
+        // d'après désigne les programmes qu'il a ajoutés.
+        let raccourcis_avant = releve_raccourcis(c);
 
         let issue = installer_le_fichier(c, fichier, type_, recette, options, p, delai)?;
         if let Some(r) = recette {
@@ -247,9 +262,19 @@ pub(crate) fn installer_avec_delai(
         // Un plugin mis à jour suit le même chemin qu'un nouveau : pontage, test, rapport.
         let mut a_traiter = apres.nouveaux(&avant);
         a_traiter.extend(modifies);
+        // Aucun plugin mais un programme nouveau (lanceur d'éditeur) : il devient une application.
+        let applications = if a_traiter.is_empty() && !gestionnaire {
+            enregistrer_nouvelles_applications(c, recette, &raccourcis_avant)
+        } else {
+            Vec::new()
+        };
         // Un gestionnaire n'installe aucun plugin : « aucun plugin » est son état normal.
-        let interactif_necessaire =
-            issue.silencieux && a_traiter.is_empty() && !issue.vide && !gestionnaire;
+        // Un lanceur enregistré est un résultat : pas besoin de rouvrir l'installeur.
+        let interactif_necessaire = issue.silencieux
+            && a_traiter.is_empty()
+            && !issue.vide
+            && !gestionnaire
+            && applications.is_empty();
         // Le conseil n'a de sens qu'après une installation silencieuse : pas en interactif
         // (l'utilisateur l'a faite lui-même), pas pour une archive de plugins copiés.
         if interactif_necessaire {
@@ -272,6 +297,7 @@ pub(crate) fn installer_avec_delai(
             lien_a_declarer: lien_a_declarer(recette),
             consigne_activation: recette
                 .and_then(|r| consigne(r, CONSIGNE_ACTIVATION, &langue_courante())),
+            applications,
         })
     })();
     let sujet = recette.map_or_else(|| nom_du_fichier(fichier), |r| r.nom.clone());
@@ -301,6 +327,35 @@ pub(crate) fn installer_avec_delai(
         ),
     }
     resultat
+}
+
+/// Enregistre dans `applications.toml` les programmes nés pendant l'installation (raccourcis
+/// absents de `avant`) et renvoie leurs noms. À n'appeler que si l'installeur n'a ajouté aucun
+/// plugin et n'est pas un gestionnaire.
+///
+/// Les gestionnaires déjà connus (recette courante et catalogue, programmes résolus à ce
+/// moment : le dossier de version existe désormais) ne sont jamais enregistrés. Un échec
+/// d'écriture est noté dans le journal et rend une liste vide : l'installation, elle, a réussi.
+fn enregistrer_nouvelles_applications(
+    c: &Chemins,
+    recette: Option<&Recette>,
+    avant: &BTreeSet<PathBuf>,
+) -> Vec<String> {
+    let apres = releve_raccourcis(c);
+    let catalogue = Catalogue::charger(&dossiers_recettes(c)).0;
+    let connus = programmes_des_gestionnaires(c, catalogue.0.iter().chain(recette));
+    let nouvelles = nouvelles_applications(c, avant, &apres, &connus);
+    if nouvelles.is_empty() {
+        return Vec::new();
+    }
+    let noms: Vec<String> = nouvelles.iter().map(|a| a.nom.clone()).collect();
+    match ajouter_applications(c, nouvelles) {
+        Ok(()) => noms,
+        Err(e) => {
+            journal::noter("applications.toml non écrit", &e.to_string());
+            Vec::new()
+        }
+    }
 }
 
 /// Vérifie que `fichier` est un fichier existant.
@@ -342,6 +397,7 @@ fn rapport_a_la_main(recette: Option<&Recette>, type_: TypeInstalleur) -> Rappor
         lien_a_declarer: lien_a_declarer(recette),
         // Rien n'a été installé : rien à activer.
         consigne_activation: None,
+        applications: Vec::new(),
     }
 }
 
@@ -1081,6 +1137,83 @@ mod tests {
         assert_eq!(r.code_installeur, Some(67));
         let messages = muet.0.lock().unwrap().join("\n");
         assert!(messages.contains("67"), "{messages}");
+    }
+
+    /// Prépare dans le dossier du faux Wine les raccourcis que `tests/faux-wine.sh` posera
+    /// (`lanceur.lnk` vers le lanceur, `desinstalleur.lnk` vers `unins000.exe`).
+    fn preparer_raccourcis(banc: &Banc) {
+        let bin = banc.c.wine_dir.join("bin");
+        let lnk = |cible: &str| crate::applications::tests::fabriquer_lnk(cible.as_bytes(), None);
+        std::fs::write(
+            bin.join("lanceur.lnk"),
+            lnk(r"C:\Program Files\BLEASS\BLEASS Plugins Installer.exe"),
+        )
+        .unwrap();
+        std::fs::write(
+            bin.join("desinstalleur.lnk"),
+            lnk(r"C:\Program Files\BLEASS\unins000.exe"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn lanceur_sans_plugin_devient_application() {
+        let banc = Banc::nouveau();
+        preparer_raccourcis(&banc);
+        let exe = banc.installeur("nsis.bin", "lanceur.exe");
+        let r = banc
+            .lancer(&exe, &catalogue_vide(), SANS_OPTIONS, DELAI_COURT)
+            .unwrap();
+        assert!(r.plugins.is_empty());
+        assert_eq!(r.applications, ["BLEASS Plugins Installer"]);
+        assert!(!r.interactif_necessaire);
+        let liste = crate::applications::lire_applications(&banc.c);
+        assert_eq!(liste.len(), 1);
+        assert_eq!(
+            liste[0].programme,
+            r"C:\Program Files\BLEASS\BLEASS Plugins Installer.exe"
+        );
+        let texte = std::fs::read_to_string(banc.c.donnees.join("applications.toml")).unwrap();
+        assert!(texte.contains("BLEASS Plugins Installer"), "{texte}");
+    }
+
+    #[test]
+    fn installeur_de_plugin_ne_cree_pas_d_application() {
+        let banc = Banc::nouveau();
+        preparer_raccourcis(&banc);
+        let exe = banc.installeur("inno.bin", "melange.exe");
+        let r = banc
+            .lancer(&exe, &catalogue_vide(), SANS_OPTIONS, DELAI_COURT)
+            .unwrap();
+        assert_eq!(r.plugins.len(), 1);
+        assert!(r.applications.is_empty());
+        assert!(!banc.c.donnees.join("applications.toml").exists());
+    }
+
+    #[test]
+    fn sans_raccourci_reste_interactif_necessaire() {
+        let banc = Banc::nouveau();
+        let exe = banc.installeur("nsis.bin", "Setup.exe");
+        let r = banc
+            .lancer(&exe, &catalogue_vide(), SANS_OPTIONS, DELAI_COURT)
+            .unwrap();
+        assert!(r.interactif_necessaire);
+        assert!(r.applications.is_empty());
+        assert!(!banc.c.donnees.join("applications.toml").exists());
+    }
+
+    #[test]
+    fn echec_d_ecriture_de_la_liste_n_echoue_pas_l_installation() {
+        let banc = Banc::nouveau();
+        preparer_raccourcis(&banc);
+        // Un dossier à la place du fichier : la lecture comme l'écriture échouent.
+        std::fs::create_dir_all(banc.c.donnees.join("applications.toml")).unwrap();
+        let exe = banc.installeur("nsis.bin", "lanceur.exe");
+        let r = banc
+            .lancer(&exe, &catalogue_vide(), SANS_OPTIONS, DELAI_COURT)
+            .unwrap();
+        assert!(r.applications.is_empty());
+        assert!(r.interactif_necessaire, "rien d'enregistré : comme avant");
     }
 
     #[test]

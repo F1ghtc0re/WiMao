@@ -4,14 +4,14 @@
 //! règles d'erreurs, et garantie qu'un installeur bloqué ne bloque pas WiMao.
 //! Utilisé par les modules d'installation, de pontage et de vérification.
 //! Écrit dans le [`journal`] chaque commande lancée. Contient aussi [`taille_lisible`], partagée
-//! par la CLI et l'interface.
+//! par la CLI et l'interface, et [`pour_shell`] (citation d'un argument pour le shell).
 
 use crate::erreur::{Erreur, Resultat};
 use crate::i18n::{langue_courante, tr, trf};
 use crate::journal;
 use std::io::Read;
 use std::os::unix::process::{CommandExt, ExitStatusExt};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -193,6 +193,21 @@ pub(crate) fn heure_locale() -> std::io::Result<libc::tm> {
     }
 }
 
+/// Date du jour à l'heure locale, au format `AAAA-MM-JJ` ; vide si l'heure est illisible
+/// (une date d'information ne doit jamais faire échouer l'appelant). Sert à dater les
+/// applications ajoutées à la liste de WiMao.
+pub fn date_du_jour() -> String {
+    match heure_locale() {
+        Ok(tm) => format!(
+            "{:04}-{:02}-{:02}",
+            tm.tm_year + 1900,
+            tm.tm_mon + 1,
+            tm.tm_mday
+        ),
+        Err(_) => String::new(),
+    }
+}
+
 /// Date locale d'un jour voisin d'aujourd'hui (`jours` = -1 pour hier, 0 pour aujourd'hui).
 ///
 /// On ne retranche pas 86 400 secondes : un jour de changement d'heure dure 23 ou 25 h et
@@ -250,12 +265,64 @@ pub fn taille_lisible(octets: u64) -> String {
     modele.replace("{value}", &texte)
 }
 
+/// Chemin écrit pour être collé tel quel dans un terminal : tel quel s'il ne contient que des
+/// caractères sans effet pour le shell, sinon entre apostrophes (`'` interne : `'\''`).
+pub fn pour_shell(chemin: &Path) -> String {
+    let texte = chemin.display().to_string();
+    let sur = !texte.is_empty()
+        && texte
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "/._-+@:,=~".contains(c));
+    if sur {
+        texte
+    } else {
+        format!("'{}'", texte.replace('\'', "'\\''"))
+    }
+}
+
+/// Cherche l'exécutable `nom` dans les dossiers de `path` (une valeur au format de `PATH`).
+///
+/// Sert à vérifier qu'un outil facultatif existe **avant** de le lancer : [`lancer`] note
+/// chaque échec dans le journal, ce qui serait trompeur pour un outil simplement absent.
+pub(crate) fn trouver_programme(nom: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
+    std::env::split_paths(path)
+        .map(|d| d.join(nom))
+        .find(|p| p.is_file())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Erreur;
     use std::process::Command;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn trouver_programme_cherche_dans_chaque_dossier() {
+        // C'est ce qui évite de lancer un `flatpak` absent (et d'écrire un échec au journal).
+        let vide = tempfile::tempdir().unwrap();
+        let avec = tempfile::tempdir().unwrap();
+        std::fs::write(avec.path().join("flatpak"), "").unwrap();
+        // Un dossier du même nom n'est pas un programme.
+        std::fs::create_dir(vide.path().join("flatpak")).unwrap();
+        let path = std::env::join_paths([vide.path(), avec.path()]).unwrap();
+        assert_eq!(
+            trouver_programme("flatpak", &path),
+            Some(avec.path().join("flatpak"))
+        );
+        let seul_vide = std::env::join_paths([vide.path()]).unwrap();
+        assert_eq!(trouver_programme("flatpak", &seul_vide), None);
+    }
+
+    #[test]
+    fn les_chemins_sont_ecrits_pour_le_shell() {
+        assert_eq!(
+            pour_shell(Path::new("/opt/wimao/yabridge")),
+            "/opt/wimao/yabridge"
+        );
+        assert_eq!(pour_shell(Path::new("/home/a b/x")), "'/home/a b/x'");
+        assert_eq!(pour_shell(Path::new("/home/l'un")), "'/home/l'\\''un'");
+    }
 
     #[test]
     #[serial_test::serial]

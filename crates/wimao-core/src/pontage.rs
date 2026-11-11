@@ -1,7 +1,8 @@
 //! Pontage yabridge isolé : relie les plugins Windows du préfixe WiMao à Linux.
 //!
 //! Utilise [`Chemins`] (où sont le préfixe, `HOME`, yabridge), [`Inventaire`]
-//! (les plugins à relier) et [`lancer`] (pour `yabridgectl sync`). Utilisé par
+//! (les plugins à relier), [`lancer`] (pour `yabridgectl sync`) et [`crate::flatpak`]
+//! (liens des logiciels de musique en Flatpak). Utilisé par
 //! les recettes après une installation, par la CLI et par l'interface.
 //!
 //! # Isolation
@@ -49,6 +50,7 @@
 
 use crate::chemins::Chemins;
 use crate::erreur::{Erreur, Resultat};
+use crate::flatpak;
 use crate::i18n::trf;
 use crate::import;
 use crate::inventaire::{
@@ -170,13 +172,19 @@ pub fn emplacement_lien_yabridge(c: &Chemins) -> PathBuf {
 /// les deux se résolvent au même dossier (liens intermédiaires, cible relative). Erreurs :
 /// [`Erreur::Io`] si l'emplacement est illisible pour une autre raison qu'être absent.
 pub fn etat_lien_yabridge(c: &Chemins) -> Resultat<EtatLienYabridge> {
-    let lien = emplacement_lien_yabridge(c);
-    match std::fs::symlink_metadata(&lien) {
+    etat_lien_yabridge_a(c, &emplacement_lien_yabridge(c))
+}
+
+/// Comme [`etat_lien_yabridge`], mais pour un lien à un emplacement quelconque (par exemple
+/// `~/.var/app/<id>/data/yabridge` pour un logiciel de musique en Flatpak, voir
+/// [`crate::flatpak`]). Ne modifie rien.
+pub fn etat_lien_yabridge_a(c: &Chemins, lien: &Path) -> Resultat<EtatLienYabridge> {
+    match std::fs::symlink_metadata(lien) {
         Ok(meta) if meta.file_type().is_symlink() => {
-            let cible = std::fs::read_link(&lien)?;
+            let cible = std::fs::read_link(lien)?;
             // Une cible relative se lit depuis le dossier du lien.
             let cible_absolue = lien.parent().unwrap_or(Path::new("/")).join(&cible);
-            if cible_absolue == c.yabridge_dir || memes_fichiers(&lien, &c.yabridge_dir) {
+            if cible_absolue == c.yabridge_dir || memes_fichiers(lien, &c.yabridge_dir) {
                 Ok(EtatLienYabridge::Bon)
             } else if lien.exists() {
                 // `exists` suit le lien : vrai seulement si la cible existe.
@@ -224,7 +232,14 @@ pub enum LienYabridge {
 /// valeur renvoyée. Erreurs : [`Erreur::Io`] si le lien ou ses dossiers ne peuvent pas
 /// être créés.
 pub fn assurer_lien_yabridge(c: &Chemins) -> Resultat<LienYabridge> {
-    match etat_lien_yabridge(c)? {
+    assurer_lien_yabridge_a(c, &emplacement_lien_yabridge(c))
+}
+
+/// Comme [`assurer_lien_yabridge`], mais pour le lien posé à `lien` (même règle : ne remplace
+/// jamais rien). Sert aux logiciels de musique en Flatpak, dont le `XDG_DATA_HOME` est
+/// `~/.var/app/<id>/data` ([`crate::flatpak`]).
+pub fn assurer_lien_yabridge_a(c: &Chemins, lien: &Path) -> Resultat<LienYabridge> {
+    match etat_lien_yabridge_a(c, lien)? {
         EtatLienYabridge::Bon => Ok(LienYabridge::DejaBon),
         // Un lien cassé est un lien vers ailleurs : on n'y touche pas non plus.
         EtatLienYabridge::Ailleurs(cible) | EtatLienYabridge::Casse(cible) => {
@@ -232,11 +247,10 @@ pub fn assurer_lien_yabridge(c: &Chemins) -> Resultat<LienYabridge> {
         }
         EtatLienYabridge::Dossier => Ok(LienYabridge::Dossier),
         EtatLienYabridge::Absent => {
-            let lien = emplacement_lien_yabridge(c);
             if let Some(parent) = lien.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::os::unix::fs::symlink(&c.yabridge_dir, &lien)?;
+            std::os::unix::fs::symlink(&c.yabridge_dir, lien)?;
             Ok(LienYabridge::Cree)
         }
     }
@@ -264,6 +278,57 @@ fn assurer_lien_et_noter(c: &Chemins) {
             "~/.local/share/yabridge est un vrai dossier : laissé tel quel",
         ),
         Err(e) => journal::noter("lien yabridge", &format!("lien non créé : {e}")),
+    }
+    assurer_liens_flatpak_et_noter(c);
+}
+
+/// Pose les liens yabridge manquants (le principal et ceux des logiciels Flatpak), sans jamais
+/// échouer ni rien remplacer ; ce qui mérite d'être su va au journal.
+///
+/// C'est le point d'entrée des appels « hors pontage » : au démarrage de l'interface (un
+/// logiciel Flatpak installé après le pontage des plugins n'aurait sinon jamais son lien), et au
+/// début de [`crate::diagnostic::reparer`] (« Réparer » / `wimao-cli reparer`), même quand rien
+/// n'est à réparer. Si un lien Flatpak est créé, les dates des `.so` pontés sont rafraîchies.
+pub fn assurer_liens(c: &Chemins) {
+    assurer_lien_et_noter(c);
+}
+
+/// Pose le lien yabridge des logiciels de musique installés en Flatpak ([`crate::flatpak`]) et
+/// note au journal ce qui mérite d'être su, comme pour le lien principal.
+///
+/// Si au moins un lien vient d'être créé, les dates des `.so` pontés sont rafraîchies : les
+/// logiciels gardent un cache de l'analyse des plugins et ne réanalysent que ce qui a changé ;
+/// sans cela un plugin déjà écarté (parce qu'il ne se chargeait pas sans le lien) le resterait.
+fn assurer_liens_flatpak_et_noter(c: &Chemins) {
+    let mut cree = false;
+    for (id, resultat) in flatpak::assurer_liens_flatpak(c, &flatpak::logiciels_installes()) {
+        let lien = flatpak::emplacement_lien_flatpak(c, &id);
+        match resultat {
+            Ok(LienYabridge::Cree) => cree = true,
+            Ok(LienYabridge::DejaBon) => {}
+            Ok(LienYabridge::AutreLien(cible)) => journal::noter_info(
+                "lien yabridge",
+                &format!(
+                    "{} vise {} et non {} : laissé tel quel",
+                    lien.display(),
+                    cible.display(),
+                    c.yabridge_dir.display()
+                ),
+            ),
+            Ok(LienYabridge::Dossier) => journal::noter_info(
+                "lien yabridge",
+                &format!("{} est un vrai dossier : laissé tel quel", lien.display()),
+            ),
+            Err(e) => journal::noter(
+                "lien yabridge",
+                &format!("lien {} non créé : {e}", lien.display()),
+            ),
+        }
+    }
+    if cree {
+        if let Err(e) = flatpak::rafraichir_dates_plugins(c) {
+            journal::noter("lien yabridge", &format!("dates des plugins : {e}"));
+        }
     }
 }
 

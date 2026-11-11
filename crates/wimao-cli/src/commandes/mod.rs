@@ -4,6 +4,7 @@
 //! - [`verification`] : `verifier` ;
 //! - [`entretien`] : `diagnostiquer`, `reparer`, `rapport` ;
 //! - [`gestionnaires`] : `recettes`, `gestionnaire installer|ouvrir`, `relayer-lien` ;
+//! - [`applications`] : `application lister|ouvrir|retirer` ;
 //! - [`historique`] : `historique` ;
 //! - [`import`] : `importer` et `importer --annuler` ;
 //! - [`restauration`] : `restauration lister|revenir` ;
@@ -12,6 +13,7 @@
 //! Utilise `wimao-core` et `wimao-recettes`. Utilisé par `main.rs`, qui n'a ensuite plus
 //! qu'à traduire le résultat en code de sortie.
 
+pub mod applications;
 pub mod entretien;
 pub mod gestionnaires;
 pub mod historique;
@@ -113,6 +115,7 @@ fn executer_avec_chemins(commande: Commande, c: &Chemins) -> Resultat<Issue> {
         Commande::Rapport => entretien::rapport(c),
         Commande::Recettes => gestionnaires::recettes(c),
         Commande::Gestionnaire(action) => gestionnaires::gestionnaire(c, action),
+        Commande::Application(action) => applications::application(c, action),
         Commande::Historique { tout } => historique::afficher(c, tout),
         Commande::RelayerLien { url } => gestionnaires::relayer(c, &url),
         // `executer` traite `detecter` avant d'appeler cette fonction (elle n'a pas besoin des

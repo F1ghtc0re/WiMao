@@ -17,11 +17,17 @@
 //! `win.ouvrir-gestionnaire` (paramètre : le nom de la recette). Couper ces actions pendant
 //! un travail grise donc les boutons sans rien suivre ici.
 //!
+//! Après les recettes viennent les applications ajoutées par un installeur (sous-projet 9) :
+//! leur bouton « Open » déclenche `win.ouvrir-application`, et un menu « ⋯ » propose
+//! `win.retirer-application` (confirmation, puis la ligne disparaît de la liste ; le programme
+//! reste installé).
+//!
 //! Utilise `operations.rs` (installation, lien), `dialogues.rs` et `fenetre/mod.rs`. Utilisé par
 //! `fenetre/mod.rs` (affichage de la section, actions).
 
 use std::path::PathBuf;
 
+use gtk4::gio;
 use gtk4::prelude::*;
 use libadwaita as adw;
 use libadwaita::prelude::*;
@@ -29,6 +35,7 @@ use wimao_core::i18n::{tr, trf};
 
 use crate::dialogues;
 use crate::fenetre::Fenetre;
+use wimao_recettes::applications::retirer_application;
 use wimao_recettes::{declarer_lien_wimao, SuiteLien};
 
 use crate::operations::{self, GestionnaireInstalle, Installe};
@@ -37,6 +44,12 @@ use crate::operations::{self, GestionnaireInstalle, Installe};
 pub const ACTION_INSTALLER: &str = "installer-gestionnaire";
 /// Action de la fenêtre qui ouvre une session du gestionnaire nommé par son paramètre.
 pub const ACTION_OUVRIR: &str = "ouvrir-gestionnaire";
+/// Action de la fenêtre qui ouvre l'application ajoutée nommée par son paramètre.
+pub const ACTION_OUVRIR_APPLICATION: &str = "ouvrir-application";
+/// Action de la fenêtre qui retire de la liste l'application nommée par son paramètre.
+pub const ACTION_RETIRER_APPLICATION: &str = "retirer-application";
+/// Icône du menu d'une application (les trois points, présente dans Adwaita et Yaru).
+const ICONE_MENU: &str = "view-more-symbolic";
 /// Icône des lignes : une boîte, le « paquet » d'un éditeur (présente dans Adwaita et Yaru).
 const ICONE_GESTIONNAIRE: &str = "package-x-generic-symbolic";
 /// Taille de l'icône dans sa tuile (px) : celle des grandes icônes de lignes GNOME.
@@ -54,6 +67,9 @@ pub struct LigneGestionnaire {
     /// Vrai si la recette donne une adresse de téléchargement ; sinon « Install » demande
     /// d'abord le fichier de l'installeur.
     pub telechargeable: bool,
+    /// Vrai pour un programme ajouté par un installeur (et non une recette de gestionnaire) :
+    /// la ligne ouvre une application et porte un menu « Remove from the list ».
+    pub application: bool,
 }
 
 impl LigneGestionnaire {
@@ -67,7 +83,10 @@ impl LigneGestionnaire {
         } else {
             tr("Not installed")
         };
-        if self.editeur.is_empty() {
+        // Une application n'a pas d'éditeur : son « éditeur » affiché dit ce qu'elle est.
+        if self.application {
+            format!("{} · {etat}", tr("Added application"))
+        } else if self.editeur.is_empty() {
             etat
         } else {
             format!("{} · {etat}", self.editeur)
@@ -102,6 +121,9 @@ fn creer_rangee(ligne: &LigneGestionnaire, session: Option<&str>) -> adw::Action
         .build();
     rangee.add_prefix(&tuile_icone(ligne.installe));
     let bouton = bouton_action(ligne, session);
+    if ligne.application {
+        rangee.add_suffix(&menu_application(ligne));
+    }
     rangee.add_suffix(&bouton);
     // Toute la ligne réagit au clic, comme dans les réglages de GNOME.
     rangee.set_activatable_widget(Some(&bouton));
@@ -123,12 +145,36 @@ fn tuile_icone(installe: bool) -> gtk4::Image {
     image
 }
 
+/// Menu « ⋯ » d'une application : « Remove from the list ». Grisé comme les autres actions
+/// pendant un travail ou une session (l'action `win.retirer-application` est coupée).
+fn menu_application(ligne: &LigneGestionnaire) -> gtk4::MenuButton {
+    let menu = gio::Menu::new();
+    let retirer = gio::MenuItem::new(Some(&tr("Remove from the list")), None);
+    retirer.set_action_and_target_value(
+        Some(&format!("win.{ACTION_RETIRER_APPLICATION}")),
+        Some(&ligne.nom.to_variant()),
+    );
+    menu.append_item(&retirer);
+    gtk4::MenuButton::builder()
+        .icon_name(ICONE_MENU)
+        .menu_model(&menu)
+        .valign(gtk4::Align::Center)
+        .css_classes(["flat"])
+        .tooltip_text(trf("Options for {name}", &[("name", &ligne.nom)]))
+        .build()
+}
+
 /// Bouton arrondi de la ligne : « Install » ou « Open ». Style ordinaire, pas
 /// `suggested-action` : selon les règles GNOME, l'accent est réservé à l'action principale de
 /// la vue (« Add an installer »).
 fn bouton_action(ligne: &LigneGestionnaire, session: Option<&str>) -> gtk4::Button {
     let (libelle, action) = if ligne.installe {
-        (tr("Open"), ACTION_OUVRIR)
+        let ouvrir = if ligne.application {
+            ACTION_OUVRIR_APPLICATION
+        } else {
+            ACTION_OUVRIR
+        };
+        (tr("Open"), ouvrir)
     } else {
         (tr("Install"), ACTION_INSTALLER)
     };
@@ -152,6 +198,37 @@ fn bouton_action(ligne: &LigneGestionnaire, session: Option<&str>) -> gtk4::Butt
         .action_name(format!("win.{action}"))
         .action_target(&ligne.nom.to_variant())
         .build()
+}
+
+// --- Action « Remove from the list » -------------------------------------------------------
+
+impl Fenetre {
+    /// Menu d'une application, « Remove from the list » : confirmation (le programme reste
+    /// installé), puis retrait de la ligne du fichier et section rafraîchie.
+    pub(crate) fn demander_retrait_application(&self, nom: String) {
+        let moi = self.clone();
+        let nom_dialogue = nom.clone();
+        dialogues::confirmer_retrait_application(&self.fenetre, &nom_dialogue, move || {
+            moi.retirer_application(nom)
+        });
+    }
+
+    /// Retire `nom` de la liste dans le fil de travail, puis rafraîchit la section.
+    fn retirer_application(&self, nom: String) {
+        let (moi, c) = (self.clone(), (*self.chemins).clone());
+        let nom_travail = nom.clone();
+        self.lancer(
+            &trf("Removing {name}…", &[("name", &nom)]),
+            move |_| retirer_application(&c, &nom_travail),
+            move |resultat| match resultat {
+                Err(erreur) => moi.erreur(&erreur, false),
+                Ok(_) => {
+                    moi.toast(&trf("{name} removed from the list", &[("name", &nom)]));
+                    moi.rafraichir();
+                }
+            },
+        );
+    }
 }
 
 // --- Action « Install » ------------------------------------------------------------------

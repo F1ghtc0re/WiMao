@@ -49,6 +49,16 @@ impl Fenetre {
             let suite = f.clone();
             f.avant_d_arreter_wine(move || suite.ouvrir_gestionnaire(nom));
         });
+        // Une application ajoutée s'ouvre comme un gestionnaire (même question sur Wine).
+        let ouvrir_appli =
+            self.action_nommee(gestionnaires::ACTION_OUVRIR_APPLICATION, |f, nom| {
+                let suite = f.clone();
+                f.avant_d_arreter_wine(move || suite.ouvrir_application(nom));
+            });
+        let retirer_appli = self
+            .action_nommee(gestionnaires::ACTION_RETIRER_APPLICATION, |f, nom| {
+                f.demander_retrait_application(nom)
+            });
         a_couper.extend([
             ajouter,
             reparer,
@@ -56,6 +66,8 @@ impl Fenetre {
             rapport,
             installer,
             ouvrir,
+            ouvrir_appli,
+            retirer_appli,
             revenir,
             restaurer,
             annuler_import,

@@ -733,12 +733,23 @@ impl Fenetre {
             });
             return;
         }
-        let message = match operations::bilan_installation(rapport) {
-            Some(bilan) => bilan,
-            None if interactif => tr("No new or updated plugin found"),
-            None => tr("Installation finished"),
-        };
-        self.toast(&message);
+        if rapport.applications.is_empty() {
+            let message = match operations::bilan_installation(rapport) {
+                Some(bilan) => bilan,
+                None if interactif => tr("No new or updated plugin found"),
+                None => tr("Installation finished"),
+            };
+            self.toast(&message);
+        }
+        // Applications enregistrées (spec § 3.1) : l'installeur n'a pas apporté de plugin, mais
+        // un programme ; un message par application dit où la retrouver (pas de proposition
+        // d'installation normale : `interactif_necessaire` est alors faux).
+        for nom in &rapport.applications {
+            self.toast(&trf(
+                "{name} installed: open it from the Managers section",
+                &[("name", nom)],
+            ));
+        }
         self.noter_mis_a_jour(&rapport.mis_a_jour);
         self.rafraichir();
         // Nom du produit pour les titres : celui de la recette (seules les recettes ont un

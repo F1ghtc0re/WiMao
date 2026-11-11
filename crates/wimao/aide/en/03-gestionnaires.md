@@ -35,3 +35,16 @@ During a session, the other actions (install, repair, back up) are greyed out: t
 - **Plugin Alliance**: the Installation Manager may freeze at 98% on the last product. Wait until all the products are shown as installed, then close it. Closing it earlier loses the downloaded packages.
 
 A manager does not open, or the sign-in does not come back? See [Common problems](aide:problemes).
+
+## Other applications
+
+Some installers added with **Add an installer** install no plugin: they put down the publisher's launcher (for example BLEASS Plugins Installer). WiMao notices the new Start-menu shortcut and puts the launcher in the **Managers** section, under the known managers. Its row reads "Added application · Installed".
+
+- **Open** starts a session exactly like a manager: restore point, plugins bridged as they appear, then **I'm done**.
+- The "⋯" menu offers **Remove from the list**, after a confirmation. It only removes the row: nothing is uninstalled.
+
+When the installation ends, WiMao shows "{name} installed: open it from the Managers section".
+
+Limit: a launcher without a Start-menu shortcut is not detected.
+
+On the command line: `wimao-cli application lister`, `wimao-cli application ouvrir <name>` and `wimao-cli application retirer <name>`.

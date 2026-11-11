@@ -1,4 +1,5 @@
 crates/wimao-cli/src/cli.rs
+crates/wimao-cli/src/commandes/applications.rs
 crates/wimao-cli/src/commandes/entretien.rs
 crates/wimao-cli/src/commandes/gestionnaires.rs
 crates/wimao-cli/src/commandes/historique.rs
@@ -22,6 +23,7 @@ crates/wimao-core/src/correctifs/msvcp.rs
 crates/wimao-core/src/diagnostic.rs
 crates/wimao-core/src/environnement.rs
 crates/wimao-core/src/erreur.rs
+crates/wimao-core/src/flatpak.rs
 crates/wimao-core/src/historique.rs
 crates/wimao-core/src/i18n.rs
 crates/wimao-core/src/import.rs
@@ -44,6 +46,7 @@ crates/wimao-core/src/test_plugin.rs
 crates/wimao-core/src/test_utils.rs
 crates/wimao-core/src/wine.rs
 crates/wimao-recettes/build.rs
+crates/wimao-recettes/src/applications.rs
 crates/wimao-recettes/src/apres_installation.rs
 crates/wimao-recettes/src/archive.rs
 crates/wimao-recettes/src/catalogue.rs

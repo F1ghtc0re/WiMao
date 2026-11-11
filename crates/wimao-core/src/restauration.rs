@@ -380,7 +380,7 @@ fn remplir_point(c: &Chemins, motif: &str, dossier: &Path) -> Resultat<()> {
 /// écriture dans `<chemin>.part`, `sync_all` (données sur le disque), `rename`
 /// (atomique sur un même système de fichiers), puis synchronisation du dossier pour
 /// que le renommage lui-même survive à une coupure de courant.
-pub(crate) fn ecrire_atomique(chemin: &Path, octets: &[u8]) -> Resultat<()> {
+pub fn ecrire_atomique(chemin: &Path, octets: &[u8]) -> Resultat<()> {
     let temporaire = nom_temporaire(chemin);
     let mut fichier = std::fs::File::create(&temporaire)?;
     std::io::Write::write_all(&mut fichier, octets)?;

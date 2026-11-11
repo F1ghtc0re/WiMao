@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wimao\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 23:40+0100\n"
+"POT-Creation-Date: 2026-11-10 23:40+0100\n"
 "PO-Revision-Date: 2026-10-31 00:00+0000\n"
 "Last-Translator: WiMao\n"
 "Language-Team: Spanish\n"
@@ -142,6 +142,26 @@ msgid "Do not test that the plugins installed in the session open"
 msgstr "No prueba que se abran los plugins instalados durante la sesión"
 
 #: crates/wimao-cli/src/cli.rs
+msgid "List, open or remove the applications added with an installer"
+msgstr "Lista, abre o quita las aplicaciones añadidas con un instalador"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "List the added applications whose program still exists"
+msgstr "Lista las aplicaciones añadidas cuyo programa sigue existiendo"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Open an application and watch its installations until it is closed"
+msgstr "Abre una aplicación y vigila sus instalaciones hasta que se cierre"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Application name (see \"application lister\")"
+msgstr "Nombre de la aplicación (véase «application lister»)"
+
+#: crates/wimao-cli/src/cli.rs
+msgid "Remove an application from the list (nothing is uninstalled)"
+msgstr "Quita una aplicación de la lista (no se desinstala nada)"
+
+#: crates/wimao-cli/src/cli.rs
 msgid "Show the latest actions (installations, repairs, backups…)"
 msgstr ""
 "Muestra las últimas acciones (instalaciones, reparaciones, copias de "
@@ -167,6 +187,19 @@ msgstr ""
 #: crates/wimao-cli/src/cli.rs
 msgid "Link received from the browser"
 msgstr "Enlace recibido del navegador"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "an application named {name}"
+msgstr "una aplicación llamada {name}"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "No application added"
+msgstr "Ninguna aplicación añadida"
+
+#: crates/wimao-cli/src/commandes/applications.rs
+msgid "{name} removed from the list; nothing was uninstalled"
+msgstr ""
+"La aplicación {name} se ha quitado de la lista; no se ha desinstalado nada"
 
 #: crates/wimao-cli/src/commandes/entretien.rs
 #: crates/wimao-cli/src/commandes/import.rs
@@ -546,6 +579,14 @@ msgid ""
 msgstr ""
 "Algunas carpetas del entorno Wine (Documentos, Escritorio…) llevan a sus "
 "carpetas personales: los instaladores las llenarían"
+
+#: crates/wimao-core/src/diagnostic.rs
+msgid ""
+"{app} (Flatpak) cannot see {folders}, so your bridged plugins will not load "
+"in it. To let it, run: {command}"
+msgstr ""
+"{app} (Flatpak) no ve {folders}: sus plugins puenteados no se cargarán en "
+"él. Para permitírselo, ejecute: {command}"
 
 #: crates/wimao-core/src/diagnostic.rs
 msgid ""
@@ -1157,6 +1198,7 @@ msgid "Putting the restored environment in place…"
 msgstr "Colocando el entorno restaurado…"
 
 #: crates/wimao-core/src/sauvegarde.rs
+#: crates/wimao-recettes/src/applications.rs
 msgid "Cannot read {path}: {error}"
 msgstr "No se puede leer {path}: {error}"
 
@@ -1837,6 +1879,14 @@ msgid "Open installer"
 msgstr "Abrir el instalador"
 
 #: crates/wimao/src/dialogues.rs
+msgid "Remove “{name}” from the list? The program stays installed."
+msgstr "¿Quitar «{name}» de la lista? El programa sigue instalado."
+
+#: crates/wimao/src/dialogues.rs
+msgid "Remove"
+msgstr "Quitar"
+
+#: crates/wimao/src/dialogues.rs
 msgid "Installers and archives"
 msgstr "Instaladores y archivos comprimidos"
 
@@ -1950,6 +2000,10 @@ msgid "Installation finished"
 msgstr "Instalación terminada"
 
 #: crates/wimao/src/fenetre/mod.rs
+msgid "{name} installed: open it from the Managers section"
+msgstr "La aplicación {name} está instalada: ábrala desde la sección Gestores"
+
+#: crates/wimao/src/fenetre/mod.rs
 msgid "Backing up…"
 msgstr "Guardando la copia…"
 
@@ -1974,6 +2028,10 @@ msgid "In use"
 msgstr "Abierto"
 
 #: crates/wimao/src/gestionnaires.rs
+msgid "Added application"
+msgstr "Aplicación añadida"
+
+#: crates/wimao/src/gestionnaires.rs
 msgid "Managers"
 msgstr "Gestores"
 
@@ -1983,6 +2041,14 @@ msgid ""
 msgstr ""
 "Las aplicaciones de los editores que descargan sus plugins. WiMao puentea lo "
 "que instalan."
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Remove from the list"
+msgstr "Quitar de la lista"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Options for {name}"
+msgstr "Opciones de {name}"
 
 #: crates/wimao/src/gestionnaires.rs
 msgid "Open"
@@ -2003,6 +2069,14 @@ msgstr "Abrir {name}: WiMao puentea los plugins que instala"
 #: crates/wimao/src/gestionnaires.rs
 msgid "Install {name}"
 msgstr "Instalar {name}"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "Removing {name}…"
+msgstr "Quitando {name}…"
+
+#: crates/wimao/src/gestionnaires.rs
+msgid "{name} removed from the list"
+msgstr "La aplicación {name} se ha quitado de la lista"
 
 #: crates/wimao/src/gestionnaires.rs
 msgid "Installing {name}…"
@@ -2226,6 +2300,10 @@ msgstr "Cancelando la importación…"
 #: crates/wimao/src/restaurer.rs
 msgid "The import was cancelled; restart WiMao."
 msgstr "Se canceló la importación: reinicie WiMao."
+
+#: crates/wimao/src/session_fenetre.rs
+msgid "{name} is no longer in the list"
+msgstr "La aplicación {name} ya no está en la lista"
 
 #: crates/wimao/src/session_fenetre.rs
 msgid "{name} is open — WiMao bridges new plugins"

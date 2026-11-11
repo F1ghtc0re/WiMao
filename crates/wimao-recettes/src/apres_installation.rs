@@ -108,6 +108,7 @@ mod tests {
             gestionnaire: true,
             lien_a_declarer: lien.map(str::to_owned),
             consigne_activation: None,
+            applications: Vec::new(),
         }
     }
 

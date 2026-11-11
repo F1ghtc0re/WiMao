@@ -30,7 +30,7 @@ use crate::chemins::Chemins;
 use crate::i18n::{tr, trf};
 use crate::inventaire::Format;
 use crate::journal;
-use crate::outils::lancer;
+use crate::outils::{lancer, trouver_programme};
 use crate::wine::preparer_environnement;
 use std::ffi::OsString;
 use std::os::unix::process::CommandExt;
@@ -455,13 +455,6 @@ fn construire_path(c: &Chemins, r: &Reglages) -> OsString {
         dossiers.extend(std::env::split_paths(&actuel));
     }
     std::env::join_paths(dossiers).unwrap_or_default()
-}
-
-/// Cherche un exécutable dans les dossiers de `path`.
-fn trouver_programme(nom: &str, path: &OsString) -> Option<PathBuf> {
-    std::env::split_paths(path)
-        .map(|d| d.join(nom))
-        .find(|p| p.is_file())
 }
 
 /// Chemin d'un journal temporaire unique pour ce test.

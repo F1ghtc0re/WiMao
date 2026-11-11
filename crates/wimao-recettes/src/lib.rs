@@ -11,12 +11,14 @@
 //! - [`pilote`] : relance en silencieux les installeurs qu'un gestionnaire ouvre avec une interface ;
 //! - [`gestionnaire`] : session d'un gestionnaire d'éditeur (ouverture, pilote, pontage, fermeture, liens) ;
 //! - [`installation`] : parcours complet d'installation d'un plugin (orchestrateur) ;
+//! - [`applications`] : programmes ajoutés par un installeur (raccourcis `.lnk`) et liste enregistrée ;
 //! - [`apres_installation`] : suite commune d'une installation (lien de connexion).
 //!
 //! Utilise `wimao-core` (erreurs, chemins, traductions, processus, liens) ; utilisée par
 //! `wimao-cli` et `wimao`. Voir `ARCHITECTURE.md` et `docs/recettes.md`.
 #![warn(missing_docs)]
 
+pub mod applications;
 pub mod apres_installation;
 pub mod archive;
 pub mod catalogue;

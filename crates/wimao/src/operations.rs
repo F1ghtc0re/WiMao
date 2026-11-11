@@ -19,7 +19,7 @@ use wimao_core::historique::{self, Entree};
 use wimao_core::i18n::{tr, trf, trn};
 use wimao_core::import::annuler as annuler_l_import;
 use wimao_core::journal;
-use wimao_core::pontage::EtatPontage;
+use wimao_core::pontage::{self, EtatPontage};
 use wimao_core::rapport::rapport as construire_rapport;
 use wimao_core::restauration::{self, BilanRetour, ListePoints, PointRestauration};
 use wimao_core::sauvegarde::restaurer as restaurer_sauvegarde;
@@ -29,6 +29,7 @@ use wimao_core::{
     diagnostiquer, reparer as reparer_probleme, Chemins, Erreur, Inventaire, PluginWindows,
     Probleme, Progression, Resultat, ResultatTest,
 };
+use wimao_recettes::applications::applications_presentes;
 use wimao_recettes::traiter_le_lien;
 use wimao_recettes::{
     dossiers_recettes, est_installe, installer as installer_plugin, installer_recette,
@@ -103,7 +104,8 @@ pub fn lister(c: &Chemins, mis_a_jour: &BTreeSet<PathBuf>) -> Resultat<(Releve, 
     Ok((releve, avertissements))
 }
 
-/// Une ligne par recette `type = "gestionnaire"` du catalogue, triée par nom (sans casse).
+/// Une ligne par recette `type = "gestionnaire"` du catalogue, triée par nom (sans casse),
+/// puis une par application ajoutée dont le programme existe ([`applications_presentes`]).
 /// « Installé » quand son `programme` existe dans l'environnement ([`est_installe`]).
 pub fn lignes_gestionnaires(c: &Chemins, catalogue: &Catalogue) -> Vec<LigneGestionnaire> {
     let mut lignes: Vec<LigneGestionnaire> = catalogue
@@ -115,9 +117,22 @@ pub fn lignes_gestionnaires(c: &Chemins, catalogue: &Catalogue) -> Vec<LigneGest
             editeur: r.editeur.clone(),
             installe: est_installe(c, r),
             telechargeable: r.telecharger.is_some(),
+            application: false,
         })
         .collect();
     lignes.sort_by_key(|l| l.nom.to_lowercase());
+    // Puis les applications ajoutées par un installeur (déjà triées, programme présent).
+    lignes.extend(
+        applications_presentes(c)
+            .into_iter()
+            .map(|a| LigneGestionnaire {
+                nom: a.nom,
+                editeur: String::new(),
+                installe: true,
+                telechargeable: false,
+                application: true,
+            }),
+    );
     lignes
 }
 
@@ -125,11 +140,15 @@ pub fn lignes_gestionnaires(c: &Chemins, catalogue: &Catalogue) -> Vec<LigneGest
 /// diagnostic (lecture seule, sans lancer Wine). `None` : rien à ponter.
 ///
 /// Sert au démarrage (spec 4.4) : si WiMao a été fermé pendant une session, ce que le
-/// gestionnaire a installé ensuite attend d'être ponté.
+/// gestionnaire a installé ensuite attend d'être ponté. Elle pose aussi, au passage, les liens
+/// yabridge manquants (dont ceux des logiciels Flatpak).
 ///
 /// # Erreurs
 /// Celles de `diagnostiquer`.
 pub fn plugins_non_pontes(c: &Chemins) -> Resultat<Option<usize>> {
+    // Au démarrage : pose les liens yabridge manquants (dont ceux des logiciels Flatpak
+    // installés depuis le dernier pontage). Ne peut pas échouer ; le journal garde la trace.
+    pontage::assurer_liens(c);
     Ok(diagnostiquer(c)?.into_iter().find_map(|p| match p {
         Probleme::PontageIncomplet(n) => Some(n),
         _ => None,
@@ -483,6 +502,7 @@ pub fn retour_en_arriere(c: &Chemins, apercu: &ApercuRetour) -> Resultat<BilanRe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use wimao_core::Format;
     use wimao_recettes::TypeInstalleur;
 
@@ -512,6 +532,7 @@ mod tests {
             gestionnaire: false,
             lien_a_declarer: None,
             consigne_activation: None,
+            applications: Vec::new(),
         }
     }
 
@@ -696,6 +717,80 @@ mod tests {
         wimao_core::i18n::init_langue(Some("en"));
     }
 
+    /// Enregistre une application de test (`applications.toml`) ; son programme existe si
+    /// `present` (fichier factice dans `drive_c`).
+    fn poser_application(c: &Chemins, nom: &str, present: bool) {
+        use wimao_recettes::applications::{ajouter_applications, Application};
+        if present {
+            let exe = c.drive_c().join(format!("Apps/{nom}.exe"));
+            std::fs::create_dir_all(exe.parent().unwrap()).unwrap();
+            std::fs::write(exe, "MZ").unwrap();
+        }
+        ajouter_applications(
+            c,
+            vec![Application {
+                nom: nom.to_owned(),
+                programme: format!("C:\\Apps\\{nom}.exe"),
+                raccourci: format!("{nom}.lnk").into(),
+                ajoutee: "2026-11-10".to_owned(),
+            }],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn lignes_avec_applications_apres_les_recettes() {
+        wimao_core::i18n::init_langue(Some("en"));
+        let racine = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(racine.path());
+        let recettes = racine.path().join("recettes");
+        std::fs::create_dir_all(&recettes).unwrap();
+        recette_gestionnaire(&recettes, "Zeta", "Zeta Inc.");
+        // « Aardvark » précède « Zeta » par ordre alphabétique, mais une application vient
+        // toujours après les recettes.
+        poser_application(&c, "Aardvark", true);
+        let (catalogue, _) = Catalogue::charger(&[recettes]);
+
+        let lignes = lignes_gestionnaires(&c, &catalogue);
+        let resume: Vec<(&str, bool)> = lignes
+            .iter()
+            .map(|l| (l.nom.as_str(), l.application))
+            .collect();
+        assert_eq!(resume, [("Zeta", false), ("Aardvark", true)]);
+        let appli = &lignes[1];
+        assert!(appli.installe && !appli.telechargeable && appli.editeur.is_empty());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn application_absente_non_listee() {
+        let racine = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(racine.path());
+        // Dans la liste, mais son programme a disparu : pas de ligne.
+        poser_application(&c, "Fantome", false);
+        let lignes = lignes_gestionnaires(&c, &Catalogue::default());
+        assert!(lignes.is_empty(), "{lignes:?}");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn sous_titre_application() {
+        wimao_core::i18n::init_langue(Some("en"));
+        let ligne = LigneGestionnaire {
+            nom: "Appli".into(),
+            editeur: String::new(),
+            installe: true,
+            telechargeable: false,
+            application: true,
+        };
+        assert_eq!(ligne.sous_titre(false), "Added application · Installed");
+        assert_eq!(ligne.sous_titre(true), "Added application · In use");
+        wimao_core::i18n::init_langue(Some("fr"));
+        assert_eq!(ligne.sous_titre(false), "Application ajoutée · Installé");
+        wimao_core::i18n::init_langue(Some("en"));
+    }
+
     #[test]
     #[serial_test::serial]
     fn message_aucun_plugin_cite_le_code() {
@@ -732,5 +827,56 @@ mod tests {
         let c = Chemins::pour_test(d.path());
         let erreur = apercu_du_retour(&c, "2026-01-01-00h00m00").err().unwrap();
         assert!(matches!(erreur, Erreur::Introuvable(id) if id == "2026-01-01-00h00m00"));
+    }
+
+    /// Au démarrage, `plugins_non_pontes` pose le lien du logiciel Flatpak déjà installé, même
+    /// quand tous les plugins sont pontés, et rafraîchit les dates des `.so`.
+    #[test]
+    #[serial]
+    fn plugins_non_pontes_pose_le_lien_flatpak() {
+        let t = tempfile::tempdir().unwrap();
+        let c = Chemins::pour_test(t.path());
+        // Faux `flatpak` : liste Bitwig, ignore le reste. Écrit hors du fil qui l'exécute
+        // (copie par `install`) pour éviter « Text file busy ».
+        let bin = t.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let source = t.path().join("flatpak.source");
+        std::fs::write(
+            &source,
+            "#!/bin/sh\ncase \"$1\" in\n  list) echo com.bitwig.BitwigStudio ;;\n  *) exit 1 ;;\nesac\n",
+        )
+        .unwrap();
+        let statut = std::process::Command::new("install")
+            .args(["-m", "755"])
+            .arg(&source)
+            .arg(bin.join("flatpak"))
+            .status()
+            .unwrap();
+        assert!(statut.success());
+        let ancien = std::env::var_os("PATH").unwrap_or_default();
+        let mut chemins = vec![bin];
+        chemins.extend(std::env::split_paths(&ancien));
+        std::env::set_var("PATH", std::env::join_paths(chemins).unwrap());
+
+        let so = c
+            .home
+            .join(".vst3/yabridge/X.vst3/Contents/x86_64-linux/X.so");
+        std::fs::create_dir_all(so.parent().unwrap()).unwrap();
+        std::fs::write(&so, "a").unwrap();
+        let ancienne = std::time::UNIX_EPOCH + std::time::Duration::from_secs(978_307_200);
+        std::fs::File::options()
+            .write(true)
+            .open(&so)
+            .unwrap()
+            .set_modified(ancienne)
+            .unwrap();
+
+        let resultat = plugins_non_pontes(&c);
+        std::env::set_var("PATH", ancien);
+        resultat.unwrap();
+
+        let lien = wimao_core::flatpak::emplacement_lien_flatpak(&c, "com.bitwig.BitwigStudio");
+        assert_eq!(std::fs::read_link(&lien).unwrap(), c.yabridge_dir);
+        assert!(std::fs::metadata(&so).unwrap().modified().unwrap() > ancienne);
     }
 }

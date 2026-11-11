@@ -79,6 +79,9 @@ pub enum Commande {
     // Installe ou ouvre le gestionnaire d'un éditeur (Native Access…).
     #[command(subcommand)]
     Gestionnaire(ActionGestionnaire),
+    // Liste, ouvre ou retire les applications ajoutées avec un installeur.
+    #[command(subcommand)]
+    Application(ActionApplication),
     // Affiche les dernières actions (installations, réparations, sauvegardes…).
     Historique {
         // Affiche toutes les actions, pas seulement les 20 dernières.
@@ -99,6 +102,31 @@ pub enum Commande {
         // Lien reçu du navigateur.
         #[arg(value_name = "URL")]
         url: String,
+    },
+}
+
+/// Actions de `application`.
+#[derive(Debug, Subcommand)]
+pub enum ActionApplication {
+    // Liste les applications ajoutées dont le programme existe encore.
+    Lister,
+    // Ouvre une application et surveille ses installations jusqu'à sa fermeture.
+    Ouvrir {
+        // Nom de l'application (voir `application lister`).
+        #[arg(value_name = "NAME")]
+        nom: String,
+        // Ne teste pas l'ouverture des plugins installés pendant la session.
+        #[arg(long)]
+        sans_test: bool,
+        // Ne demande pas confirmation avant de fermer les programmes ouverts.
+        #[arg(long)]
+        oui: bool,
+    },
+    // Retire une application de la liste (rien n'est désinstallé).
+    Retirer {
+        // Nom de l'application (voir `application lister`).
+        #[arg(value_name = "NAME")]
+        nom: String,
     },
 }
 
@@ -298,6 +326,38 @@ pub fn commande_traduite() -> clap::Command {
                     })
                 })
         })
+        .mut_subcommand("application", |s| {
+            s.about(tr(
+                "List, open or remove the applications added with an installer",
+            ))
+            .mut_subcommand("lister", |s| {
+                s.about(tr("List the added applications whose program still exists"))
+            })
+            .mut_subcommand("ouvrir", |s| {
+                s.about(tr(
+                    "Open an application and watch its installations until it is closed",
+                ))
+                .mut_arg("nom", |a| {
+                    a.help(tr("Application name (see \"application lister\")"))
+                })
+                .mut_arg("sans_test", |a| {
+                    a.help(tr(
+                        "Do not test that the plugins installed in the session open",
+                    ))
+                })
+                .mut_arg("oui", |a| {
+                    a.help(tr("Do not ask before closing the open programs"))
+                })
+            })
+            .mut_subcommand("retirer", |s| {
+                s.about(tr(
+                    "Remove an application from the list (nothing is uninstalled)",
+                ))
+                .mut_arg("nom", |a| {
+                    a.help(tr("Application name (see \"application lister\")"))
+                })
+            })
+        })
         .mut_subcommand("historique", |s| {
             s.about(tr(
                 "Show the latest actions (installations, repairs, backups…)",
@@ -401,6 +461,31 @@ mod tests {
                 assert!(arg.get_help().is_some(), "pas d'aide pour {chemin} --{id}");
             }
         }
+    }
+
+    #[test]
+    fn application_ouvrir_se_lit_avec_un_nom_a_espaces() {
+        let cli = Cli::try_parse_from([
+            "wimao-cli",
+            "application",
+            "ouvrir",
+            "BLEASS Plugins Installer",
+            "--oui",
+        ])
+        .unwrap();
+        match cli.commande {
+            Commande::Application(ActionApplication::Ouvrir {
+                nom,
+                oui,
+                sans_test,
+            }) => {
+                assert_eq!(nom, "BLEASS Plugins Installer");
+                assert!(oui && !sans_test);
+            }
+            autre => panic!("commande inattendue : {autre:?}"),
+        }
+        assert!(Cli::try_parse_from(["wimao-cli", "application", "lister"]).is_ok());
+        assert!(Cli::try_parse_from(["wimao-cli", "application", "retirer"]).is_err());
     }
 
     #[test]
