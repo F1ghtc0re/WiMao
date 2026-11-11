@@ -1,0 +1,46 @@
+# Dépendances du paquet AUR wimao-bin, en noms de paquets Arch. Elles reprennent celles des RPM
+# (paquets/rpm/*.deps et *.recommends) ; tableau de référence : § 3.2 de
+# docs/superpowers/specs/2026-11-11-wimao-sous-projet-10-design.md.
+# Lu par paquets/fabriquer-pkgbuild.sh.
+#
+# Format : une dépendance par ligne.
+#   <nom>            dépendance obligatoire (devient « depends »)
+#   opt:<nom>: <raison>   dépendance facultative avec sa raison (devient « optdepends »)
+# Les lignes vides et celles qui commencent par « # » sont ignorées.
+
+# --- Obligatoires : Wine (wimao-wine) ---
+freetype2
+fontconfig
+libx11
+libxext
+libxrender
+libxrandr
+libxi
+libxcursor
+libxcomposite
+libxfixes
+vulkan-icd-loader
+gnutls
+libpulse
+alsa-lib
+opencl-icd-loader
+
+# --- Obligatoires : application WiMao (wimao) ---
+libadwaita
+gtk4
+xorg-server-xvfb
+7zip
+cabextract
+zstd
+tar
+
+# --- Facultatives ---
+opt:carla: test d'ouverture des plugins
+opt:xorg-xwininfo: test d'ouverture des plugins
+opt:mesa: rendu OpenGL de Wine
+opt:libxinerama: gestion de plusieurs écrans par Wine
+opt:libxxf86vm: modes d'affichage X11 de Wine
+opt:libcups: impression sous Wine
+opt:sdl2-compat: manettes de jeu sous Wine
+opt:dbus: intégration au bureau de Wine
+opt:vulkan-driver: DXVK (Direct3D par Vulkan) : pilote Vulkan de votre carte graphique

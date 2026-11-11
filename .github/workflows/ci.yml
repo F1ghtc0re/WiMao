@@ -167,6 +167,20 @@ jobs:
       # faux RPM, faux gh et git. Les refus du mode réel (dépôt non propre, Release brouillon) sont simulés.
       - name: Test de la publication dans le dépôt dnf (à blanc)
         run: scripts/tests/tester-publier-depot-dnf.sh
+      # Script de préparation de la recette AUR (signature de SHA256SUMS, recette, refus), à blanc : clé jetable,
+      # faux SHA256SUMS, faux gh et git. L'essai réel dans Arch (makepkg depuis la Release) n'a lieu qu'en vrai.
+      - name: Test de la publication de la recette AUR (à blanc)
+        run: scripts/tests/tester-publier-aur.sh
+      # Script d'envoi de la recette AUR, à blanc : un dépôt git nu local tient lieu d'AUR (vide au départ, comme un
+      # nouveau paquet), aucun réseau ni SSH. Contrôle du commit (contenu, auteur, pas de signature), du renvoi
+      # identique, des refus (pkgver, essai local, .SRCINFO périmé, dépôt non propre) et de l'usage.
+      - name: Test de l'envoi de la recette AUR (à blanc)
+        run: scripts/tests/tester-envoyer-aur.sh
+      # Recette AUR (PKGBUILD et .SRCINFO de wimao-bin) fabriquée depuis un faux SHA256SUMS, avec une clé d'essai :
+      # contrôle des sources, des empreintes, des refus et du mode local. Le .SRCINFO est produit dans l'image Arch
+      # figée (podman est présent sur le runner ; accès au réseau pour tirer l'image).
+      - name: Test de la fabrication de la recette AUR
+        run: paquets/tests/tester-fabriquer-pkgbuild.sh
       # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
       - name: Données personnelles (test du contrôle)
         run: scripts/tests/tester-verifier-donnees-perso.sh

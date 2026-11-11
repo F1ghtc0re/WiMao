@@ -1,0 +1,10 @@
+prepare() {
+    cd "$srcdir"
+    # Second verrou : SHA256SUMS (dont la signature vient d'être vérifiée par makepkg) doit confirmer les .deb.
+    local deb
+    for deb in "${_debs[@]}"; do
+        grep -qF -- "  $deb" SHA256SUMS || { echo "ERREUR : $deb absent de SHA256SUMS" >&2; return 1; }
+    done
+    # --ignore-missing : SHA256SUMS liste aussi les paquets Fedora, que cette recette ne télécharge pas.
+    sha256sum -c SHA256SUMS --ignore-missing
+}

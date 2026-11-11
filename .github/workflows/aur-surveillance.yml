@@ -1,0 +1,74 @@
+# Surveillance quotidienne de l'AUR : le paquet wimao-bin publié sur https://aur.archlinux.org doit être
+# EXACTEMENT la recette de main (paquets/aur/wimao-bin/{PKGBUILD,.SRCINFO}). Personne d'autre que le
+# propriétaire ne peut y écrire ; une différence signifie donc soit un envoi oublié (après la fusion d'une
+# nouvelle recette : voulu, c'est le rappel d'envoyer), soit un envoi non voulu ou une prise de contrôle du
+# compte. Le job échoue, et GitHub prévient le propriétaire par e-mail.
+#
+# Comportement de git : cloner un paquet AUR qui n'existe pas (ou pas encore envoyé) rend un dépôt VIDE, code 0,
+# avec l'avertissement « dépôt vide » : on teste donc l'existence de HEAD, pas le code du clonage.
+#   - AUR vide ou absent, et pas de recette dans main : note, succès ;
+#   - AUR vide ou absent, mais recette dans main : note, succès (rien n'est encore envoyé) ;
+#   - AUR rempli, mais pas de recette dans main : ÉCHEC (publication inattendue) ;
+#   - sinon : le dépôt AUR doit suivre exactement PKGBUILD et .SRCINFO (aucun fichier en trop), puis comparaison
+#     octet pour octet (cmp) de ces deux fichiers.
+# Aucun conteneur, aucun secret, lecture seule (clone anonyme public).
+name: Surveillance AUR
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  comparer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Toujours main, même lancé à la main depuis une autre branche : on compare l'AUR à la recette de main.
+          ref: main
+          persist-credentials: false
+      - name: Comparer l'AUR avec main
+        run: |
+          set -euo pipefail
+          recette=paquets/aur/wimao-bin
+          aur="$RUNNER_TEMP/aur-wimao-bin"
+          # La sortie d'erreur de git est gardée : elle précise la cause dans le message d'échec.
+          if ! sortie_clone="$(git clone --quiet https://aur.archlinux.org/wimao-bin.git "$aur" 2>&1)"; then
+            echo "::error::Clonage de l'AUR impossible (réseau ou AUR indisponible) : relancez le workflow plus tard. Détail : $sortie_clone"
+            exit 1
+          fi
+          if ! git -C "$aur" rev-parse --verify --quiet HEAD > /dev/null; then
+            echo "::notice::Le paquet wimao-bin n'est pas (encore) publié sur l'AUR : rien à comparer."
+            exit 0
+          fi
+          if [ ! -f "$recette/PKGBUILD" ]; then
+            echo "::error::L'AUR contient wimao-bin alors que main n'a aucune recette ($recette) : publication inattendue. Voir SECURITY.md (compromission de compte) : changez la clé SSH et le mot de passe AUR, puis relisez l'historique du paquet."
+            exit 1
+          fi
+          ecart=0
+          # L'AUR ne doit suivre que ces deux fichiers : un fichier de plus (source, script) serait servi aux
+          # utilisateurs sans que la comparaison de PKGBUILD et .SRCINFO le voie.
+          suivis="$(git -C "$aur" ls-files | LC_ALL=C sort | paste -sd' ')"
+          if [ "$suivis" != ".SRCINFO PKGBUILD" ]; then
+            echo "::error::Le dépôt AUR doit contenir exactement .SRCINFO et PKGBUILD, il contient : $suivis"
+            ecart=1
+          fi
+          for fichier in PKGBUILD .SRCINFO; do
+            if [ ! -f "$aur/$fichier" ]; then
+              echo "::error::$fichier absent de l'AUR."
+              ecart=1
+            elif ! cmp "$recette/$fichier" "$aur/$fichier"; then
+              echo "::error::$fichier diffère entre main et l'AUR."
+              ecart=1
+            fi
+          done
+          if [ "$ecart" -ne 0 ]; then
+            echo "::error::L'AUR n'est pas la recette de main. Si une nouvelle recette vient d'être fusionnée : envoyez-la (scripts/envoyer-aur.sh vX.Y.Z). Sinon, c'est un envoi non voulu : voir SECURITY.md (compromission de compte), changez la clé SSH et le mot de passe AUR, puis relisez l'historique du paquet sur l'AUR."
+            exit 1
+          fi
+          echo "L'AUR correspond exactement à la recette de main."

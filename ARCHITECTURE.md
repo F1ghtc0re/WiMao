@@ -95,9 +95,10 @@ wimao-cli                         ──┼──> wimao-recettes ──> wimao-
 - `crates/wimao-recettes/tests/gestionnaire.rs` : tests `#[ignore = "Wine requis"]` d'une session de gestionnaire avec `FauxGestionnaire.exe` et sa recette `tests/recettes-gestionnaire/faux-gestionnaire.toml` : `session_pilote_et_ponte` (`installer_recette`, `ouvrir`, `tick` jusqu'à la fermeture, relance NSIS par le pilote, plugin ponté, gestionnaire fini normalement, aucun processus restant) et `relais_transmet_l_adresse` (`relayer_lien`). Même variable `WIMAO_FIXTURES`, même job CI.
 - `crates/wimao-cli/tests/cli.rs` : tests `assert_cmd` du vrai programme, avec `HOME` et `WIMAO_DONNEES` temporaires (aucun Wine).
 - `.github/workflows/ci.yml` : job `unitaires` (format, clippy, `cargo doc` sans avertissement, tests, traductions) et job `integration` (Wine stable de WineHQ dans /opt/wine-stable ; installeurs factices NSIS et MSI seulement, `WIMAO_FIXTURES_SANS_INNO=1` car l'installeur d'Inno Setup échoue sur l'image GitHub — le test Inno se fait en local ; yabridge 5.1.1 vérifié, installeurs factices dont `faux-gestionnaire-setup.exe` (7z), `cargo test --workspace --exclude wimao -- --ignored` sous `xvfb-run` : installation des installeurs factices (`integration.rs`) et session du faux gestionnaire avec pilote, pontage et relais de lien (`gestionnaire.rs`), avec `HOME`, `XDG_*` et `WIMAO_DONNEES` temporaires).
-- `.github/workflows/paquets.yml` : fabrication des trois paquets `.deb` et des trois paquets `.rpm` (jobs `wine`, `bridge`, `wimao`, `reproductible`, `reproductible-wine`, `rpm`, `sommes`, `installation`, `installation-rpm`, `signature-a-blanc`, `brouillon`, `brouillon-a-blanc`) ; description dans `paquets/README.md`. Job `chaine` de `ci.yml` : `shellcheck -x` des scripts, workflows figés (`paquets/verifier-workflows.sh` et son test), `cargo deny`, `cargo audit`, test de `scripts/signer-version.sh`. Aussi : `deny.toml` (licences et sources des dépendances), `.github/dependabot.yml`, `.github/CODEOWNERS`.
+- `.github/workflows/paquets.yml` : fabrication des trois paquets `.deb` et des trois paquets `.rpm` (jobs `wine`, `bridge`, `wimao`, `reproductible`, `reproductible-wine`, `rpm`, `sommes`, `installation`, `installation-rpm`, `installation-aur`, `signature-a-blanc`, `brouillon`, `brouillon-a-blanc`) ; description dans `paquets/README.md`. Job `chaine` de `ci.yml` : `shellcheck -x` des scripts, workflows figés (`paquets/verifier-workflows.sh` et son test), `cargo deny`, `cargo audit`, test de `scripts/signer-version.sh`. Aussi : `deny.toml` (licences et sources des dépendances), `.github/dependabot.yml`, `.github/CODEOWNERS`.
 - `paquets/` : fabrication, contrôle et test des paquets Debian et RPM (voir « Paquets Debian » et « Paquets RPM (Fedora) » plus bas, et `paquets/README.md`).
 - `scripts/publier-depot-apt.sh`, `scripts/publier-depot-dnf.sh`, `scripts/assembler-site-apt.sh`, `scripts/lib/` : dépôts `apt` et `dnf` signés (index préparé et signé chez le propriétaire, site assemblé et déployé par la CI). `scripts/lib/lire-index-dnf.py` est le seul lecteur de l'index `dnf` (voir « Paquets RPM (Fedora) »).
+- `scripts/publier-aur.sh`, `scripts/envoyer-aur.sh`, `paquets/fabriquer-pkgbuild.sh`, `paquets/aur/` : paquet AUR `wimao-bin` pour Arch Linux (voir « Paquet AUR (Arch Linux) »). Workflows `aur.yml` (essai de la recette sur les PR) et `aur-surveillance.yml` (comparaison quotidienne de l'AUR à `main`) ; job `installation-aur` de `paquets.yml`.
 - `scripts/signer-version.sh` (+ test dans `scripts/tests/`) : vérification, refabrication et signature d'une version ; procédure dans `docs/publier-une-version.md`. `SECURITY.md` : signalement des failles et vérification d'une version.
 - `docs/recettes.md` : référence du format des recettes.
 - `scripts/`, `patches/`, `patches-v2/`, `NOTES.md` : ancienne installation en shell, correctifs Wine et journal des essais.
@@ -145,6 +146,26 @@ installés et leurs chemins sont identiques à ceux des `.deb`, donc le code n'a
   `.github/workflows/depot-apt.yml` : job `installation-dnf`.
 - `scripts/signer-version.sh` contrôle aussi les RPM (présence, sommes, attestations), les refabrique depuis les
   `.deb` qu'il vient de vérifier et les compare ; `SHA256SUMS` couvre six paquets.
+
+## Paquet AUR (Arch Linux)
+
+`wimao-bin` est une **recette** (`PKGBUILD` + `.SRCINFO`, quelques Ko), pas un paquet fabriqué : `makepkg` télécharge les
+trois `.deb` de la Release GitHub, vérifie leurs empreintes SHA-256 et la signature de `SHA256SUMS` (clé = empreinte
+de `SECURITY.md`), puis assemble un paquet Arch qui installe les mêmes fichiers que les `.deb`. Aucun code Rust propre à Arch.
+
+- `paquets/fabriquer-pkgbuild.sh <SHA256SUMS> <sortie> [--local]` écrit `PKGBUILD` (modèle `paquets/aur/PKGBUILD.in`,
+  étape `prepare` dans `paquets/aur/prepare.in`, dépendances dans `paquets/aur/dependances`) puis `.SRCINFO`. Reproductible
+  octet pour octet ; `--local` marque la recette « ESSAI LOCAL, NE PAS PUBLIER ».
+- `paquets/aur/commun-aur.sh` (sourcé) : image Arch figée (`IMAGE_ARCH`), `makepkg` toujours sous un utilisateur non
+  privilégié, fonctions d'essai partagées. `paquets/aur/aur.archlinux.org.known_hosts` : clé d'hôte de l'AUR, figée.
+- `paquets/tester-installation-aur.sh` (job `installation-aur`, avant l'étiquette, mode `--local`) et
+  `paquets/tester-recette-aur.sh` (workflow `aur.yml`, recette réelle : Release, signature, et trois sources
+  trafiquées refusées) s'exécutent dans un conteneur Arch jetable.
+- Publication en deux temps, comme pour apt et dnf : `scripts/publier-aur.sh` (essai réel dans Arch, branche, PR,
+  rien n'est signé) puis, après fusion, `scripts/envoyer-aur.sh` (depuis la machine du propriétaire, clé SSH dédiée
+  `~/.ssh/aur`, clé d'hôte figée, relecture de l'AUR). Tests : `scripts/tests/tester-publier-aur.sh`,
+  `scripts/tests/tester-envoyer-aur.sh`, `paquets/tests/tester-fabriquer-pkgbuild.sh`.
+- Le risque propre à l'AUR (le compte du mainteneur) et la surveillance quotidienne sont décrits dans `SECURITY.md`.
 
 ## Emplacements sur disque
 

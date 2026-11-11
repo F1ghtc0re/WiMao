@@ -1,7 +1,7 @@
 # WiMao : installation détaillée et référence
 
 Ce document reprend, tel quel, tout le détail qui se trouvait dans le README : paquets,
-vérifications à la main, signatures, cas particuliers (Debian 13, Fedora), données, retrait des
+vérifications à la main, signatures, cas particuliers (Debian 13, Fedora, Arch Linux), données, retrait des
 dépôts, compilation et exemples en ligne de commande. Pour une prise en main rapide, voir le
 [README](../README.md).
 
@@ -46,8 +46,9 @@ retour en arrière est proposé pour les actions qui ont un point de restauratio
 
 ## Installation
 
-Deux familles de systèmes sont prévues : **Ubuntu et Debian** (paquets `.deb`, ci-dessous) et **Fedora**
-(paquets `.rpm`, plus bas, « Installation sur Fedora »).
+Trois familles de systèmes sont prévues : **Ubuntu et Debian** (paquets `.deb`, ci-dessous), **Fedora**
+(paquets `.rpm`, plus bas, « Installation sur Fedora ») et **Arch Linux** (recette de l'AUR, « Installation sur
+Arch Linux »).
 
 WiMao s'installe sur Ubuntu et Debian avec trois paquets Debian (`.deb`), publiés dans un dépôt `apt` signé et dans les
 « Releases » du dépôt GitHub. Ils fonctionnent sur **Ubuntu 24.04 et plus récent** et **Debian 13 et
@@ -186,6 +187,55 @@ plugins (`~/.local/share/wimao/`) sont conservés.
 Fabriquer les paquets soi-même, et comprendre comment on s'assure qu'ils sont reproductibles :
 `paquets/README.md`. Publier une version (pour le propriétaire du dépôt) :
 `docs/publier-une-version.md`.
+
+### Installation sur Arch Linux (AUR)
+
+<!-- NOTE TEMPORAIRE (à supprimer à la première publication sur l'AUR, avec le sous-projet 10 terminé) : -->
+> **Pas encore disponible.** Le paquet `wimao-bin` arrive sur l'AUR avec sa première publication : le
+> propriétaire doit encore y créer son compte. Tant que `yay -S wimao-bin` répond « paquet introuvable »,
+> utilisez une autre méthode. Ce qui suit décrit ce qui sera en place.
+<!-- FIN DE LA NOTE TEMPORAIRE -->
+
+Sur l'AUR, `wimao-bin` n'est qu'une **recette** (un fichier `PKGBUILD`, quelques Ko), pas un paquet déjà
+fabriqué : `makepkg` télécharge les trois `.deb` de la Release GitHub, vérifie leurs empreintes SHA-256 **et** la
+signature de `SHA256SUMS`, puis en tire un seul paquet Arch qui installe les mêmes fichiers (`/opt/wimao/…`,
+`/usr/bin/…`) et remplace `wimao` s'il est présent (`provides`/`conflicts`). Le Wine de votre système n'est pas touché.
+64 bits Intel/AMD (x86_64) seulement. Les binaires sont compilés pour Ubuntu 24.04 ; Arch évolue chaque jour, donc une
+mise à jour d'une bibliothèque système pourrait un jour les casser (voir `docs/ameliorations-reportees.md`).
+
+**1. Importez la clé de signature, une seule fois.** `makepkg` exige la signature de `SHA256SUMS` et refuse
+de continuer tant que la clé n'est pas dans votre trousseau :
+
+```sh
+curl -fsSL https://f1ghtc0re.github.io/WiMao/wimao.asc | gpg --import
+gpg --fingerprint 3980C3D20A17566A075A65CBCB97DE3FBF41DD46
+```
+
+Comparez l'empreinte affichée avec celle de `SECURITY.md` (`3980 C3D2 0A17 566A 075A 65CB CB97 DE3F BF41 DD46`) :
+si elle diffère, n'allez pas plus loin.
+
+**2. Installez.**
+
+```sh
+yay -S wimao-bin
+# ou, sans assistant de l'AUR :
+git clone https://aur.archlinux.org/wimao-bin.git && cd wimao-bin && makepkg -si
+```
+
+**Lisez la recette avant de la construire.** L'AUR sert ce que son mainteneur y envoie, sans relecture : `makepkg`
+exécute le `PKGBUILD`. `yay` vous montre la recette (et, aux mises à jour, ce qui a changé) et vous demande
+confirmation : lisez-la. Elle doit seulement télécharger depuis
+`https://github.com/F1ghtc0re/WiMao/releases/download/…`, vérifier les empreintes et la signature, puis
+extraire les `.deb`. Les risques propres à l'AUR sont expliqués dans `SECURITY.md`, « Le paquet AUR ».
+
+**Si `makepkg` dit « unknown public key » ou « signatures could not be verified »**, la clé n'est pas importée :
+refaites l'étape 1. Si une empreinte ou la signature est dite fausse, **ne forcez pas** (`--skippgpcheck`, `--skipinteg`) et signalez-le (`SECURITY.md`).
+
+Mises à jour : avec le reste du système (`yay -Syu`). Après une prolongation de la clé (la sous-clé expire le
+2027-11-01), réimportez-la comme à l'étape 1.
+
+**Retirer WiMao** : `sudo pacman -R wimao-bin`. Comme avec `apt` et `dnf`, votre environnement Wine et vos plugins
+(`~/.local/share/wimao/`) sont conservés.
 
 ## Gestionnaires et installeurs pris en charge
 

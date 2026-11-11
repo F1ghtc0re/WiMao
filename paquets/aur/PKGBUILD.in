@@ -1,0 +1,41 @@
+@MARQUE_LOCAL@
+# Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+#
+# Recette AUR de WiMao (installe les .deb de la Release GitHub).
+# Généré par paquets/fabriquer-pkgbuild.sh depuis le dépôt WiMao (https://github.com/F1ghtc0re/WiMao) ;
+# ne pas modifier à la main : modifier le modèle paquets/aur/PKGBUILD.in puis régénérer.
+pkgname=wimao-bin
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc="WiMao : faire tourner les plugins audio Windows (VST) sous Linux avec Wine et yabridge"
+arch=(x86_64)
+url="https://github.com/F1ghtc0re/WiMao"
+license=('GPL-3.0-or-later' 'LGPL-2.1-or-later' 'Zlib')
+provides=(wimao)
+conflicts=(wimao)
+# Les fichiers sont installés octet pour octet comme dans les .deb : on ne retouche pas les binaires
+# (en particulier les binaires Windows de Wine).
+options=(!strip !debug)
+
+@DEPENDS@
+@OPTDEPENDS@
+
+# Les trois paquets .deb de la Release, extraits à la main dans package() (makepkg ne sait pas les lire).
+_debs=(@NOMS_DEB@)
+noextract=("${_debs[@]}")
+
+@SOURCES@
+@SOMMES@
+@VALIDPGPKEYS@
+
+@PREPARE@
+
+package() {
+    local deb
+    for deb in "${_debs[@]}"; do
+        # Un .deb est une archive « ar » dont data.tar.* contient les fichiers à installer.
+        bsdtar -xOf "$srcdir/$deb" 'data.tar.*' | bsdtar -xpf - -C "$pkgdir"
+    done
+    # Les fichiers lintian sont propres à Debian.
+    rm -rf "$pkgdir/usr/share/lintian"
+}
