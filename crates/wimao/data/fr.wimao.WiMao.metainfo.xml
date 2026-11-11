@@ -61,6 +61,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.7.0" date="2026-11-11">
+      <description>
+        <p>Music software installed as Flatpak (Bitwig from Flathub) now loads bridged plugins; unknown vendor launchers can be opened from WiMao; shorter README with credits.</p>
+        <p xml:lang="fr">Les logiciels de musique en Flatpak (Bitwig de Flathub) chargent les plugins pontés ; les lanceurs d'éditeurs inconnus s'ouvrent depuis WiMao ; README plus court avec crédits.</p>
+        <p xml:lang="es">El software musical instalado como Flatpak (Bitwig de Flathub) carga los plugins puenteados; los lanzadores de editores desconocidos se abren desde WiMao; README más corto con créditos.</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-11-08">
       <description>
         <p>RPM packages and a signed dnf repository for Fedora, new logo.</p>

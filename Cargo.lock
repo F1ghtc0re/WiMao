@@ -1563,7 +1563,7 @@ dependencies = [
 
 [[package]]
 name = "wimao"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "async-channel",
  "gtk4",
@@ -1578,7 +1578,7 @@ dependencies = [
 
 [[package]]
 name = "wimao-cli"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1590,7 +1590,7 @@ dependencies = [
 
 [[package]]
 name = "wimao-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "gettext",
  "libc",
@@ -1608,7 +1608,7 @@ dependencies = [
 
 [[package]]
 name = "wimao-recettes"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "glob",
  "serde",
