@@ -64,6 +64,28 @@ Description: gestionnaire Wine pour la production musicale (plugins audio Window
  interface (wimao) and a command line tool (wimao-cli).
 
 
+Package: wimao
+Architecture: amd64
+Version: 0.7.0-1
+Priority: optional
+Section: sound
+Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Depends: wimao-wine (>= 11.20+wimao1), wimao-bridge (>= 5.1.1+dxvk3.1.1-1), libadwaita-1-0 (>= 1.5), xvfb, 7zip | p7zip-full, cabextract, zstd, tar, libadwaita-1-0 (>= 1.5~beta), libc6 (>= 2.39), libgcc-s1 (>= 4.2), libglib2.0-0t64 (>= 2.54.0), libgtk-4-1 (>= 4.12.0)
+Recommends: carla, x11-utils
+Filename: pool/v0.7.0/wimao_0.7.0-1_amd64.deb
+Size: 3052892
+SHA256: 5785fa62fa795eff7fd9a05e5708a1cbbab66d3f95bd2c2fbc35325c89963fbe
+Homepage: https://github.com/F1ghtc0re/WiMao
+Description: gestionnaire Wine pour la production musicale (plugins audio Windows)
+ WiMao installe et gère des plugins audio Windows (VST2, VST3, CLAP) sous
+ Linux : préfixes Wine, yabridge, DXVK et recettes d'installation, avec une
+ interface GTK4 / libadwaita (wimao) et une ligne de commande (wimao-cli).
+ .
+ WiMao installs and manages Windows audio plugins (VST2, VST3, CLAP) on Linux:
+ Wine prefixes, yabridge, DXVK and install recipes, with a GTK4 / libadwaita
+ interface (wimao) and a command line tool (wimao-cli).
+
+
 Package: wimao-bridge
 Architecture: amd64
 Version: 5.1.1+dxvk3.1.1-1
@@ -116,6 +138,27 @@ Depends: wimao-wine (>= 11.20+wimao1), libc6 (>= 2.34), libgcc-s1 (>= 4.2), libs
 Filename: pool/v0.6.0/wimao-bridge_5.1.1+dxvk3.1.1-1_amd64.deb
 Size: 11591616
 SHA256: 3fb010cc7a1fe74db51885643f35060535b9e7672a6cc057433784fcd71711bc
+Homepage: https://github.com/F1ghtc0re/WiMao
+Description: yabridge et DXVK pour WiMao (plugins audio Windows sous Linux)
+ yabridge 5.1.1 relie les plugins audio Windows (VST2, VST3, CLAP) aux
+ logiciels de musique Linux ; DXVK 3.1.1 fournit les DLL Direct3D sur Vulkan
+ pour les interfaces graphiques des plugins. Ce paquet est utilisé par WiMao.
+ .
+ yabridge 5.1.1 bridges Windows audio plugins (VST2, VST3, CLAP) to Linux
+ music software; DXVK 3.1.1 provides the Direct3D-on-Vulkan DLLs used by
+ plugin interfaces. This package is used by WiMao.
+
+
+Package: wimao-bridge
+Architecture: amd64
+Version: 5.1.1+dxvk3.1.1-1
+Priority: optional
+Section: sound
+Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Depends: wimao-wine (>= 11.20+wimao1), libc6 (>= 2.34), libgcc-s1 (>= 4.2), libstdc++6 (>= 10.2)
+Filename: pool/v0.7.0/wimao-bridge_5.1.1+dxvk3.1.1-1_amd64.deb
+Size: 11592996
+SHA256: 9a50b2d7c9ef9ede1863998d90c9f7a7a51c2e2648ebf70b5fdf57302b275e23
 Homepage: https://github.com/F1ghtc0re/WiMao
 Description: yabridge et DXVK pour WiMao (plugins audio Windows sous Linux)
  yabridge 5.1.1 relie les plugins audio Windows (VST2, VST3, CLAP) aux
@@ -180,6 +223,28 @@ Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
 Depends: libfreetype6, libfontconfig1, libx11-6, libxext6, libxrender1, libxrandr2, libxi6, libxcursor1, libxcomposite1, libxfixes3, libvulkan1, libgnutls30t64, libpulse0, libasound2t64 (>= 1.0.16), libc6 (>= 2.38), libgcc-s1 (>= 3.0), libgssapi-krb5-2 (>= 1.17), libkrb5-3 (>= 1.8+dfsg), libpulse0 (>= 0.99.1), libudev1 (>= 183), libusb-1.0-0 (>= 2:1.0.21), libx11-6, libxext6, ocl-icd-libopencl1 | libopencl-1.1-1 | libopencl1, ocl-icd-libopencl1 | libopencl1, ocl-icd-libopencl1 (>= 1.0) | libopencl-1.2-1
 Recommends: libgl1, libegl1, libxinerama1, libxxf86vm1, libcups2t64, libsdl2-2.0-0, libdbus-1-3
 Filename: pool/v0.6.0/wimao-wine_11.20+wimao1_amd64.deb
+Size: 74645068
+SHA256: 517d9e9e26e76d6bae8e1246a7b9d0315495a46a550589f210e0f3071337c89e
+Homepage: https://github.com/F1ghtc0re/WiMao
+Description: Wine 11.20 réglé pour les plugins audio, utilisé par WiMao
+ Wine 11.20 (mode WoW64, sans staging) avec le seul correctif nécessaire aux
+ fenêtres de plugins audio sous X11 (annulation de la garde wm_state_serial
+ de Wine 9.22). Installé dans /opt/wimao/wine, sans toucher au Wine du système.
+ .
+ Wine 11.20 (WoW64 mode, no staging) with the single patch needed for audio
+ plugin windows on X11 (revert of the Wine 9.22 wm_state_serial guard).
+ Installed in /opt/wimao/wine, leaving the system Wine untouched.
+
+
+Package: wimao-wine
+Architecture: amd64
+Version: 11.20+wimao1
+Priority: optional
+Section: otherosfs
+Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+Depends: libfreetype6, libfontconfig1, libx11-6, libxext6, libxrender1, libxrandr2, libxi6, libxcursor1, libxcomposite1, libxfixes3, libvulkan1, libgnutls30t64, libpulse0, libasound2t64 (>= 1.0.16), libc6 (>= 2.38), libgcc-s1 (>= 3.0), libgssapi-krb5-2 (>= 1.17), libkrb5-3 (>= 1.8+dfsg), libpulse0 (>= 0.99.1), libudev1 (>= 183), libusb-1.0-0 (>= 2:1.0.21), libx11-6, libxext6, ocl-icd-libopencl1 | libopencl-1.1-1 | libopencl1, ocl-icd-libopencl1 | libopencl1, ocl-icd-libopencl1 (>= 1.0) | libopencl-1.2-1
+Recommends: libgl1, libegl1, libxinerama1, libxxf86vm1, libcups2t64, libsdl2-2.0-0, libdbus-1-3
+Filename: pool/v0.7.0/wimao-wine_11.20+wimao1_amd64.deb
 Size: 74645068
 SHA256: 517d9e9e26e76d6bae8e1246a7b9d0315495a46a550589f210e0f3071337c89e
 Homepage: https://github.com/F1ghtc0re/WiMao
