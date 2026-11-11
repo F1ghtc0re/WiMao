@@ -167,6 +167,11 @@ jobs:
       # faux RPM, faux gh et git. Les refus du mode réel (dépôt non propre, Release brouillon) sont simulés.
       - name: Test de la publication dans le dépôt dnf (à blanc)
         run: scripts/tests/tester-publier-depot-dnf.sh
+      # Recette AUR (PKGBUILD et .SRCINFO de wimao-bin) fabriquée depuis un faux SHA256SUMS, avec une clé d'essai :
+      # contrôle des sources, des empreintes, des refus et du mode local. Le .SRCINFO est produit dans l'image Arch
+      # figée (podman est présent sur le runner ; accès au réseau pour tirer l'image).
+      - name: Test de la fabrication de la recette AUR
+        run: paquets/tests/tester-fabriquer-pkgbuild.sh
       # Contrôle des données personnelles : le test s'exécute sur des dépôts jetables (faux noms).
       - name: Données personnelles (test du contrôle)
         run: scripts/tests/tester-verifier-donnees-perso.sh
