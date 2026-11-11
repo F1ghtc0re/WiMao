@@ -1,0 +1,94 @@
+# Maintainer: F1ghtc0re <162480684+F1ghtc0re@users.noreply.github.com>
+#
+# Recette AUR de WiMao (installe les .deb de la Release GitHub).
+# Généré par paquets/fabriquer-pkgbuild.sh depuis le dépôt WiMao (https://github.com/F1ghtc0re/WiMao) ;
+# ne pas modifier à la main : modifier le modèle paquets/aur/PKGBUILD.in puis régénérer.
+pkgname=wimao-bin
+pkgver=0.7.0
+pkgrel=1
+pkgdesc="WiMao : faire tourner les plugins audio Windows (VST) sous Linux avec Wine et yabridge"
+arch=(x86_64)
+url="https://github.com/F1ghtc0re/WiMao"
+license=('GPL-3.0-or-later' 'LGPL-2.1-or-later' 'Zlib')
+provides=(wimao)
+conflicts=(wimao)
+# Les fichiers sont installés octet pour octet comme dans les .deb : on ne retouche pas les binaires
+# (en particulier les binaires Windows de Wine).
+options=(!strip !debug)
+
+depends=(
+  freetype2
+  fontconfig
+  libx11
+  libxext
+  libxrender
+  libxrandr
+  libxi
+  libxcursor
+  libxcomposite
+  libxfixes
+  vulkan-icd-loader
+  gnutls
+  libpulse
+  alsa-lib
+  opencl-icd-loader
+  libadwaita
+  gtk4
+  xorg-server-xvfb
+  7zip
+  cabextract
+  zstd
+  tar
+)
+optdepends=(
+  "carla: test d'ouverture des plugins"
+  "xorg-xwininfo: test d'ouverture des plugins"
+  "mesa: rendu OpenGL de Wine"
+  "libxinerama: gestion de plusieurs écrans par Wine"
+  "libxxf86vm: modes d'affichage X11 de Wine"
+  "libcups: impression sous Wine"
+  "sdl2-compat: manettes de jeu sous Wine"
+  "dbus: intégration au bureau de Wine"
+  "vulkan-driver: DXVK (Direct3D par Vulkan) : pilote Vulkan de votre carte graphique"
+)
+
+# Les trois paquets .deb de la Release, extraits à la main dans package() (makepkg ne sait pas les lire).
+_debs=('wimao_0.7.0-1_amd64.deb' 'wimao-bridge_5.1.1+dxvk3.1.1-1_amd64.deb' 'wimao-wine_11.20+wimao1_amd64.deb')
+noextract=("${_debs[@]}")
+
+source=(
+  https://github.com/F1ghtc0re/WiMao/releases/download/v${pkgver}/wimao_0.7.0-1_amd64.deb
+  https://github.com/F1ghtc0re/WiMao/releases/download/v${pkgver}/wimao-bridge_5.1.1+dxvk3.1.1-1_amd64.deb
+  https://github.com/F1ghtc0re/WiMao/releases/download/v${pkgver}/wimao-wine_11.20+wimao1_amd64.deb
+  https://github.com/F1ghtc0re/WiMao/releases/download/v${pkgver}/SHA256SUMS
+  https://github.com/F1ghtc0re/WiMao/releases/download/v${pkgver}/SHA256SUMS.asc
+)
+sha256sums=(
+  5785fa62fa795eff7fd9a05e5708a1cbbab66d3f95bd2c2fbc35325c89963fbe
+  9a50b2d7c9ef9ede1863998d90c9f7a7a51c2e2648ebf70b5fdf57302b275e23
+  517d9e9e26e76d6bae8e1246a7b9d0315495a46a550589f210e0f3071337c89e
+  fe875bc50b930110d3bf5dd8bad66df675a464c38be43e5a74ee415562406daf
+  SKIP
+)
+validpgpkeys=(3980C3D20A17566A075A65CBCB97DE3FBF41DD46)
+
+prepare() {
+    cd "$srcdir"
+    # Second verrou : SHA256SUMS (dont la signature vient d'être vérifiée par makepkg) doit confirmer les .deb.
+    local deb
+    for deb in "${_debs[@]}"; do
+        grep -qF -- "  $deb" SHA256SUMS || { echo "ERREUR : $deb absent de SHA256SUMS" >&2; return 1; }
+    done
+    # --ignore-missing : SHA256SUMS liste aussi les paquets Fedora, que cette recette ne télécharge pas.
+    sha256sum -c SHA256SUMS --ignore-missing
+}
+
+package() {
+    local deb
+    for deb in "${_debs[@]}"; do
+        # Un .deb est une archive « ar » dont data.tar.* contient les fichiers à installer.
+        bsdtar -xOf "$srcdir/$deb" 'data.tar.*' | bsdtar -xpf - -C "$pkgdir"
+    done
+    # Les fichiers lintian sont propres à Debian.
+    rm -rf "$pkgdir/usr/share/lintian"
+}
