@@ -43,3 +43,4 @@ opt:libxxf86vm: modes d'affichage X11 de Wine
 opt:libcups: impression sous Wine
 opt:sdl2-compat: manettes de jeu sous Wine
 opt:dbus: intégration au bureau de Wine
+opt:vulkan-driver: DXVK (Direct3D par Vulkan) : pilote Vulkan de votre carte graphique
