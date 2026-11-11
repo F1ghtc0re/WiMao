@@ -98,7 +98,9 @@ contrôleur du projet ; ne transmettez jamais un mot de passe ni une phrase de p
 - [ ] **Compte AUR et clé SSH d'envoi** (guidé, sous-projet 10 ; une seule fois, avant le premier
       `envoyer-aur.sh`) :
       1. créer le compte sur <https://aur.archlinux.org> (pseudonyme `F1ghtc0re`, adresse non personnelle) ; activer
-         la double authentification si l'AUR la propose ; le mot de passe n'est jamais transmis ;
+         la double authentification si l'AUR la propose ; le mot de passe n'est jamais transmis. **Faites le
+         premier `envoyer-aur.sh` dès que le compte existe** : tant que le paquet n'est pas envoyé, le nom
+         `wimao-bin` est réservable par n'importe qui ;
       2. `ssh-keygen -t ed25519 -f ~/.ssh/aur -C "wimao-aur"` (la phrase de passe est tapée par vous), puis coller
          le contenu de `~/.ssh/aur.pub` dans votre profil AUR (*My Account*, champ « SSH Public Key »). Cette clé
          ne sert qu'à l'AUR : ne l'ajoutez jamais à GitHub, ni à la CI ;
@@ -470,14 +472,18 @@ Ensuite :
    scripts/envoyer-aur.sh vX.Y.Z
    ```
 
-   Le script refuse une recette qui n'annonce pas cette version, un essai local ou un `.SRCINFO` périmé ; clone
-   l'AUR avec la clé `~/.ssh/aur` et la clé d'hôte figée du dépôt (rien n'est écrit dans `~/.ssh`) ; affiche le
-   diff ; fait le `git push` ; puis relit l'AUR et la compare à `main`. **La fenêtre de phrase de passe de la clé
-   SSH peut s'ouvrir** (agent SSH) : le script prévient avant. Le premier envoi crée la branche `master` du dépôt
-   AUR, vide jusque-là.
+   Le script refuse une recette qui n'annonce pas cette version, un essai local, un `.SRCINFO` périmé, ou une
+   recette dont `validpgpkeys`, les cinq sources ou la vérification des empreintes ne sont pas conformes ; clone
+   l'AUR avec la clé `~/.ssh/aur` et la clé d'hôte figée du dépôt (rien n'est écrit dans `~/.ssh`) ; retire du
+   dépôt AUR tout fichier autre que `PKGBUILD` et `.SRCINFO` ; affiche le diff complet ; fait le `git push` ; puis
+   relit l'AUR et la compare à `main`. **La fenêtre de phrase de passe de la clé SSH peut s'ouvrir** : le script
+   prévient avant. Le premier envoi crée la branche `master` du dépôt AUR, vide jusque-là.
 4. La **surveillance quotidienne** (`aur-surveillance.yml`) compare l'AUR à `main`. Entre la fusion et l'envoi,
-   elle échoue : c'est voulu (rappel d'envoyer) ; elle redevient verte après l'envoi (lancez-la à la main depuis
-   l'onglet *Actions* pour le constater). Si elle échoue sans fusion récente, lisez `SECURITY.md`,
+   elle échoue : c'est voulu (rappel d'envoyer), sauf avant le tout premier envoi (un AUR vide ou absent est un
+   succès avec une note) ; elle redevient verte après l'envoi (lancez-la à la main depuis
+   l'onglet *Actions* pour le constater). **GitHub désactive les workflows planifiés d'un dépôt public après
+   60 jours sans activité** : de temps en temps, vérifiez dans l'onglet *Actions* que « Surveillance AUR » est
+   actif et réactivez-le sinon (tout commit remet le compteur à zéro). Si elle échoue sans fusion récente, lisez `SECURITY.md`,
    « Compromission de compte ».
 5. Vérifiez comme un utilisateur, dans un Arch (conteneur) : les commandes du `README.md`, puis
    `yay -S wimao-bin`.

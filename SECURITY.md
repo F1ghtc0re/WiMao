@@ -4,8 +4,9 @@
 button (Security tab); we aim to answer within 7 days; only the latest release is supported.
 Releases are signed (`SHA256SUMS.asc`) and carry build attestations; see "Vérifier une version" below.
 The signed APT repository (https://f1ghtc0re.github.io/WiMao) is signed with the same key; see
-"Le dépôt APT" below. The same key signs the dnf repository for Fedora; see "Le dépôt dnf". The Arch Linux (AUR) recipe is covered in "Le paquet AUR" (account risk and what to do
-if the daily check fails).*
+"Le dépôt APT" below. The same key signs the dnf repository for Fedora; see "Le dépôt dnf". The Arch
+Linux (AUR) recipe is covered in "Le paquet AUR" (account risk and what to do if the daily check
+fails).*
 
 ## Signaler une faille
 
@@ -137,25 +138,30 @@ par l'AUR ; la chaîne de confiance est donc celle des Releases.
      `.deb` modifié, une empreinte fausse et une signature altérée.
   2. L'envoi se fait **uniquement depuis la machine du propriétaire** (`scripts/envoyer-aur.sh`), avec une clé SSH
      **dédiée à l'AUR** (`~/.ssh/aur`, ed25519, protégée par une phrase de passe), qui ne va jamais sur GitHub ni
-     en CI. Le script n'envoie que `PKGBUILD` et `.SRCINFO` tels qu'ils sont sur `main`, puis relit l'AUR.
+     en CI. Le script n'envoie que `PKGBUILD` et `.SRCINFO` tels qu'ils sont sur `main` (il refuse une recette dont
+     `validpgpkeys`, les sources ou la vérification des empreintes ne sont pas conformes), retire tout autre fichier
+     du dépôt AUR, montre le diff complet, puis relit l'AUR.
   3. L'empreinte de la clé d'hôte de `aur.archlinux.org` est figée dans le dépôt
      (`paquets/aur/aur.archlinux.org.known_hosts`) : pas de « confiance au premier contact ».
   4. Une **surveillance quotidienne** (`.github/workflows/aur-surveillance.yml`) compare `PKGBUILD` et `.SRCINFO`
-     de l'AUR à ceux de `main` ; une différence fait échouer le job et GitHub prévient le propriétaire par e-mail.
+     de l'AUR à ceux de `main` et vérifie que le dépôt AUR ne contient aucun autre fichier ; une différence fait
+     échouer le job et GitHub prévient le propriétaire par e-mail. **Attention :** GitHub désactive les workflows
+     planifiés d'un dépôt public après 60 jours sans activité. Vérifiez de temps en temps, dans l'onglet *Actions*,
+     que « Surveillance AUR » est actif, et réactivez-le sinon ; tout commit remet le compteur à zéro.
 - **Ce que vous pouvez faire, côté utilisateur.** Lire le `PKGBUILD` avant de construire (`yay` le montre, ainsi que
   les changements aux mises à jour). Il ne doit contenir que des téléchargements depuis
   `https://github.com/F1ghtc0re/WiMao/releases/download/`, des empreintes, `validpgpkeys` égal à l'empreinte
   ci-dessus, et l'extraction des `.deb`. Toute autre commande est suspecte : ne construisez pas et signalez-le.
 - **Limite.** La surveillance détecte une modification, elle ne l'empêche pas : une personne qui installerait entre
-  la modification et la correction serait exposée (au plus un jour environ). Elle ne compare que `PKGBUILD` et
-  `.SRCINFO`. Voir aussi `docs/ameliorations-reportees.md`.
+  la modification et la correction serait exposée (au plus un jour environ). Voir aussi `docs/ameliorations-reportees.md`.
 - **Expiration de la sous-clé** (2027-11-01) : comme pour apt et dnf, les utilisateurs Arch doivent réimporter la
   clé après la prolongation.
 
 ### Compromission de compte : que faire si la surveillance de l'AUR échoue
 
 Le job « Surveillance AUR » échoue dans deux cas : un envoi **oublié** (une nouvelle recette vient d'être fusionnée
-sur `main` et n'est pas encore partie ; c'est voulu, c'est un rappel), ou un envoi **non voulu**. Dans le premier
+sur `main` et n'est pas encore partie ; c'est voulu, c'est un rappel, sauf avant le tout premier envoi : un AUR
+vide ou absent est alors un succès avec une note), ou un envoi **non voulu**. Dans le premier
 cas, lancez `scripts/envoyer-aur.sh vX.Y.Z`. Dans le doute, ou si aucune recette n'a été fusionnée récemment :
 
 1. **ne fusionnez rien** de nouveau et n'envoyez rien tant que ce n'est pas clair ;

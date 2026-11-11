@@ -351,16 +351,15 @@ Décisions et limites connues (conception : `docs/superpowers/specs/2026-11-08-w
 - **Compte AUR.** La sécurité de l'AUR repose sur le compte du mainteneur ; la surveillance détecte une modification,
   elle ne l'empêche pas. Un utilisateur qui installe entre la modification et la correction serait exposé. `yay`
   montre la recette avant de la lancer : le README invite à la lire.
-- **Surveillance partielle.** Elle ne compare que `PKGBUILD` et `.SRCINFO` : un fichier ajouté dans le dépôt AUR
-  (source supplémentaire, script) ne serait pas détecté.
 - **Clé OpenPGP.** Sans publication sur un serveur de clés, l'utilisateur importe la clé à la main une fois
   (publication facultative, décision du propriétaire).
 - **Arch évolue chaque jour.** Une future version de glibc ou d'une bibliothèque peut casser les binaires compilés
-  pour Ubuntu 24.04. Le job `installation-aur` (image figée) ne le verra pas ; `aur.yml` met le conteneur à jour
-  (`pacman -Syu`) et ne le verra qu'à la prochaine recette. **Reporté : un essai régulier (périodique) contre
-  l'Arch du jour.**
+  pour Ubuntu 24.04. Le job `installation-aur` part d'une image figée mais lance `pacman -Syu` : il éprouve la
+  recette contre l'Arch d'aujourd'hui, donc une casse d'Arch est vue avant l'étiquette (et par `aur.yml` à chaque
+  recette). **Reporté : un essai régulier (périodique), sans nouvelle version, contre l'Arch du jour.**
 - **Taille.** Chaque mise à jour retélécharge 87 Mo (les trois `.deb`).
 - **Expiration de la clé.** Comme pour apt et dnf, la sous-clé expire le 2027-11-01 ; après prolongation, les
   utilisateurs Arch doivent réimporter la clé.
-- **Paquet pas encore sur l'AUR.** Tant que le compte AUR n'est pas créé et le premier envoi fait, la note de
-  `docs/installation-detaillee.md` (« Installation sur Arch Linux ») le dit ; elle est à retirer ensuite.
+- **Paquet pas encore sur l'AUR.** Tant que le compte AUR n'est pas créé et le premier envoi fait, les notes
+  temporaires de `README.md` et de `docs/installation-detaillee.md` (« Installation sur Arch Linux », repérées par
+  les commentaires HTML `NOTE TEMPORAIRE`) le disent ; elles sont à retirer ensemble ensuite.

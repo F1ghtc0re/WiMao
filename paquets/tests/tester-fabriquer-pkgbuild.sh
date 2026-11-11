@@ -113,6 +113,8 @@ attend_code 1 "version mal formée" "$fabriquer" "$temporaire/mal-formee" "$temp
 # --- Mode local ---
 attend_code 0 "mode local" "$fabriquer" "$sommes" "$temporaire/l" --local
 pkg="$temporaire/l/PKGBUILD"
+# La marque est celle que cherchent les refus (constante de commun-aur.sh, recherche par sous-chaîne).
+( source "$racine/paquets/aur/commun-aur.sh"; head -n1 "$pkg" | grep -qF "$MARQUE_ESSAI_LOCAL" ) || echec "la marque du mode local ne contient pas MARQUE_ESSAI_LOCAL"
 [ "$(head -n1 "$pkg")" = "# ESSAI LOCAL, NE PAS PUBLIER" ] || echec "première ligne du mode local"
 attendu="source=(
   $deb_wimao

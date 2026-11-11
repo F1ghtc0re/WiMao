@@ -203,8 +203,9 @@ d'envoyer). La procédure dit d'envoyer juste après la fusion.
   exposé. `yay` montre le diff de la recette avant de la lancer : le README invite à le lire.
 - **Clé OpenPGP :** sans publication sur un serveur de clés, l'utilisateur doit l'importer à la main une fois.
 - **Arch évolue chaque jour :** une future version de glibc ou d'une bibliothèque peut casser les binaires
-  compilés pour Ubuntu 24.04. Le job `installation-aur` (image figée) ne le verra pas ; `aur.yml` met le
-  conteneur à jour (`pacman -Syu`) et le verra à la prochaine recette. Un essai régulier est reporté.
+  compilés pour Ubuntu 24.04. Le job `installation-aur` part d'une image figée mais lance `pacman -Syu` : il
+  éprouve la recette contre l'Arch d'aujourd'hui, donc une casse d'Arch est vue avant l'étiquette (et par `aur.yml`
+  à chaque recette). Un essai régulier, sans nouvelle version, est reporté.
 - **Taille :** chaque mise à jour retélécharge 87 Mo (forme A).
 - **Expiration de la clé :** comme pour apt et dnf, la sous-clé expire le 2027-11-01 ; après prolongation, les
   utilisateurs Arch doivent réimporter la clé.

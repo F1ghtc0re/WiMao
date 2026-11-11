@@ -204,7 +204,7 @@ Ajouter un écart, c'est l'accepter : la justification est obligatoire.
 | `rpm` | Réemballe les trois `.deb` en RPM (conteneur Fedora 45 figé), deux fois, et compare octet pour octet. |
 | `sommes` | Réunit les trois `.deb` et les trois RPM, écrit `SHA256SUMS`. |
 | `installation` | Test d'installation décrit ci-dessus (Ubuntu 24.04 et Debian 13). |
-| `installation-aur` | Installation réelle de la recette AUR (`--local`) et ouverture d'un plugin, sur Arch Linux (image figée). |
+| `installation-aur` | Installation réelle de la recette AUR (`--local`) et ouverture d'un plugin, sur Arch Linux (image de départ figée, puis mise à jour `pacman -Syu` : l'Arch d'aujourd'hui). |
 | `installation-rpm` | Installation réelle des RPM et ouverture d'un plugin, sur Fedora 45 (avec et sans le `wine` de Fedora) et Fedora 44. |
 | `signature-a-blanc` | Rejoue `scripts/signer-version.sh --a-blanc` avec une clé jetable (refabrique les `.deb`, puis les RPM). |
 | `brouillon` | Attestation de provenance et Release **brouillon** sur une étiquette `v*` (ou lancement manuel avec `a_blanc` faux). Seul job avec des droits d'écriture. |

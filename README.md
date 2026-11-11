@@ -42,7 +42,14 @@ sudo curl -fsSL -o /etc/yum.repos.d/wimao.repo https://f1ghtc0re.github.io/WiMao
 sudo dnf install wimao
 ```
 
-Arch Linux et dérivés (64 bits Intel/AMD), par l'AUR : importez d'abord la clé de signature, puis
+Arch Linux et dérivés (64 bits Intel/AMD), par l'AUR :
+
+<!-- NOTE TEMPORAIRE (à supprimer à la première publication sur l'AUR, avec le sous-projet 10 terminé) : -->
+> **Pas encore disponible.** Le paquet `wimao-bin` arrive sur l'AUR avec sa première publication. Tant que
+> `yay -S wimao-bin` répond « paquet introuvable », utilisez une autre méthode.
+<!-- FIN DE LA NOTE TEMPORAIRE -->
+
+Importez d'abord la clé de signature, puis
 vérifiez que son empreinte est `3980 C3D2 0A17 566A 075A 65CB CB97 DE3F BF41 DD46` :
 
 ```sh

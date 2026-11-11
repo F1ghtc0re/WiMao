@@ -57,8 +57,15 @@ fi
 # montés (le dépôt et la recette en lecture seule). Le conteneur a besoin du réseau (Release GitHub, Arch).
 if ! command -v makepkg > /dev/null; then
     command -v podman > /dev/null || { echo "ERREUR : ni makepkg ni podman : lancez ce script dans un Arch Linux" >&2; exit 1; }
+    # Un DEXED_ZIP donné est un chemin de l'hôte : on le monte en lecture seule et on indique son chemin
+    # dans le conteneur (sinon le fichier y serait introuvable).
+    options_dexed=(-e DEXED_ZIP=)
+    if [ -n "${DEXED_ZIP:-}" ]; then
+        [ -f "$DEXED_ZIP" ] || { echo "ERREUR : DEXED_ZIP introuvable : $DEXED_ZIP" >&2; exit 1; }
+        options_dexed=(-v "$DEXED_ZIP:/dexed.zip:ro,Z" -e DEXED_ZIP=/dexed.zip)
+    fi
     exec podman run --rm -v "$racine:/depot:ro,Z" -v "$RECETTE_SOURCE:/recette-source:ro,Z" \
-        -v "$JOURNAUX:/journaux:Z" -e DEXED_ZIP="${DEXED_ZIP:-}" "$IMAGE_ARCH" \
+        -v "$JOURNAUX:/journaux:Z" "${options_dexed[@]}" "$IMAGE_ARCH" \
         /depot/paquets/tester-recette-aur.sh /recette-source /journaux
 fi
 [ "$(id -u)" -eq 0 ] || echec "ce script doit s'exécuter en root dans un conteneur jetable"
@@ -111,7 +118,7 @@ copie_neuve() {
 
 # --- 1. .SRCINFO -------------------------------------------------------------------------------------
 etape "1. .SRCINFO à jour, pas de marque d'essai local"
-! grep -q 'ESSAI LOCAL' "$RECETTE_SOURCE/PKGBUILD" || echec "le PKGBUILD porte la marque d'essai local : il ne doit pas être publié"
+! grep -qF "$MARQUE_ESSAI_LOCAL" "$RECETTE_SOURCE/PKGBUILD" || echec "le PKGBUILD porte la marque d'essai local : il ne doit pas être publié"
 # Mise à jour d'Arch d'abord (Arch vivant : on éprouve la recette contre l'Arch d'aujourd'hui), puis outils.
 pacman -Syu --noconfirm --needed git > "$JOURNAUX/pacman.log" 2>&1 || { cat "$JOURNAUX/pacman.log"; echec "pacman -Syu a échoué"; }
 rm -rf "$TRAVAIL"

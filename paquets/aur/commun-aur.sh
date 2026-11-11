@@ -8,6 +8,8 @@
 #
 # Variable :
 #   IMAGE_ARCH  image Arch Linux figée par empreinte (seule définition, pour les scripts comme pour les tests)
+#   MARQUE_ESSAI_LOCAL  texte qui signale une recette d'essai local (seule définition) ; tous les contrôles
+#               cherchent ce texte comme sous-chaîne (grep -qF), jamais comme ligne exacte
 # Fonctions :
 #   utilisateur_constructeur            crée l'utilisateur « constructeur » s'il manque (en root, dans un conteneur)
 #   srcinfo <dossier>                   écrit <dossier>/.SRCINFO à partir de <dossier>/PKGBUILD
@@ -23,6 +25,12 @@
 # fonctions d'essai : un conteneur Arch jetable, en root.
 
 IMAGE_ARCH='docker.io/library/archlinux:base-devel@sha256:97119fd9e21219b02b3c14ba256c9d3c0d031d07fc26c836c41ed793beeb5b74'
+
+# Texte du marquage « essai local » (écrit par fabriquer-pkgbuild.sh --local, qui en garde sa propre copie
+# littérale : le test de ce script vérifie que les deux concordent). Les refus le cherchent PARTOUT dans le
+# PKGBUILD, même précédé ou suivi d'autres caractères (espace final, commentaire ajouté...).
+# shellcheck disable=SC2034  # utilisée par les scripts qui sourcent cette bibliothèque
+MARQUE_ESSAI_LOCAL='ESSAI LOCAL'
 
 # Dossier de cette bibliothèque, retenu au moment où elle est sourcée (utile pour la monter dans un conteneur).
 DOSSIER_LIB_AUR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

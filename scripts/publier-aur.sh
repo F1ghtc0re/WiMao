@@ -230,7 +230,7 @@ recette="$temporaire/recette"
     || arreter "la fabrication de la recette a échoué (voir ci-dessus)"
 [ -f "$recette/PKGBUILD" ] && [ -f "$recette/.SRCINFO" ] || arreter "la recette est incomplète"
 # Jamais de recette d'essai local dans ce qu'on publie.
-! grep -q 'ESSAI LOCAL' "$recette/PKGBUILD" || arreter "la recette porte la marque d'essai local"
+! grep -qF "$MARQUE_ESSAI_LOCAL" "$recette/PKGBUILD" || arreter "la recette porte la marque d'essai local"
 
 # --- 5. Essai réel dans Arch ---
 if [ "$a_blanc" -eq 0 ]; then

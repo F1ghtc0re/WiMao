@@ -9,7 +9,8 @@
 #   - AUR vide ou absent, et pas de recette dans main : note, succès ;
 #   - AUR vide ou absent, mais recette dans main : note, succès (rien n'est encore envoyé) ;
 #   - AUR rempli, mais pas de recette dans main : ÉCHEC (publication inattendue) ;
-#   - sinon : comparaison octet pour octet (cmp) de PKGBUILD et .SRCINFO.
+#   - sinon : le dépôt AUR doit suivre exactement PKGBUILD et .SRCINFO (aucun fichier en trop), puis comparaison
+#     octet pour octet (cmp) de ces deux fichiers.
 # Aucun conteneur, aucun secret, lecture seule (clone anonyme public).
 name: Surveillance AUR
 
@@ -28,14 +29,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Toujours main, même lancé à la main depuis une autre branche : on compare l'AUR à la recette de main.
+          ref: main
           persist-credentials: false
       - name: Comparer l'AUR avec main
         run: |
           set -euo pipefail
           recette=paquets/aur/wimao-bin
           aur="$RUNNER_TEMP/aur-wimao-bin"
-          git clone --quiet https://aur.archlinux.org/wimao-bin.git "$aur" 2> /dev/null \
-            || { echo "::error::Clonage de l'AUR impossible (réseau ou AUR indisponible) : relancez le workflow plus tard."; exit 1; }
+          # La sortie d'erreur de git est gardée : elle précise la cause dans le message d'échec.
+          if ! sortie_clone="$(git clone --quiet https://aur.archlinux.org/wimao-bin.git "$aur" 2>&1)"; then
+            echo "::error::Clonage de l'AUR impossible (réseau ou AUR indisponible) : relancez le workflow plus tard. Détail : $sortie_clone"
+            exit 1
+          fi
           if ! git -C "$aur" rev-parse --verify --quiet HEAD > /dev/null; then
             echo "::notice::Le paquet wimao-bin n'est pas (encore) publié sur l'AUR : rien à comparer."
             exit 0
@@ -45,6 +51,13 @@ jobs:
             exit 1
           fi
           ecart=0
+          # L'AUR ne doit suivre que ces deux fichiers : un fichier de plus (source, script) serait servi aux
+          # utilisateurs sans que la comparaison de PKGBUILD et .SRCINFO le voie.
+          suivis="$(git -C "$aur" ls-files | LC_ALL=C sort | paste -sd' ')"
+          if [ "$suivis" != ".SRCINFO PKGBUILD" ]; then
+            echo "::error::Le dépôt AUR doit contenir exactement .SRCINFO et PKGBUILD, il contient : $suivis"
+            ecart=1
+          fi
           for fichier in PKGBUILD .SRCINFO; do
             if [ ! -f "$aur/$fichier" ]; then
               echo "::error::$fichier absent de l'AUR."
