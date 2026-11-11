@@ -141,8 +141,10 @@ construire_installer_recette() {
     cp -- "$dossier"/* "$dossier"/.SRCINFO "$travail/"
     chown -R constructeur "$travail"
     chmod 755 "$travail"
-    (cd "$travail" && runuser -u constructeur -- makepkg --nodeps) 2>&1 | tee "$journaux/makepkg.log" \
-        && [ "${PIPESTATUS[0]}" -eq 0 ] || echec "makepkg a échoué (voir $journaux/makepkg.log)"
+    # pipefail (posé par les scripts appelants) fait échouer le tube si makepkg échoue, malgré tee.
+    if ! (cd "$travail" && runuser -u constructeur -- makepkg --nodeps) 2>&1 | tee "$journaux/makepkg.log"; then
+        echec "makepkg a échoué (voir $journaux/makepkg.log)"
+    fi
     paquet="$(find "$travail" -maxdepth 1 -name 'wimao-bin-*.pkg.tar.*' | head -n 1)"
     [ -n "$paquet" ] || echec "makepkg n'a produit aucun paquet"
     pacman -U --noconfirm "$paquet"

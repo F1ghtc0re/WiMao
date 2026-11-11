@@ -228,7 +228,9 @@ echo "== 4. Recette (fabriquer-pkgbuild.sh)"
 recette="$temporaire/recette"
 "$RACINE_DEPOT/paquets/fabriquer-pkgbuild.sh" "$dossier/SHA256SUMS" "$recette" --cle "$empreinte" \
     || arreter "la fabrication de la recette a échoué (voir ci-dessus)"
-[ -f "$recette/PKGBUILD" ] && [ -f "$recette/.SRCINFO" ] || arreter "la recette est incomplète"
+if [ ! -f "$recette/PKGBUILD" ] || [ ! -f "$recette/.SRCINFO" ]; then
+    arreter "la recette est incomplète"
+fi
 # Jamais de recette d'essai local dans ce qu'on publie.
 ! grep -qF "$MARQUE_ESSAI_LOCAL" "$recette/PKGBUILD" || arreter "la recette porte la marque d'essai local"
 

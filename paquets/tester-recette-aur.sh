@@ -41,16 +41,15 @@ racine="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=paquets/aur/commun-aur.sh
 source "$racine/paquets/aur/commun-aur.sh"
 
-[ -d "$1" ] || { echo "ERREUR : dossier de la recette introuvable : $1" >&2; exit 2; }
+# Aucune recette publiée (premier paquet pas encore préparé) : rien à éprouver, ce n'est pas une erreur.
+# Le dossier lui-même n'existe pas tant que scripts/publier-aur.sh n'a jamais été lancé : même cas.
+if [ ! -f "$1/PKGBUILD" ]; then
+    echo "Note : aucune recette publiée dans $1 (pas de PKGBUILD) : rien à éprouver."
+    exit 0
+fi
 RECETTE_SOURCE="$(cd "$1" && pwd)"
 mkdir -p "$2"
 JOURNAUX="$(cd "$2" && pwd)"
-
-# Aucune recette publiée (premier paquet pas encore préparé) : rien à éprouver, ce n'est pas une erreur.
-if [ ! -f "$RECETTE_SOURCE/PKGBUILD" ]; then
-    echo "Note : aucune recette publiée dans $RECETTE_SOURCE (pas de PKGBUILD) : rien à éprouver."
-    exit 0
-fi
 [ -f "$RECETTE_SOURCE/.SRCINFO" ] || { echo "ERREUR : $RECETTE_SOURCE/.SRCINFO absent" >&2; exit 1; }
 
 # Hors d'un Arch (pas de makepkg) : on se relance DANS le conteneur figé. Dépôt, recette et journaux y sont
