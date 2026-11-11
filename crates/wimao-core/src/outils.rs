@@ -11,7 +11,7 @@ use crate::i18n::{langue_courante, tr, trf};
 use crate::journal;
 use std::io::Read;
 use std::os::unix::process::{CommandExt, ExitStatusExt};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -280,12 +280,39 @@ pub fn pour_shell(chemin: &Path) -> String {
     }
 }
 
+/// Cherche l'exécutable `nom` dans les dossiers de `path` (une valeur au format de `PATH`).
+///
+/// Sert à vérifier qu'un outil facultatif existe **avant** de le lancer : [`lancer`] note
+/// chaque échec dans le journal, ce qui serait trompeur pour un outil simplement absent.
+pub(crate) fn trouver_programme(nom: &str, path: &std::ffi::OsStr) -> Option<PathBuf> {
+    std::env::split_paths(path)
+        .map(|d| d.join(nom))
+        .find(|p| p.is_file())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Erreur;
     use std::process::Command;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn trouver_programme_cherche_dans_chaque_dossier() {
+        // C'est ce qui évite de lancer un `flatpak` absent (et d'écrire un échec au journal).
+        let vide = tempfile::tempdir().unwrap();
+        let avec = tempfile::tempdir().unwrap();
+        std::fs::write(avec.path().join("flatpak"), "").unwrap();
+        // Un dossier du même nom n'est pas un programme.
+        std::fs::create_dir(vide.path().join("flatpak")).unwrap();
+        let path = std::env::join_paths([vide.path(), avec.path()]).unwrap();
+        assert_eq!(
+            trouver_programme("flatpak", &path),
+            Some(avec.path().join("flatpak"))
+        );
+        let seul_vide = std::env::join_paths([vide.path()]).unwrap();
+        assert_eq!(trouver_programme("flatpak", &seul_vide), None);
+    }
 
     #[test]
     fn les_chemins_sont_ecrits_pour_le_shell() {

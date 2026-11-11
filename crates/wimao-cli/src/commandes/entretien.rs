@@ -46,7 +46,8 @@ pub fn reparer(c: &Chemins, oui: bool) -> Resultat<Issue> {
         afficher!("{}", tr("Cancelled: nothing was changed"));
         return Ok(Issue::Succes);
     }
-    // Sans problème, `reparer_tout` ne fait rien (ni point de restauration ni arrêt de Wine).
+    // Sans problème réparable, `reparer_tout` pose seulement les liens yabridge manquants
+    // (Flatpak compris) : ni point de restauration ni arrêt de Wine.
     let reparation = reparer_tout(c, &problemes, &ProgressionTerminal);
     // Même après une réparation partielle (erreur), des réglages ont pu se perdre : on les
     // réapplique, puis on rend l'erreur de la réparation (la première rencontrée).

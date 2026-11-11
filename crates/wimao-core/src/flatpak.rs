@@ -28,7 +28,7 @@
 
 use crate::chemins::Chemins;
 use crate::erreur::Resultat;
-use crate::outils::{lancer, pour_shell};
+use crate::outils::{lancer, pour_shell, trouver_programme};
 use crate::pontage::{assurer_lien_yabridge_a, LienYabridge};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -61,7 +61,9 @@ const DOSSIERS_PONTES: [&str; 3] = [".vst3/yabridge", ".vst/yabridge", ".clap/ya
 /// Tout échec (`flatpak` absent du `PATH`, code de sortie non nul, délai dépassé) donne une
 /// liste vide, sans erreur ni message : sur une machine sans Flatpak, il n'y a rien à faire.
 pub fn logiciels_installes() -> Vec<String> {
-    let mut cmd = Command::new("flatpak");
+    let Some(mut cmd) = commande_flatpak() else {
+        return Vec::new();
+    };
     cmd.args(["list", "--app", "--columns=application"]);
     match lancer(&mut cmd, DELAI_FLATPAK) {
         Ok(sortie) if sortie.code == 0 => sortie
@@ -73,6 +75,16 @@ pub fn logiciels_installes() -> Vec<String> {
             .collect(),
         _ => Vec::new(),
     }
+}
+
+/// Une commande `flatpak` prête à recevoir ses arguments, ou `None` si `flatpak` n'est pas
+/// dans le `PATH`.
+///
+/// On vérifie avant de lancer : [`lancer`] note tout échec dans le journal de WiMao, et une
+/// machine sans Flatpak (cas le plus courant) aurait sinon une « erreur » à chaque démarrage.
+fn commande_flatpak() -> Option<Command> {
+    let path = std::env::var_os("PATH")?;
+    trouver_programme("flatpak", &path).map(Command::new)
 }
 
 /// Emplacement du lien yabridge d'un logiciel : `~/.var/app/<id>/data/yabridge`.
@@ -87,7 +99,7 @@ pub fn emplacement_lien_flatpak(c: &Chemins, id: &str) -> PathBuf {
 /// affirmer, donc le diagnostic ne signale rien. Sans ligne `filesystems=`, le logiciel n'a
 /// aucun accès particulier : liste vide.
 pub fn systemes_de_fichiers(id: &str) -> Option<Vec<String>> {
-    let mut cmd = Command::new("flatpak");
+    let mut cmd = commande_flatpak()?;
     cmd.args(["info", "--show-permissions", id]);
     let sortie = lancer(&mut cmd, DELAI_FLATPAK)
         .ok()

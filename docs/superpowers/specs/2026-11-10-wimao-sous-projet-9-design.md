@@ -133,7 +133,8 @@ Nouveau module `wimao-core/src/flatpak.rs`.
 - Pour chaque logiciel Flatpak installé, `flatpak info --show-permissions <id>` donne ses `filesystems`.
   Fonction pure `chemins_invisibles(filesystems, home, chemins_requis) -> Vec<PathBuf>` : `host` couvre tout ;
   `home` couvre ce qui est sous le dossier personnel ; une entrée explicite couvre son dossier et ses
-  sous-dossiers (`~/` développé, suffixes `:ro`/`:rw`/`:create` ignorés). Chemins requis : `/opt/wimao`, les
+  sous-dossiers (`~/` développé, suffixes `:ro`/`:rw`/`:create` ignorés) ; `xdg-data`, `xdg-config` et
+  `xdg-cache` (avec un éventuel sous-dossier) couvrent `~/.local/share`, `~/.config` et `~/.cache`. Chemins requis : `/opt/wimao`, les
   données de WiMao, `~/.vst3`, `~/.vst`, `~/.clap`.
 - Nouveau `Probleme::FlatpakSansAcces { id, invisibles, commande }`, avertissement comme
   `LienYabridge` (montré, jamais réparé ni compté dans un point de restauration), avec la commande :
