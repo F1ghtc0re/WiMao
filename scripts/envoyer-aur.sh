@@ -141,6 +141,13 @@ if [ "$a_blanc" -eq 0 ]; then
     [ -f "$CLE_SSH_AUR" ] || arreter "la clé SSH de l'AUR ($CLE_SSH_AUR) est absente. Pour la créer :
   ssh-keygen -t ed25519 -f ~/.ssh/aur -C \"wimao-aur\"
 puis collez ~/.ssh/aur.pub dans votre profil sur https://aur.archlinux.org (voir docs/publier-une-version.md)"
+    # Git lance la commande SSH par `sh -c`, et ssh développe « % » et traite les blancs comme séparateurs :
+    # on refuse ces chemins plutôt que de les laisser se couper.
+    for chemin in "$CLE_SSH_AUR" "$HOTES_CONNUS"; do
+        case "$chemin" in
+            *[[:space:]%]*) arreter "le chemin « $chemin » contient un blanc ou un « % » : incompatible avec la commande SSH" ;;
+        esac
+    done
     [ -f "$HOTES_CONNUS" ] || arreter "$HOTES_CONNUS introuvable (clé d'hôte de l'AUR)"
 else
     echo "À blanc : pas de contrôle de main ni de ~/.ssh/aur, pas de réseau."
@@ -148,8 +155,17 @@ fi
 
 # --- 2. Recette ---
 echo "== 2. Recette (paquets/aur/wimao-bin)"
-[ -f "$recette/PKGBUILD" ] && [ -f "$recette/.SRCINFO" ] \
-    || arreter "la recette est absente de $recette (PKGBUILD et .SRCINFO) : la PR de scripts/publier-aur.sh est-elle fusionnée ?"
+# La recette est lue dans le COMMIT (HEAD, déjà prouvé identique à origin/main en réel), jamais dans le dossier de
+# travail : celui-ci peut différer de git sans que `git status` le montre (skip-worktree, assume-unchanged,
+# fichier ignoré, filtres .gitattributes). Tous les contrôles, la copie vers l'AUR et la relecture utilisent
+# cette copie extraite, octet pour octet.
+recette_git="$recette"
+recette="$temporaire/main"
+mkdir "$recette"
+for fichier in PKGBUILD .SRCINFO; do
+    git -C "$racine" show "HEAD:paquets/aur/wimao-bin/$fichier" > "$recette/$fichier" 2> /dev/null \
+        || arreter "la recette est absente de $recette_git ($fichier) : la PR de scripts/publier-aur.sh est-elle fusionnée ?"
+done
 pkgver="$(awk -F= '$1 == "pkgver" { print $2; exit }' "$recette/PKGBUILD")"
 pkgrel="$(awk -F= '$1 == "pkgrel" { print $2; exit }' "$recette/PKGBUILD")"
 [ "$pkgver" = "$numero" ] \
@@ -171,7 +187,15 @@ clone="$temporaire/aur"
 if [ "$a_blanc" -eq 0 ]; then
     # Clé dédiée seule (pas d'agent : IdentitiesOnly), clé d'hôte figée et exigée : aucun
     # « trust on first use », rien dans ~/.ssh/config ni ~/.ssh/known_hosts.
-    export GIT_SSH_COMMAND="ssh -i $CLE_SSH_AUR -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOTES_CONNUS -o StrictHostKeyChecking=yes"
+    # Exclusif : -F /dev/null ignore ~/.ssh/config et /etc/ssh/ssh_config (HostName, IdentityFile,
+    # KnownHostsCommand…) ; GlobalKnownHostsFile=/dev/null ignore /etc/ssh/ssh_known_hosts ; UpdateHostKeys=no
+    # interdit d'ajouter des clés d'hôte. L'agent SSH reste joignable (variable SSH_AUTH_SOCK, pas la config).
+    # Git lance cette commande par `sh -c` : les chemins sont protégés par printf %q (refus des blancs et « % » :
+    # voir les préconditions).
+    cle_q="$(printf '%q' "$CLE_SSH_AUR")"
+    hotes_q="$(printf '%q' "$HOTES_CONNUS")"
+    GIT_SSH_COMMAND="ssh -F /dev/null -i $cle_q -o IdentitiesOnly=yes -o UserKnownHostsFile=$hotes_q -o GlobalKnownHostsFile=/dev/null -o UpdateHostKeys=no -o StrictHostKeyChecking=yes"
+    export GIT_SSH_COMMAND
 fi
 git clone --quiet "$depot_aur" "$clone" || arreter "le clone de $depot_aur a échoué"
 # Premier envoi : le dépôt de l'AUR est vide (aucune branche). L'AUR n'accepte que master : on la crée ici
@@ -209,6 +233,8 @@ fi
 
 # --- 6. Relecture ---
 echo "== 6. Relecture de ce que l'AUR publie"
+# Commit exact du clone : l'adresse cgit porte cet identifiant, ce qui évite une réponse en cache d'avant l'envoi.
+sha_envoye="$(git -C "$clone" rev-parse HEAD)"
 for fichier in PKGBUILD .SRCINFO; do
     publie="$temporaire/relu-$fichier"
     if [ "$a_blanc" -eq 1 ]; then
@@ -217,7 +243,7 @@ for fichier in PKGBUILD .SRCINFO; do
         # cgit peut mettre quelques secondes à refléter l'envoi : trois essais.
         ok=0
         for _ in 1 2 3; do
-            if curl -fsSL -o "$publie" "$URL_RELECTURE/$fichier?h=wimao-bin" && cmp -s "$publie" "$recette/$fichier"; then
+            if curl -fsSL -o "$publie" "$URL_RELECTURE/$fichier?h=wimao-bin&id=$sha_envoye" && cmp -s "$publie" "$recette/$fichier"; then
                 ok=1
                 break
             fi

@@ -203,6 +203,21 @@ lancer v9.9.9 --a-blanc --aur "$aur_vide" --racine "$racine"
 attendre_code 1 "refus sur faux AUR vide"
 [ "$(nb_commits "$aur_vide")" -eq 0 ] || echec "un refus a rempli le faux AUR vide"
 
+# Modification locale cachée à git (skip-worktree, puis assume-unchanged) : `git status` est propre, mais ce qui part
+# vers l'AUR doit être le contenu du commit, jamais le fichier du dossier de travail.
+for drapeau in skip-worktree assume-unchanged; do
+    r="$(nouvelle_racine "cache-$drapeau")"
+    a_cache="$(nouvel_aur "cache-$drapeau")"
+    git_essai "$r" update-index "--$drapeau" paquets/aur/wimao-bin/PKGBUILD
+    sed -i 's/^pkgrel=1$/pkgrel=7/' "$r/paquets/aur/wimao-bin/PKGBUILD"
+    lancer "$etiquette" --a-blanc --aur "$a_cache" --racine "$r"
+    attendre_code 0 "modification cachée ($drapeau)"
+    git -C "$r" show HEAD:paquets/aur/wimao-bin/PKGBUILD | cmp -s - <(git -C "$a_cache" show master:PKGBUILD) \
+        || echec "$drapeau : le PKGBUILD envoyé n'est pas celui du commit"
+    ! git -C "$a_cache" show master:PKGBUILD | grep -q '^pkgrel=7$' || echec "$drapeau : la modification locale a été envoyée"
+    [ "$(git -C "$a_cache" log -1 --format=%s master)" = "wimao-bin $version-1" ] || echec "$drapeau : message de commit incorrect"
+done
+
 # --- 5. Usage ---
 lancer "$etiquette" --a-blanc --aur "$aur" --racine "$racine" --inconnue
 attendre_code 2 "option inconnue"
@@ -256,6 +271,14 @@ PATH="$temporaire/bin:$PATH" lancer "$etiquette"
 attendre_code 1 "clé SSH absente"
 attendre_message "clé SSH de l'AUR" "clé SSH absente"
 attendre_message "docs/publier-une-version.md" "clé SSH absente"
+# Chemin de clé SSH avec un blanc : refusé (git le couperait dans GIT_SSH_COMMAND)
+HOME="$temporaire/ma maison"
+mkdir -p "$HOME/.ssh"
+: > "$HOME/.ssh/aur"
+PATH="$temporaire/bin:$PATH" lancer "$etiquette"
+attendre_code 1 "chemin avec un blanc"
+attendre_message "contient un blanc" "chemin avec un blanc"
+export HOME="$temporaire/maison"
 ! grep -qE 'clone|push|commit|^ssh ' "$journal" || echec "un refus du mode réel est allé trop loin : $(cat "$journal")"
 [ ! -e "$HOME/.ssh" ] || echec "le script a écrit dans ~/.ssh"
 
