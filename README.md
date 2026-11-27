@@ -1,5 +1,7 @@
 # WiMao
 
+*[Read in English](README.en.md)*
+
 WiMao fait tourner vos plugins audio Windows (VST2, VST3, CLAP) sous Linux, sans configuration
 à la main. Il prépare Wine, installe vos plugins et les rend visibles dans votre logiciel de
 musique.
