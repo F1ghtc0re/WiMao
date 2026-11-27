@@ -361,5 +361,5 @@ Décisions et limites connues (conception : `docs/superpowers/specs/2026-11-08-w
 - **Expiration de la clé.** Comme pour apt et dnf, la sous-clé expire le 2027-11-01 ; après prolongation, les
   utilisateurs Arch doivent réimporter la clé.
 - **Paquet pas encore sur l'AUR.** Tant que le compte AUR n'est pas créé et le premier envoi fait, les notes
-  temporaires de `README.md` et de `docs/installation-detaillee.md` (« Installation sur Arch Linux », repérées par
+  temporaires de `README.md`, `README.en.md` et `docs/installation-detaillee.md` (« Installation sur Arch Linux », repérées par
   les commentaires HTML `NOTE TEMPORAIRE`) le disent ; elles sont à retirer ensemble ensuite.
